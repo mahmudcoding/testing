@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-"""Jira reads and writes through `twg`, keeping payloads out of the model's context.
+"""Jira reads and writes over the REST API, keeping payloads out of the model's context.
 
-The Atlassian MCP echoes the whole issue back on every create/comment — description
-verbatim plus reporter/assignee/project blocks with four avatar URLs each. `twg` hits
-the same API with the same credentials and returns plain text, and --output-file keeps
-even that on disk.
+Reads write their payload to a file so it never enters context; writes print one line.
 
   scripts/jira.py comment ALK-3123 --file body.md
   scripts/jira.py create --summary '[FE-WEB][CALLS] …' --file body.md \
@@ -24,8 +21,7 @@ CLOUD = "823c42fe-9add-4000-b9b6-0c64496759f8"
 PROJECT, ISSUETYPE = "ALK", "Bug"
 
 
-def twg(path, method="GET", body=None, out=None):
-    """Kept for call-site compatibility; routes through the shared transport."""
+def api(path, method="GET", body=None, out=None):
     try:
         d = jira_api.call(path, method, body)
     except jira_api.JiraError as e:
@@ -137,7 +133,7 @@ def main():
     a = ap.parse_args()
 
     if a.cmd == "comment":
-        d = twg(f"/rest/api/3/issue/{a.key}/comment", "POST", {"body": md_to_adf(read_body(a))})
+        d = api(f"/rest/api/3/issue/{a.key}/comment", "POST", {"body": md_to_adf(read_body(a))})
         print(f"{a.key} comment {d.get('id')} posted")
 
     elif a.cmd == "create":
@@ -146,17 +142,17 @@ def main():
                   "priority": {"name": a.priority}}
         if a.labels:
             fields["labels"] = [l.strip() for l in a.labels.split(",") if l.strip()]
-        d = twg("/rest/api/3/issue", "POST", {"fields": fields})
+        d = api("/rest/api/3/issue", "POST", {"fields": fields})
         print(f"created {d.get('key')}  https://ttbrm.atlassian.net/browse/{d.get('key')}")
 
     elif a.cmd == "search":
-        twg("/rest/api/3/search/jql", "POST",
+        api("/rest/api/3/search/jql", "POST",
             {"jql": a.jql, "maxResults": a.max, "fields": a.fields.split(",")}, out=a.out)
         d = json.load(open(a.out))
         print(f"{len(d.get('issues', []))} issue(s) -> {a.out}")
 
     elif a.cmd == "get":
-        twg(f"/rest/api/3/issue/{a.key}", out=a.out)
+        api(f"/rest/api/3/issue/{a.key}", out=a.out)
         print(f"{a.key} -> {a.out}")
 
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Local mirror of the ALK project, so any ticket lookup costs zero Jira calls.
 
-`alk_open_bugs.py` only ever cached open Bugs, which is enough for dedup and
-useless for anything else — a Task like a fix-verification ticket, a ticket that
+Caching only open Bugs is enough for dedup and useless for anything else — a Task like a fix-verification ticket, a ticket that
 is already Done, or the ALK ids named in a release's commits. Every one of those
-was an ad-hoc query, and Jira's cooldown makes ad-hoc queries expensive.
+was an ad-hoc query. Mirroring once makes every later lookup free.
 
 This mirrors the whole project once, then tops up by `updated >=` on later runs.
 
@@ -80,8 +79,6 @@ def fetch(jql, label):
         token = d.get("nextPageToken") if not d.get("isLast") else None
         if not token:
             break
-        if not jira_api.have_token():
-            time.sleep(1.5)                  # twg's limiter needs pacing; a token does not
     return issues
 
 
