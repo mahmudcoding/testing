@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A QA workspace for black-box testing **Aloqa**, the team-chat app at https://airion-cargo.store. There is no application source code here and no build/lint/test tooling — the "work" is driving the live app through browser tools, recording findings, and publishing a report. Nothing here is meant to be built.
 
+**Scope: what a user can see and do.** Every test is something reachable through the interface — a click path a person could follow. API calls are instrumentation and proof for those paths (measuring the request behind a button, checking a boundary a user could hit), never the subject of testing on their own. Surfaces with no UI — background jobs and tickers, service-to-service gRPC, webhook handlers, endpoints no screen calls, migrations — are the developers' job, not this one. An endpoint no screen reaches is out of scope even when it is clearly untested.
+
 Contents:
 - `AIRION-QA-<date>.md` — the running bug log for a session (raw, one `### BUG-N [Severity] [backend|frontend] title` block per finding, plus "Verified working" sections).
 - `.playwright-mcp/` — auto-generated Playwright MCP snapshots/screenshots/console logs. Disposable; don't read through it for context.
@@ -25,6 +27,7 @@ Cloned at `~/Projects/aloqa-src/{aloqa-frontend,aloqa-backend}` — outside this
 - Verdicts in their harness are `reproduced` / `not_reproduced` / `inconclusive`, where **`inconclusive` always means a missing precondition, never a pass**. Useful discipline for findings here too: name the precondition instead of calling a state absolute.
 - `packages/features/` — `admin calendar calls chat files search settings` — maps almost 1:1 to product areas, so a diff tells you what to test. Commit messages carry ALK ids (`fix(calls): … (ALK-3359)`), so `git log <lastTestedTag>..HEAD` names exactly which tickets are waiting on verification.
 - Use the source to decide **where** to look and to add a root-cause pointer to a ticket (ALK tickets often carry a `Precise root cause` section naming files and lines). Don't derive expected behaviour from it — the testing itself stays black-box.
+- Source widens *where to look in the UI*, not what counts as testable: it does not pull headless surfaces into scope (see **Scope** above).
 
 ## QA fixtures — use these accounts, don't create new ones
 
