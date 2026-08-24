@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 ## What this repo is
 
-A QA workspace for black-box testing **Aloqa**, the team-chat app at https://airion-cargo.store. There is no application source code here and no build/lint/test tooling — the "work" is driving the live app through browser tools, recording findings, and publishing a report. Nothing here is meant to be built.
+A QA workspace for black-box testing **Aloqa**, the team-chat app at https://airion-cargo.store. This repo holds no application source and no build/lint/test tooling — the work is driving the live app through browser tools, recording findings, and publishing a report. Nothing here is meant to be built. **The product's source is available**, cloned outside this repo — see **Upstream** below for what it is for and what it is not for.
 **Scope: what a user can see and do.** Every test is something reachable through the interface — a click path a person could follow. API calls are instrumentation and proof for those paths (measuring the request behind a button, checking a boundary a user could hit), never the subject of testing on their own. Surfaces with no UI — background jobs and tickers, service-to-service gRPC, webhook handlers, endpoints no screen calls, migrations — are the developers' job, not this one. An endpoint no screen reaches is out of scope even when it is clearly untested.
 Contents:
 - `AIRION-QA-<date>.md` — the running bug log for a session (raw, one `### BUG-N [Severity] [backend|frontend] title` block per finding, plus "Verified working" sections).
