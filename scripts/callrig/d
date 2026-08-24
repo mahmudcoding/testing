@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+cd /Users/mahmud/Projects/testing/scripts/callrig
+exec node drive.mjs "$@"

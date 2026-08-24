@@ -1,0 +1,307 @@
+<title>Aloqa Calls QA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@500;600;700;800&family=Literata:opsz,wght@7..72,400;7..72,600&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+:root{
+  --bg:#EFF2F4; --surface:#FFFFFF; --surface-2:#E6EBEF; --code-bg:#F4F7F8;
+  --ink:#111820; --ink-2:#4A5763; --ink-3:#7A8793;
+  --rule:#D3DBE1; --rule-2:#BCC7CF;
+  --accent:#0E6B75; --accent-2:#0A545C;
+  --sev-crit:#7A0A12; --sev-crit-bg:#F6D2D4; --sev-crit-line:#B8434E;
+  --sev-high:#A3121B; --sev-high-bg:#FADFE0; --sev-high-line:#D4707A;
+  --sev-med:#9C4A08; --sev-med-bg:#F8E7D6; --sev-med-line:#D68B4A;
+  --sev-low:#42525F; --sev-low-bg:#E2E9EE; --sev-low-line:#93A3B0;
+  --ok:#1B6E46; --ok-bg:#DFEDE5;
+  --drop:#6B4A6B; --drop-bg:#EDE4EE;
+  --maxw:74rem;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1317; --surface:#151C22; --surface-2:#1C252C; --code-bg:#111A20;
+    --ink:#E6EDF2; --ink-2:#A2AFBA; --ink-3:#71808C;
+    --rule:#27323A; --rule-2:#35434D;
+    --accent:#4CBCC6; --accent-2:#79D4DC;
+    --sev-crit:#FF9AA2; --sev-crit-bg:#45111A; --sev-crit-line:#A83E4C;
+    --sev-high:#F2848D; --sev-high-bg:#38141A; --sev-high-line:#8C3A44;
+    --sev-med:#E9A264; --sev-med-bg:#2E1F10; --sev-med-line:#8A5A2B;
+    --sev-low:#A6B6C3; --sev-low-bg:#1B242B; --sev-low-line:#44545F;
+    --ok:#5CC38C; --ok-bg:#12271C;
+    --drop:#C79FC7; --drop-bg:#241A24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1317; --surface:#151C22; --surface-2:#1C252C; --code-bg:#111A20;
+  --ink:#E6EDF2; --ink-2:#A2AFBA; --ink-3:#71808C;
+  --rule:#27323A; --rule-2:#35434D;
+  --accent:#4CBCC6; --accent-2:#79D4DC;
+  --sev-high:#F2848D; --sev-high-bg:#38141A; --sev-high-line:#8C3A44;
+  --sev-med:#E9A264; --sev-med-bg:#2E1F10; --sev-med-line:#8A5A2B;
+  --sev-low:#A6B6C3; --sev-low-bg:#1B242B; --sev-low-line:#44545F;
+  --ok:#5CC38C; --ok-bg:#12271C;
+  --drop:#C79FC7; --drop-bg:#241A24;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Literata",Georgia,"Times New Roman",serif;
+  font-size:16px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 1.5rem 6rem;}
+h1,h2,h3,.disp{font-family:"Golos Text",-apple-system,"Segoe UI",sans-serif; text-wrap:balance;}
+code,kbd,pre,.mono{font-family:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;}
+
+/* ---------- masthead ---------- */
+.mast{padding:3.5rem 0 2rem; border-bottom:2px solid var(--ink);}
+.eyebrow{
+  font-family:"Golos Text",sans-serif; font-weight:700; font-size:.7rem;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--accent); margin:0 0 1rem;
+}
+h1{font-size:clamp(2.1rem,5.2vw,3.4rem); line-height:1.04; font-weight:800; letter-spacing:-.02em; margin:0 0 1rem;}
+.lede{font-size:1.08rem; color:var(--ink-2); max-width:44rem; margin:0 0 2rem;}
+.meta{display:flex; flex-wrap:wrap; gap:0 2.5rem; font-family:"Golos Text",sans-serif; font-size:.82rem;}
+.meta div{padding:.45rem 0; border-top:1px solid var(--rule); flex:1 1 11rem; min-width:9rem;}
+.meta dt{color:var(--ink-3); font-weight:600; letter-spacing:.06em; text-transform:uppercase; font-size:.66rem; margin:0 0 .15rem;}
+.meta dd{margin:0; color:var(--ink); font-weight:600;}
+
+/* ---------- tally ---------- */
+.tally{display:grid; grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr)); border-bottom:1px solid var(--rule);}
+.tally .cell{padding:1.5rem 1.25rem 1.4rem; border-right:1px solid var(--rule);}
+.tally .cell:last-child{border-right:0;}
+.num{font-family:"Golos Text",sans-serif; font-weight:800; font-size:2.6rem; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums;}
+.cap{font-family:"Golos Text",sans-serif; font-size:.72rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-top:.5rem;}
+.n-crit{color:var(--sev-crit);} .n-high{color:var(--sev-high);} .n-med{color:var(--sev-med);} .n-low{color:var(--sev-low);} .n-ok{color:var(--ok);} .n-drop{color:var(--drop);}
+
+section{padding-top:3.25rem;}
+h2{font-size:1.55rem; font-weight:700; letter-spacing:-.015em; margin:0 0 .4rem;}
+.sub{color:var(--ink-3); font-size:.92rem; margin:0 0 1.75rem; max-width:46rem;}
+p{max-width:44rem;}
+
+/* ---------- findings ledger ---------- */
+.led{border-top:1px solid var(--ink);}
+.item{display:grid; grid-template-columns:11rem 1fr; gap:0 2rem; padding:2rem 0; border-bottom:1px solid var(--rule);}
+@media (max-width:46rem){ .item{grid-template-columns:1fr; gap:1rem 0;} }
+.gut{display:flex; flex-direction:column; gap:.6rem; align-items:flex-start;}
+.id{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:600; color:var(--ink-3); letter-spacing:.04em;}
+.chip{
+  font-family:"Golos Text",sans-serif; font-size:.68rem; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; padding:.28rem .6rem; border-radius:2px; border:1px solid;
+}
+.crit{color:var(--sev-crit); background:var(--sev-crit-bg); border-color:var(--sev-crit-line);}
+.high{color:var(--sev-high); background:var(--sev-high-bg); border-color:var(--sev-high-line);}
+.med{color:var(--sev-med); background:var(--sev-med-bg); border-color:var(--sev-med-line);}
+.low{color:var(--sev-low); background:var(--sev-low-bg); border-color:var(--sev-low-line);}
+.area{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--ink-3);}
+.body h3{font-size:1.14rem; font-weight:700; margin:0 0 .7rem; line-height:1.34;}
+.body p{margin:0 0 .85rem;}
+.body p:last-child{margin-bottom:0;}
+
+pre{
+  background:var(--code-bg); border:1px solid var(--rule); border-left:2px solid var(--rule-2);
+  padding:.85rem 1rem; margin:.9rem 0; overflow-x:auto;
+  font-size:.79rem; line-height:1.62; color:var(--ink-2); white-space:pre;
+}
+code{font-size:.86em; background:var(--surface-2); padding:.08em .35em; border-radius:2px; color:var(--ink);}
+pre code{background:none; padding:0; font-size:1em; color:inherit;}
+.note{
+  font-size:.87rem; color:var(--ink-2); border-left:2px solid var(--accent);
+  padding:.15rem 0 .15rem .9rem; margin:.9rem 0 0;
+}
+.note strong{color:var(--ink);}
+
+/* ---------- repro path ---------- */
+.path{
+  font-family:"Golos Text",-apple-system,"Segoe UI",sans-serif; font-size:.9rem; line-height:1.72;
+  background:var(--code-bg); border:1px solid var(--rule); border-left:2px solid var(--accent);
+  padding:.75rem 1rem; margin:0 0 1rem; color:var(--ink-2);
+}
+.path b{
+  display:block; margin-bottom:.35rem; font-weight:700;
+  font-family:"Golos Text",sans-serif; font-size:.64rem; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+.path code{background:var(--surface-2); padding:.06em .35em; border-radius:2px; font-size:.85em; color:var(--ink);}
+.path i{font-style:normal; color:var(--ink-3);}
+.path .r{color:var(--accent); font-weight:600;}
+
+/* ---------- expected behaviour ---------- */
+.exp{
+  font-family:"Golos Text",-apple-system,"Segoe UI",sans-serif; font-size:.9rem; line-height:1.72;
+  background:var(--ok-bg); border:1px solid var(--rule); border-left:2px solid var(--ok);
+  padding:.75rem 1rem; margin:1rem 0 0; color:var(--ink);
+}
+.exp b{
+  display:block; margin-bottom:.35rem; font-weight:700;
+  font-family:"Golos Text",sans-serif; font-size:.64rem; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ok);
+}
+.exp code{background:var(--surface-2); padding:.06em .35em; border-radius:2px; font-size:.85em; color:var(--ink);}
+
+/* ---------- lists ---------- */
+.checks{list-style:none; padding:0; margin:0; columns:2; column-gap:2.5rem;}
+@media (max-width:52rem){ .checks{columns:1;} }
+.checks li{
+  break-inside:avoid; padding:.7rem 0 .7rem 1.6rem; border-bottom:1px solid var(--rule);
+  font-size:.92rem; position:relative;
+}
+.checks li::before{
+  content:""; position:absolute; left:0; top:1.18rem; width:.5rem; height:.5rem;
+  border-radius:50%; background:var(--ok);
+}
+.checks b{font-family:"Golos Text",sans-serif; font-weight:700; color:var(--ink);}
+.checks .m{font-family:"JetBrains Mono",monospace; font-size:.8em; color:var(--ink-2);}
+
+.dropped{list-style:none; padding:0; margin:0;}
+.dropped li{padding:.85rem 0 .85rem 1.6rem; border-bottom:1px solid var(--rule); font-size:.92rem; position:relative;}
+.dropped li::before{
+  content:"×"; position:absolute; left:.1rem; top:.8rem; color:var(--drop);
+  font-family:"Golos Text",sans-serif; font-weight:800; font-size:1rem; line-height:1.4;
+}
+.dropped b{font-family:"Golos Text",sans-serif; font-weight:700;}
+
+.jira{display:flex; flex-direction:column; gap:0; border-top:1px solid var(--rule);}
+.jira .row{display:grid; grid-template-columns:7rem 1fr; gap:0 1.25rem; padding:.95rem 0; border-bottom:1px solid var(--rule); font-size:.92rem;}
+@media (max-width:40rem){ .jira .row{grid-template-columns:1fr; gap:.3rem 0;} }
+.jira .k{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:600; color:var(--accent);}
+
+.tbl{width:100%; border-collapse:collapse; font-size:.86rem; font-family:"Golos Text",sans-serif;}
+.tblwrap{overflow-x:auto; border-top:1px solid var(--rule);}
+.tbl th,.tbl td{text-align:left; padding:.7rem 1rem .7rem 0; border-bottom:1px solid var(--rule); white-space:nowrap;}
+.tbl th{font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); font-weight:700;}
+.tbl td{font-variant-numeric:tabular-nums; color:var(--ink-2);}
+.tbl td:first-child{color:var(--ink); font-weight:600;}
+
+footer{margin-top:4rem; padding-top:1.5rem; border-top:2px solid var(--ink); font-size:.84rem; color:var(--ink-3);}
+a{color:var(--accent); text-underline-offset:.18em;}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important;} }
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Aloqa · звонки · 24 августа 2026</p>
+  <h1>Звонки — отчёт о дефектах</h1>
+  <p class="lede">4 дефекта: доступ к записям, приглашения, уведомления, гостевые ссылки и поведение интерфейса во время звонка. У каждого — путь повторения и замер, которым он подтверждён.</p>
+  <dl class="meta">
+    <div><dt>Область</dt><dd>Звонки, календарь</dd></div>
+    <div><dt>Среда</dt><dd>staging</dd></div>
+    <div><dt>Дата</dt><dd>24.08.2026</dd></div>
+    <div><dt>Всего</dt><dd>4 дефекта</dd></div>
+  </dl>
+</header>
+
+<div class="tally">
+  <div class="cell"><div class="num n-high">1</div><div class="cap">High</div></div>
+  <div class="cell"><div class="num n-med">2</div><div class="cap">Medium</div></div>
+  <div class="cell"><div class="num n-low">1</div><div class="cap">Low</div></div>
+  <div class="cell"><div class="num">4 / 0</div><div class="cap">frontend / backend</div></div>
+</div>
+
+<section>
+  <h2>Дефекты</h2>
+  <p class="sub">Отсортированы по важности. <b>High</b> — приводит к последствиям, которых пользователь не ожидал. <b>Medium</b> — мешает, но обойти можно. <b>Low</b> — тексты и подписи.</p>
+
+  <div class="led">
+
+    <article class="item">
+      <div class="gut"><span class="id">BUG-1</span><span class="chip high">High</span><span class="area">frontend</span></div>
+      <div class="body">
+        <h3>После остановки записи кнопка ещё около двадцати секунд выглядит как «идёт запись», но уже запускает новую</h3>
+        <div class="path"><b>Путь</b>начать звонок <i>&rarr;</i> <code>Record</code> <i>&rarr;</i> <code>Start recording</code> <i>&rarr;</i> подождать <i>&rarr;</i> нажать <code>Stop recording</code> <i>&rarr;</i> <span class="r">кнопка остаётся красной и подписанной «Stop recording»</span> <i>&rarr;</i> нажать её ещё раз</div>
+        <p>Сервер останавливает запись за полсекунды, но кнопка в панели звонка ещё около двадцати секунд остаётся красной, подписанной <code>Stop recording</code>, и красный значок записи продолжает висеть. Человек видит, что запись идёт, и нажимает кнопку ещё раз — вместо остановки <b>начинается новая запись звонка</b>.</p>
+<pre><code>нажали Stop      ->  POST /meeting/{id}/recording/stop -> 204
+
++0,5 c   сервер:  status "completed", duration 22 s, file_size 447 897
+         кнопка:  aria-label "Stop recording", color rgb(239,68,68), значок записи виден
++1 c … +19 c      без изменений: «Stop recording», красная, значок виден
++21 c    кнопка:  aria-label "Record", color rgb(255,255,255), значок пропал</code></pre>
+        <p>Что делает повторное нажатие в эти двадцать секунд — на чистом звонке видно по списку записей:</p>
+<pre><code>completed  начата 10:54:41  завершена 10:55:00  14 s   <- эту остановили
+recording  начата 10:55:03  не завершена           <- эту запустил повторный клик</code></pre>
+        <p>То есть подпись и цвет говорят «идёт запись, нажмите чтобы остановить», а действие под кнопкой уже переключилось на «начать запись». Пользователь уверен, что выключает запись, а включает вторую — и звонок продолжает записываться.</p>
+        <p>Этим же объясняется пара уведомлений, которые появляются одновременно: «Recording ready» от завершившейся записи и «This call is being recorded» вместе с «Recording started» от только что запущенной. На звонке, где записей уже пять, вместо новой появляется «This call already has the maximum number of recordings (5)» — тоже сообщение операции запуска, а не остановки.</p>
+        <p class="note">Воспроизведено три раза подряд, время до возврата кнопки в обычное состояние — 21 секунда в каждом прогоне.</p>
+        <div class="exp"><b>Как должно быть</b>Кнопка и значок записи должны возвращаться в обычное состояние сразу после подтверждения остановки — сервер отвечает за полсекунды. Пока состояние не подтверждено, кнопку разумно показывать неактивной, чтобы повторное нажатие ничего не запускало.</div>
+      </div>
+    </article>
+    <article class="item">
+      <div class="gut"><span class="id">BUG-2</span><span class="chip med">Medium</span><span class="area">frontend</span></div>
+      <div class="body">
+        <h3>Один заблокированный человек в списке отменяет приглашение всем остальным, и сообщение не говорит кому именно</h3>
+        <div class="path"><b>Путь</b>пусть человек Б заблокировал человека А <i>(<code>Settings</code> &rarr; <code>Privacy &amp; security</code>)</i> <i>&rarr;</i> человек А начинает звонок <i>&rarr;</i> <code>Add to call</code> <i>&rarr;</i> отметить <b>и Б, и любого другого коллегу</b> <i>(кнопка показывает <code>Invite (2)</code>)</i> <i>&rarr;</i> <code>Invite</code></div>
+        <p>Запрос падает целиком: <b>не приглашается никто</b>, а всплывающее сообщение говорит «These people cannot be invited to this call», не называя, кто именно виноват. Пользователь уверен, что позвал всех, — на самом деле не позвал никого.</p>
+<pre><code>POST /api/v1/meeting/{id}/invite  (двое отмечены)
+-> 400 {"key":"REALTIME_INVITE_USER_BLOCKED",
+        "message":"cannot invite a blocked user to the call"}
+
+интерфейс: «These people cannot be invited to this call»   (кого именно — не сказано)
+у второго приглашённого:  уведомления о звонке нет</code></pre>
+        <p>Контрольная проверка — тот же второй человек один, без заблокированного:</p>
+<pre><code>POST /api/v1/meeting/{id}/invite  (отмечен один)
+-> 204
+у него появляется уведомление о входящем звонке в этот же звонок</code></pre>
+        <p class="note">Дополнительно: чекбокс у заблокированного человека в списке остаётся активным, хотя приложение уже знает про блокировку — тех, кто уже в звонке, оно помечает <code>In call</code> и гасит чекбокс.</p>
+        <div class="exp"><b>Как должно быть</b>Приглашение должно уходить всем, кому можно; про остальных — отдельное сообщение с именами («такого-то пригласить не удалось»). Ещё лучше — сразу показывать таких людей в списке недоступными, как это уже сделано для тех, кто в звонке.</div>
+</div>
+    </article>
+    <article class="item">
+      <div class="gut"><span class="id">BUG-3</span><span class="chip med">Medium</span><span class="area">frontend</span></div>
+      <div class="body">
+        <h3>Гость, открывший ссылку раньше чем за 30 минут до встречи, попадает в тупик: одна строка без единой кнопки</h3>
+        <div class="path"><b>Путь</b>создать встречу в календаре и пригласить внешнего участника по email <i>&rarr;</i> открыть присланную ссылку <b>более чем за 30 минут</b> до начала <i>&rarr;</i> ввести имя <i>&rarr;</i> <code>Continue</code></div>
+        <p>Комната встречи открывается за 30 минут до начала. Если гость открывает ссылку внутри этого получаса, всё в порядке — ему показывают понятный экран ожидания. Если раньше — вся страница заменяется одной строкой, и на ней <b>не остаётся ни одной кнопки</b>.</p>
+<pre><code>гость открыл ссылку за 10 минут до начала (внутри окна):
+    «The host has not started the meeting yet»
+    «You will join automatically as soon as the meeting starts.»
+    [Leave]                                   <- состояние объяснено, выход есть
+
+гость открыл ссылку за 3 часа до начала (вне окна):
+    «The meeting has not started yet»
+    кнопок на странице: 0                     <- ни выхода, ни объяснения, ни повтора</code></pre>
+        <p>Замер сделан в чистом окне браузера; состояние держится и через 12 секунд, это не промежуточная отрисовка. Человек не понимает, ошибся ли он ссылкой, опоздал или пришёл слишком рано.</p>
+        <p>Кроме того, <b>ни один из двух экранов не называет встречу</b> — ни её темы, ни времени начала, ни организатора. Хотя сервер присылает всё это в том же ответе:</p>
+<pre><code>POST /api/v1/calendar/join -> 200
+{"state":"not_started",
+ "meeting":{"title":"…","starts_at":"…","ends_at":"…","timezone":"Asia/Tashkent", …}}</code></pre>
+        <p class="note">Для сравнения, гостевая ссылка <b>живого</b> звонка сразу пишет, куда человека зовут: «You are invited to “&lt;название&gt;”».</p>
+        <div class="exp"><b>Как должно быть</b>Экран ожидания, который уже есть внутри получасового окна, показывать и раньше — с названием встречи, датой и временем начала в часовом поясе гостя и указанием, с какого момента можно будет подключиться. Страница без единой кнопки не должна оставаться конечным состоянием.</div>
+</div>
+    </article>
+    <article class="item">
+      <div class="gut"><span class="id">BUG-4</span><span class="chip low">Low</span><span class="area">frontend</span></div>
+      <div class="body">
+        <h3>Тому, кто звонил, показывают «Missed call» — как будто пропустил он</h3>
+        <div class="path"><b>Путь</b><code>Directories</code> <i>&rarr;</i> <code>People</code> <i>&rarr;</i> у любого коллеги нажать <code>Call</code> <i>&rarr;</i> не отвечать на звонок с той стороны <i>&rarr;</i> дождаться, пока звонок завершится сам <i>(около 65 секунд)</i></p>
+        <p>Звонящему всплывает уведомление с тем же текстом, что и вызываемому: «Missed call». Для звонящего это неверно — он никого не пропускал, ему не ответили.</p>
+        <p>Правильная формулировка в приложении уже есть: в списке <code>Recent calls</code> та же запись подписана верно с обеих сторон.</p>
+<pre><code>у звонившего:   «Outbound · No answer · Aug 24, 02:27 PM · 1m»
+у вызываемого:  «Incoming · Missed · …»
+
+всплывающее уведомление у обоих: «Missed call»</code></pre>
+        <p class="note">То есть данные различают эти два случая, и только всплывающее уведомление у звонящего берёт чужой текст.</p>
+        <div class="exp"><b>Как должно быть</b>Звонящему — «Не отвечает» / «No answer», как это уже написано в <code>Recent calls</code>.</div>
+</div>
+    </article>
+
+
+
+
+
+
+
+
+
+
+  </div>
+</section>
+
+<footer>
+  Отчёт по итогам сессии тестирования звонков 24.08.2026, staging. 4 дефекта.
+  Дедуп проведён по открытым багам проекта ALK (Backlog / Ready / In Progress).
+</footer>
+
+</div>

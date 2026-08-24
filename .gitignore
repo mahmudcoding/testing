@@ -1,0 +1,18 @@
+.playwright-mcp/
+*.png
+
+# python venv for the seeder (created by seed/seed.sh outside the repo by default)
+qavenv/
+.venv/
+node_modules/
+node_modules/
+
+# local-only: credentials and machine-specific context
+.claude.local.md
+seed/.env.local
+*.env.local
+
+# python / node artefacts
+__pycache__/
+*.pyc
+scripts/callrig/node_modules
