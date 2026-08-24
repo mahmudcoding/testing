@@ -28,6 +28,8 @@ Cloned at `~/Projects/aloqa-src/{aloqa-frontend,aloqa-backend}` — outside this
 - `packages/features/` — `admin calendar calls chat files search settings` — maps almost 1:1 to product areas, so a diff tells you what to test. Commit messages carry ALK ids (`fix(calls): … (ALK-3359)`), so `git log <lastTestedTag>..HEAD` names exactly which tickets are waiting on verification.
 - Use the source to decide **where** to look and to add a root-cause pointer to a ticket (ALK tickets often carry a `Precise root cause` section naming files and lines). Don't derive expected behaviour from it — the testing itself stays black-box.
 - Source widens *where to look in the UI*, not what counts as testable: it does not pull headless surfaces into scope (see **Scope** above).
+- When a screen shows a 500 or a generic error, two files explain what it should have been: `platform/pkg/apperror/keys.go` (backend) lists every error key, and `apps/web/src/generated/openapi.json` (frontend) is the generated contract for the request behind the screen. Use them to root-cause what you saw, not as a list of things to go test.
+- Clone with `--filter=blob:none` if disk matters — a full backend clone is 1.4 GB.
 
 ## QA fixtures — use these accounts, don't create new ones
 
@@ -79,6 +81,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 - **Label every finding `[backend]` or `[frontend]`** immediately after the severity in the heading — `### BUG-N [High] [backend] title` — based on where the defect lives (an API 500 is backend; a clipped label or unreachable control is frontend).
 - The published report is bugs-only and written for developers who know nothing about the test setup — no account names, test call names, meeting/workspace/channel IDs, rig ports or fake-device labels. (The raw `AIRION-QA-<date>.md` log keeps full provenance, including verified-working notes.)
 - Each finding carries a click-by-click reproduction path with UI labels in **English** (the app is used in English) inside the Russian prose, plus a "Как должно быть" expected-behaviour block. Plain human wording — not "no-op", "accessible name", "оверлей". Severity lives in Jira's Priority field, not in the description text.
+- A finding that gets withdrawn stays in `AIRION-QA-<date>.md` with the reason and the measurement that killed it — otherwise a later session re-discovers it and files it again.
 - The app is in active development — cosmetic trivia gets trimmed at triage rather than filed. This filters what gets **written up**, not what gets **tested**: keep probing everything and keep every finding in `AIRION-QA-<date>.md`, then decide which ones earn a place in the report or an ALK ticket.
 - **Dedup against Jira before reporting.** Don't file or report anything already open in project **ALK** as `issuetype = Bug` with `status IN ("Backlog","Ready","In Progress")`.
 - Dedup by reading, not searching: `alk_open_bugs.py --print` and read every summary, then `--show <KEY>` for the full description of anything even loosely related. Titles and descriptions diverge often enough that keyword and stem matching misses real duplicates; `--grep` is for spot-checks only. Both stages read the cached dump, so only the first call hits Jira.
@@ -129,7 +132,7 @@ Credentials for Postgres, Redis, MinIO, SigNoz and SSH live in **`seed/.env.loca
 - Passwords are **bcrypt `$2a$`, cost 10**. Go's bcrypt rejects `htpasswd`'s `$2y$` — mint hashes with python `bcrypt.gensalt(rounds=10, prefix=b'2a')`.
 - System `pip3 install` is refused (PEP-668, externally-managed). Use a venv — `seed/seed.sh` already provisions one.
 - IDs are `generate_slack_id(prefix)` = prefix + 14 base36 chars: `U` user, `O` company, `W` workspace/workspace_member, `C` channel, `R` role, `K` company_member, `P` channel_member & role_permission. Membership tables all have `(scope, user)` unique keys, which is what makes the seed idempotent.
-- `psql "host=$QA_PGHOST port=$QA_PGPORT user=$QA_PGUSER dbname=org_db sslmode=require"` after sourcing `seed/.env.local` (**sslmode=require** is mandatory).
+- `psql`: source `seed/.env.local`, then **`export PGPASSWORD="$QA_PGPASS"`** — psql does not read `QA_PGPASS` and will sit on an interactive prompt without it. Then `psql "host=$QA_PGHOST port=$QA_PGPORT user=$QA_PGUSER dbname=<db> sslmode=require"` (**sslmode=require** is mandatory).
 
 ## App facts worth not rediscovering
 
@@ -153,6 +156,7 @@ Credentials for Postgres, Redis, MinIO, SigNoz and SSH live in **`seed/.env.loca
 - **Reproduce before writing up.** Run the same check at least twice and probe the boundary — different timing, entry point, settled vs fresh state — before describing behaviour as unconditional. Intermittent and state-gated defects read as absolute on a single run.
 - **Functional bugs come before security bugs.** The question that earns time is whether a feature does the right thing for the person using it — wrong results, silent failures, state that contradicts what the user was told. Deliberate authz and leak hunting is lower priority; don't open a session with it. A security or privacy defect found while testing normally is still logged and rated on its merits.
 - **Races are out of scope.** Don't construct scenarios where two actors act at the same instant, and don't build harnesses to provoke them — such findings are timing-dependent and land as tickets nobody can confirm. Sequential multi-account testing (A acts, then B observes) is not a race and stays in scope.
+- **Check whether staging is broken before blaming the product.** A 500 on a path the code clearly handles is often environment drift, not a defect: compare `schema_migrations` against the repo's migrations, and the live columns against what the failing query inserts. Getting this wrong files a Critical against code that is fine.
 - **Suspect the rig before the app.** A finding that depends on how the test was driven is not a finding: check window isolation, `document.visibilityState`, and whether a helper is hiding the truth (see `RTC_STATS`) before concluding the product is broken.
 
 ## Maintaining this file
