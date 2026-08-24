@@ -15,35 +15,23 @@ even that on disk.
 Bodies are written in Markdown and converted to ADF here. Supported: headings,
 paragraphs, fenced code, bullet/numbered lists, tables, **bold**, `code`.
 """
-import argparse, json, os, re, subprocess, sys, tempfile
+import argparse, json, os, re, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import jira_api
 
 CLOUD = "823c42fe-9add-4000-b9b6-0c64496759f8"
 PROJECT, ISSUETYPE = "ALK", "Bug"
 
 
 def twg(path, method="GET", body=None, out=None):
-    cmd = [os.path.expanduser("~/.local/bin/twg"), "api", f"jira:{path}", "-X", method]
-    if body is not None:
-        cmd += ["--input", "-"]        # without this twg sends no body and Jira 415s
-    if out:
-        cmd += ["--output-file", out]
-    p = subprocess.run(cmd, input=json.dumps(body) if body is not None else None,
-                       capture_output=True, text=True)
-    raw = open(out, encoding="utf-8").read() if out and os.path.exists(out) else p.stdout
+    """Kept for call-site compatibility; routes through the shared transport."""
     try:
-        d = json.loads(raw)
-    except json.JSONDecodeError:
-        if p.returncode == 0 and not raw.strip():
-            return {}                                    # 204, e.g. DELETE
-        sys.exit(f"twg {method} {path} failed (exit {p.returncode}): {(p.stderr or raw)[:300]}")
-    if isinstance(d, dict):
-        if d.get("ok") is False:
-            e = d.get("error") or {}
-            sys.exit(f"twg error {e.get('code','?')}: {e.get('message','')[:200]}")
-        if d.get("errorMessages"):
-            sys.exit("jira error: " + "; ".join(d["errorMessages"])[:300])
-        if isinstance(d.get("status"), int) and d["status"] >= 400:   # RFC7807 problem+json
-            sys.exit(f"jira {d['status']}: {d.get('title','')} — {d.get('detail','')}"[:300])
+        d = jira_api.call(path, method, body)
+    except jira_api.JiraError as e:
+        sys.exit(str(e))
+    if out:
+        json.dump(d, open(out, "w", encoding="utf-8"), ensure_ascii=False)
     return d
 
 

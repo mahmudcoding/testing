@@ -17,29 +17,21 @@ This mirrors the whole project once, then tops up by `updated >=` on later runs.
 
 Everything but `sync` is local and free.
 """
-import argparse, json, os, re, subprocess, sys, time
+import argparse, json, os, re, sys, time
 from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import jira_api
 
 CACHE = os.path.expanduser("~/.cache/aloqa-qa/alk-cache.json")
 PROJECT, PAGE = "ALK", 100
 
 
-def twg_post(path, body, out):
-    cmd = [os.path.expanduser("~/.local/bin/twg"), "api", f"jira:{path}",
-           "-X", "POST", "--input", "-", "--output-file", out]
-    subprocess.run(cmd, input=json.dumps(body), capture_output=True, text=True)
+def search(body):
     try:
-        d = json.load(open(out, encoding="utf-8"))
-    except Exception:
-        return {"__err": "unparseable response"}
-    if isinstance(d, dict):
-        if d.get("ok") is False:
-            return {"__err": (d.get("error") or {}).get("code", "twg error")}
-        if d.get("errorMessages"):
-            return {"__err": "; ".join(d["errorMessages"])[:160]}
-        if isinstance(d.get("status"), int) and d["status"] >= 400:
-            return {"__err": f"{d['status']} {d.get('title','')}"}
-    return d
+        return jira_api.call("/rest/api/3/search/jql", "POST", body)
+    except jira_api.JiraError as e:
+        return {"__err": str(e)}
 
 
 def adf_text(node, out):
@@ -59,7 +51,6 @@ def adf_text(node, out):
 def fetch(jql, label):
     """Page through a JQL, backing off when Jira throttles."""
     issues, token, page = {}, None, 0
-    tmp = CACHE + ".page"
     while True:
         page += 1
         body = {"jql": jql, "maxResults": PAGE,
@@ -67,7 +58,7 @@ def fetch(jql, label):
         if token:
             body["nextPageToken"] = token
         for attempt in range(6):
-            d = twg_post("/rest/api/3/search/jql", body, tmp)
+            d = search(body)
             if "__err" not in d:
                 break
             wait = 30 * (attempt + 1)
@@ -89,11 +80,8 @@ def fetch(jql, label):
         token = d.get("nextPageToken") if not d.get("isLast") else None
         if not token:
             break
-        time.sleep(1.5)                      # be polite; the burst is what trips the limit
-    try:
-        os.remove(tmp)
-    except OSError:
-        pass
+        if not jira_api.have_token():
+            time.sleep(1.5)                  # twg's limiter needs pacing; a token does not
     return issues
 
 
@@ -122,7 +110,7 @@ def cmd_sync(a):
     save(c)
     chars = sum(len(i.get("description") or "") for i in c["issues"].values())
     print(f"{label}: +{len(got)} → {len(c['issues'])} issues, {chars//1000}k chars, "
-          f"{time.time()-t0:.0f}s → {CACHE}", file=sys.stderr)
+          f"{time.time()-t0:.0f}s via {jira_api.transport()} → {CACHE}", file=sys.stderr)
 
 
 OPEN_BUG_STATUSES = {"backlog", "ready", "in progress"}   # TESTING == closed here
