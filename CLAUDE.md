@@ -15,16 +15,12 @@ Contents:
 - `seed/` — fixture seeder for staging (`seed.sh`, `seed_qa_fixtures.py`); see "QA fixtures".
 - `scripts/` — helper scripts. `jira_cache.py` mirrors the whole ALK project locally so ticket lookups cost no Jira calls (see Reporting); `jira.py` files and comments; `jira_api.py` is the REST transport both use; `callrig/` drives real WebRTC calls (see "Call testing rig").
 
-## Upstream: the product repos and the team's own QA process
+## Upstream: the product repos
 
 Source for the app under test, both private and readable with the local `gh` login:
 `AmirkhonMakhkamov/aloqa-frontend` (TypeScript pnpm monorepo) and `AmirkhonMakhkamov/aloqa-backend` (Go).
 Cloned at `~/Projects/aloqa-src/{aloqa-frontend,aloqa-backend}` — outside this repo, so nothing here tracks them. **Pull both before relying on them**, they go stale within hours: `for r in aloqa-frontend aloqa-backend; do git -C ~/Projects/aloqa-src/$r pull -q; done`
 
-- **Read `docs/qa/` in the frontend repo before inventing process here.** It already holds `p8-calls-qa-staging-checklist.md`, `staging-browser-evidence-runbook.md` and `2026-08-17-weekly-merged-pr-testing-progress.md`. The team's ship gate is **merged → QA green → Done**, so QA is expected to verify merged PRs rather than roam.
-- Their acceptance rule: a finding counts as evidence only when recorded against the **staging release tag and the SHA the build was cut from**. Put both in the session log and in any ticket filed.
-- Traces, videos, screenshots and `auth.*.json` are treated as raw sensitive artefacts — never attach them to Jira or GitHub; quote sanitized facts only.
-- Verdicts in their harness are `reproduced` / `not_reproduced` / `inconclusive`, where **`inconclusive` always means a missing precondition, never a pass**. Useful discipline for findings here too: name the precondition instead of calling a state absolute.
 - `packages/features/` — `admin calendar calls chat files search settings` — maps almost 1:1 to product areas, so a diff tells you what to test. Commit messages carry ALK ids (`fix(calls): … (ALK-3359)`), so `git log <lastTestedTag>..HEAD` names exactly which tickets are waiting on verification.
 - Use the source to decide **where** to look and to add a root-cause pointer to a ticket (ALK tickets often carry a `Precise root cause` section naming files and lines). Don't derive expected behaviour from it — the testing itself stays black-box.
 - Source widens *where to look in the UI*, not what counts as testable: it does not pull headless surfaces into scope (see **Scope** above).
@@ -67,7 +63,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 ## Start of a session
 
 1. `seed/seed.sh --verify` — confirms staging is reachable and the fixtures are intact. Then `GET /api/v1/auth/me` in each browser to learn which account it holds (sessions persist between runs).
-2. Record the deployed staging build — `curl -s https://airion-cargo.store/ | grep -o 'data-dpl-id="[^"]*"'`. It is in the server HTML only; the attribute is gone from the hydrated DOM, so read it with curl, not from the browser. Put it at the top of the session log. No equivalent stamp found for the backend.
+2. Record the deployed staging build — `curl -s https://airion-cargo.store/ | grep -o 'data-dpl-id="[^"]*"'`. It is in the server HTML only; the attribute is gone from the hydrated DOM, so read it with curl, not from the browser. Put it at the top of the session log — a finding is only reproducible if you know which build produced it. No equivalent stamp found for the backend.
 3. Settings → Account → Language → English on every account you'll use.
 4. `scripts/jira_cache.py sync` — mirrors every ALK ticket (all statuses and types, with descriptions) to `~/.cache/aloqa-qa/`. First run is a full fetch (~3.5 min, 35 paced pages); later runs top up by `updated >=` in about a second. Everything after that — `show`, `list`, `grep` — is local and free. Re-run `sync` once more before filing or writing the report: colleagues open tickets during a session, and the top-up costs a second. Comments are not mirrored, so reading a ticket's discussion is still a live call.
 5. Create `AIRION-QA-<date>.md` and log as you go — one `### BUG-N [Severity] [backend|frontend] title` block per finding, with the request/response or DOM measurement that proves it.
