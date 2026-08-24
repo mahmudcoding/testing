@@ -151,6 +151,8 @@ Credentials for Postgres, Redis, MinIO, SigNoz and SSH live in **`seed/.env.loca
 
 - **Measure, don't eyeball.** Every finding carries the request, response, or DOM measurement that proves it. Plausible-looking defects — slow loads, mispositioned elements, stray debug panels — have repeatedly evaporated under measurement.
 - **Reproduce before writing up.** Run the same check at least twice and probe the boundary — different timing, entry point, settled vs fresh state — before describing behaviour as unconditional. Intermittent and state-gated defects read as absolute on a single run.
+- **Functional bugs come before security bugs.** The question that earns time is whether a feature does the right thing for the person using it — wrong results, silent failures, state that contradicts what the user was told. Deliberate authz and leak hunting is lower priority; don't open a session with it. A security or privacy defect found while testing normally is still logged and rated on its merits.
+- **Races are out of scope.** Don't construct scenarios where two actors act at the same instant, and don't build harnesses to provoke them — such findings are timing-dependent and land as tickets nobody can confirm. Sequential multi-account testing (A acts, then B observes) is not a race and stays in scope.
 - **Suspect the rig before the app.** A finding that depends on how the test was driven is not a finding: check window isolation, `document.visibilityState`, and whether a helper is hiding the truth (see `RTC_STATS`) before concluding the product is broken.
 
 ## Maintaining this file
