@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A QA workspace for black-box testing **Aloqa**, the team-chat app at https://airion-cargo.store. This repo holds no application source and no build/lint/test tooling — the work is driving the live app through browser tools, recording findings, and publishing a report. Nothing here is meant to be built. **The product's source is available**, cloned outside this repo — see **Upstream** below for what it is for and what it is not for.
 **Scope: what a user can see and do.** Every test is something reachable through the interface — a click path a person could follow. API calls are instrumentation and proof for those paths (measuring the request behind a button, checking a boundary a user could hit), never the subject of testing on their own. Surfaces with no UI — background jobs and tickers, service-to-service gRPC, webhook handlers, endpoints no screen calls, migrations — are the developers' job, not this one. An endpoint no screen reaches is out of scope even when it is clearly untested.
+
 Contents:
 
 - `AIRION-QA-<date>.md` — the running bug log for a session (raw, one `### BUG-N [Severity] [backend|frontend] title` block per finding, plus "Verified working" sections).
@@ -33,7 +34,9 @@ Cloned at `~/Projects/aloqa-src/{aloqa-frontend,aloqa-backend}` — outside this
 ## QA fixtures — use these accounts, don't create new ones
 
 `seed/seed.sh` seeds a permanent, isolated fixture set on staging. It is idempotent: re-run it any time the data looks wrong and it repairs drift rather than duplicating. `seed/seed.sh --verify` reports state without writing. You should never need to hand-create QA users again.
+
 It auto-creates a venv at `~/.cache/aloqa-qa-venv` (psycopg + bcrypt); override with `QA_VENV=/path ./seed/seed.sh`.
+
 To add a user or channel, edit the `USERS` / `CHANNELS` / `ROLES` lists at the top of `seed/seed_qa_fixtures.py` (fixed IDs, 15 chars: prefix + 14 base36) and re-run — existing rows are untouched. Pin IDs only for things referenced by name (users, channels, roles, company, workspace); let membership and permission rows take their table defaults — deriving those IDs by hand collides, and the `(scope, user)` unique keys already make them idempotent.
 
 - Company **QA Fixtures** `O4QAF1XTURESO01`, workspace **QA Workspace** `W4QAF1XTURESO01` — an isolated clean room containing only `qa.*` accounts. Test here.
@@ -58,6 +61,7 @@ To add a user or channel, edit the `USERS` / `CHANNELS` / `ROLES` lists at the t
 | `#qa-archived` | `C4QAARCHIVE0001` | public, archived | owner, alice |
 
 Alice owning `#qa-private` but not `#qa-general` exercises channel-permission differences inside a single account: her own message shows Delete + Pin in the channel she owns and only "Hide for me" in the one she doesn't.
+
 Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) from older sessions — match fixtures by exact email or fixed id, never `LIKE 'qa.%'`.
 
 ## Start of a session
@@ -95,6 +99,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 - Log in at `/login` (email + password form); sign out via Profile → Sign out. Probe the API with `fetch('/api/v1/…', {credentials:'include'})` from inside a logged-in tab.
 - Cleanup is optional now that the workspace is disposable, but `seed/seed.sh` only repairs structure — it never deletes messages. If a channel gets too noisy, archive it and add a fresh one to the fixture. Note plain members can't delete their own messages (only channel owners can), so test messages tend to stay.
 - "Sign out other sessions" on an account logs out every browser using it — expect to re-login elsewhere.
+
 ### Browser tooling
 
 - Run **as many browsers as the scenario needs** — one per account is fine, and there are 8 fixture accounts. Each browser holds its own session, so a 3-way or 4-way test is just three or four logged-in tabs.
@@ -108,6 +113,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 - Measure layout defects, don't eyeball them: clipping = `scrollWidth > clientWidth` on leaf nodes; unreachable controls = `getBoundingClientRect().left >= innerWidth` with `documentElement.scrollWidth === innerWidth`; thread/pinned counts via the API.
 - The published artifact URL needs a claude.ai login (Playwright sees a 404). To eyeball the HTML, wrap it in `<!doctype html><html><body>…` in a temp folder and serve with `python3 -m http.server`; delete the folder after.
 - Session clock: `TZ=Asia/Tashkent date '+%Y-%m-%d %H:%M:%S %Z'` — the app and the team run on +05.
+
 ### Call testing rig (`scripts/callrig/`)
 
 - `scripts/callrig/launch.sh <profile> <cdp-port>` — one Chrome for Testing per account with `--use-fake-device/ui-for-media-stream`, started maximized, profile at `~/.cache/aloqa-callrig/<profile>`; drop `audio.wav` / `video.y4m` in that dir for per-user distinguishable media. The Chrome path is hardcoded to a Playwright cache build — update `CH` if that build is gone.
