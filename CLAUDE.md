@@ -1,21 +1,25 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## What this repo is
 
 A QA workspace for black-box testing **Aloqa**, the team-chat app at https://airion-cargo.store. This repo holds no application source and no build/lint/test tooling — the work is driving the live app through browser tools, recording findings, and publishing a report. Nothing here is meant to be built. **The product's source is available**, cloned outside this repo — see **Upstream** below for what it is for and what it is not for.
 **Scope: what a user can see and do.** Every test is something reachable through the interface — a click path a person could follow. API calls are instrumentation and proof for those paths (measuring the request behind a button, checking a boundary a user could hit), never the subject of testing on their own. Surfaces with no UI — background jobs and tickers, service-to-service gRPC, webhook handlers, endpoints no screen calls, migrations — are the developers' job, not this one. An endpoint no screen reaches is out of scope even when it is clearly untested.
 Contents:
+
 - `AIRION-QA-<date>.md` — the running bug log for a session (raw, one `### BUG-N [Severity] [backend|frontend] title` block per finding, plus "Verified working" sections).
 - `.playwright-mcp/` — auto-generated Playwright MCP snapshots/screenshots/console logs. Disposable; don't read through it for context.
 - `reports/` — HTML source of any published report. Write it here, publish with the Artifact tool, and record the resulting URL next to the file so a later session can pass it back as `url` and update in place; publishing without `url` creates a separate artifact. The tool can delete an artifact's *assets* but not the artifact itself — removing one is manual, via the claude.ai artifacts gallery.
 - `seed/` — fixture seeder for staging (`seed.sh`, `seed_qa_fixtures.py`); see "QA fixtures".
 - `scripts/` — helper scripts. `alk_open_bugs.py` dumps the open ALK bugs through `twg` for report dedup (see Reporting); `callrig/` drives real WebRTC calls (see "Call testing rig").
+
 ## Upstream: the product repos and the team's own QA process
 
 Source for the app under test, both private and readable with the local `gh` login:
 `AmirkhonMakhkamov/aloqa-frontend` (TypeScript pnpm monorepo) and `AmirkhonMakhkamov/aloqa-backend` (Go).
 Cloned at `~/Projects/aloqa-src/{aloqa-frontend,aloqa-backend}` — outside this repo, so nothing here tracks them. `git -C ~/Projects/aloqa-src/aloqa-frontend pull` before relying on them.
+
 - **Read `docs/qa/` in the frontend repo before inventing process here.** It already holds `p8-calls-qa-staging-checklist.md`, `staging-browser-evidence-runbook.md` and `2026-08-17-weekly-merged-pr-testing-progress.md`. The team's ship gate is **merged → QA green → Done**, so QA is expected to verify merged PRs rather than roam.
 - Their acceptance rule: a finding counts as evidence only when recorded against the **staging release tag and the SHA the build was cut from**. Put both in the session log and in any ticket filed.
 - Traces, videos, screenshots and `auth.*.json` are treated as raw sensitive artefacts — never attach them to Jira or GitHub; quote sanitized facts only.
@@ -25,13 +29,16 @@ Cloned at `~/Projects/aloqa-src/{aloqa-frontend,aloqa-backend}` — outside this
 - Source widens *where to look in the UI*, not what counts as testable: it does not pull headless surfaces into scope (see **Scope** above).
 - When a screen shows a 500 or a generic error, two files explain what it should have been: `platform/pkg/apperror/keys.go` (backend) lists every error key, and `apps/web/src/generated/openapi.json` (frontend) is the generated contract for the request behind the screen. Use them to root-cause what you saw, not as a list of things to go test.
 - Clone with `--filter=blob:none` if disk matters — a full backend clone is 1.4 GB.
+
 ## QA fixtures — use these accounts, don't create new ones
 
 `seed/seed.sh` seeds a permanent, isolated fixture set on staging. It is idempotent: re-run it any time the data looks wrong and it repairs drift rather than duplicating. `seed/seed.sh --verify` reports state without writing. You should never need to hand-create QA users again.
 It auto-creates a venv at `~/.cache/aloqa-qa-venv` (psycopg + bcrypt); override with `QA_VENV=/path ./seed/seed.sh`.
 To add a user or channel, edit the `USERS` / `CHANNELS` / `ROLES` lists at the top of `seed/seed_qa_fixtures.py` (fixed IDs, 15 chars: prefix + 14 base36) and re-run — existing rows are untouched. Pin IDs only for things referenced by name (users, channels, roles, company, workspace); let membership and permission rows take their table defaults — deriving those IDs by hand collides, and the `(scope, user)` unique keys already make them idempotent.
+
 - Company **QA Fixtures** `O4QAF1XTURESO01`, workspace **QA Workspace** `W4QAF1XTURESO01` — an isolated clean room containing only `qa.*` accounts. Test here.
 - **Password for every account: `QaPass123!`**, all `email_verified = true`, all timezone Asia/Tashkent.
+
 | account | id | in workspace | purpose |
 |---|---|---|---|
 | `qa.owner@aloqa.test` | `U4QAOWNER000001` | yes | company + workspace owner; owns #qa-general/#qa-empty/#qa-archived |
@@ -52,6 +59,7 @@ To add a user or channel, edit the `USERS` / `CHANNELS` / `ROLES` lists at the t
 
 Alice owning `#qa-private` but not `#qa-general` exercises channel-permission differences inside a single account: her own message shows Delete + Pin in the channel she owns and only "Hide for me" in the one she doesn't.
 Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) from older sessions — match fixtures by exact email or fixed id, never `LIKE 'qa.%'`.
+
 ## Start of a session
 
 1. `seed/seed.sh --verify` — confirms staging is reachable and the fixtures are intact. Then `GET /api/v1/auth/me` in each browser to learn which account it holds (sessions persist between runs).
@@ -60,6 +68,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 4. `scripts/alk_open_bugs.py --out <path>` once, up front — caches the open ALK bugs **with their descriptions** for the whole session, so dedup costs no further Jira calls. Re-run with `--refresh` before writing the report or filing, to catch tickets opened during the session.
 5. Create `AIRION-QA-<date>.md` and log as you go — one `### BUG-N [Severity] [backend|frontend] title` block per finding, with the request/response or DOM measurement that proves it.
 6. Severity: **Critical** = a feature is unusable (500s); **High** = wrong data, security/privacy, or a control that can't be reached; **Medium** = broken UX with a workaround; **Low** = cosmetic, copy, i18n.
+
 ## Session conventions
 
 ### Reporting
@@ -108,14 +117,17 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 - `snip/lib.mjs` exports `HOOK` (auto-injected — `window.__pcs`, `__gumCalls`, `__gdmCalls`), `RTC_STATS`, `UI_STATE`; ready-made snippets sit in `snip/`.
 - `RTC_STATS` collapses simulcast layers — it can report 0 outbound video for a participant who is streaming fine on a lower layer. Confirm from the *receiving* side (`framesDecoded` rising) before concluding media has stopped.
 - Prove media actually flows with `RTCPeerConnection.getStats()` (`bytesSent`, `framesDecoded`, `audioLevel`, `totalAudioEnergy`) rather than from the tiles on screen.
+
 ## Staging infrastructure
 
 Credentials for Postgres, Redis, MinIO, SigNoz and SSH live in **`seed/.env.local`** — gitignored, never committed (this repo's GitHub remote is public). `seed/seed.sh` sources it automatically; `cat seed/.env.local` when you need a value by hand. If it is missing, `.claude.local.md` documents the keys it must define.
+
 - A user only works if it exists in **all five** databases that hold user rows. `auth_db` is the identity of record (`password_hash`, `email_verified`); `org_db` owns companies/workspaces/channels/roles/memberships; `messaging_db`, `notification_db` and `realtime_db` keep replicas. `file_db` and `gateway_db` have none.
 - Passwords are **bcrypt `$2a$`, cost 10**. Go's bcrypt rejects `htpasswd`'s `$2y$` — mint hashes with python `bcrypt.gensalt(rounds=10, prefix=b'2a')`.
 - System `pip3 install` is refused (PEP-668, externally-managed). Use a venv — `seed/seed.sh` already provisions one.
 - IDs are `generate_slack_id(prefix)` = prefix + 14 base36 chars: `U` user, `O` company, `W` workspace/workspace_member, `C` channel, `R` role, `K` company_member, `P` channel_member & role_permission. Membership tables all have `(scope, user)` unique keys, which is what makes the seed idempotent.
 - `psql`: source `seed/.env.local`, then **`export PGPASSWORD="$QA_PGPASS"`** — psql does not read `QA_PGPASS` and will sit on an interactive prompt without it. Then `psql "host=$QA_PGHOST port=$QA_PGPORT user=$QA_PGUSER dbname=<db> sslmode=require"` (**sslmode=require** is mandatory).
+
 ## How the app is addressed
 
 - Routes: `/w/{ws}/c/{channelId}` channel, `/w/{ws}/d/{dmId}` DM, `/w/{ws}/chat/saved`, `/w/{ws}/chat/mentions`, `/w/{ws}/directories?tab=people|channels`, `/w/{ws}/calendar`, `/w/{ws}/calls`, `/w/{ws}/files`, `/w/{ws}/settings/{account|privacy|sessions|appearance|notifications|about}`. `?thread=<msgId>` opens a thread panel; `?m=<msgId>` deep-links a message.
@@ -132,6 +144,7 @@ Credentials for Postgres, Redis, MinIO, SigNoz and SSH live in **`seed/.env.loca
 - **Races are out of scope.** Don't construct scenarios where two actors act at the same instant, and don't build harnesses to provoke them — such findings are timing-dependent and land as tickets nobody can confirm. Sequential multi-account testing (A acts, then B observes) is not a race and stays in scope.
 - **Check whether staging is broken before blaming the product.** A 500 on a path the code clearly handles is often environment drift, not a defect: compare `schema_migrations` against the repo's migrations, and the live columns against what the failing query inserts. Getting this wrong files a Critical against code that is fine.
 - **Suspect the rig before the app.** A finding that depends on how the test was driven is not a finding: check window isolation, `document.visibilityState`, and whether a helper is hiding the truth (see `RTC_STATS`) before concluding the product is broken.
+
 ## Maintaining this file
 
 Two kinds of line, and nothing else:
