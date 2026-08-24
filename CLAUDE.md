@@ -17,6 +17,7 @@ Contents:
 
 Source for the app under test, both private and readable with the local `gh` login:
 `AmirkhonMakhkamov/aloqa-frontend` (TypeScript pnpm monorepo) and `AmirkhonMakhkamov/aloqa-backend` (Go).
+Cloned at `~/Projects/aloqa-src/{aloqa-frontend,aloqa-backend}` — outside this repo, so nothing here tracks them. `git -C ~/Projects/aloqa-src/aloqa-frontend pull` before relying on them.
 
 - **Read `docs/qa/` in the frontend repo before inventing process here.** It already holds `p8-calls-qa-staging-checklist.md`, `staging-browser-evidence-runbook.md` and `2026-08-17-weekly-merged-pr-testing-progress.md`. The team's ship gate is **merged → QA green → Done**, so QA is expected to verify merged PRs rather than roam.
 - Their acceptance rule: a finding counts as evidence only when recorded against the **staging release tag and the SHA the build was cut from**. Put both in the session log and in any ticket filed.

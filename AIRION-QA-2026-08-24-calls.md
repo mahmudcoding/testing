@@ -1127,3 +1127,69 @@ RC4OTR4D5J9ULX2F  recording  started 10:55:03  ended —                   <- э
 **Итог сессии.** В отчёте 4 дефекта, все заведены:
 ALK-3385 (High), ALK-3387 (Medium), ALK-3389 (Medium), ALK-3391 (Low).
 Плюс ALK-3386 (Medium) — заведён, но из отчёта убран, чтобы не дублировать тикет.
+
+## Корневая причина ALK-3123 (повторяющаяся встреча → 500): расхождение схемы на staging
+
+После клонирования репозиториев причина найдена — **дефекта в коде нет**.
+
+Код вставки правила повторения
+(`realtime-service/internal/features/v1/calendar/repository/recurrence_repo/create.go`):
+
+```sql
+INSERT INTO recurrence_rules
+  (frequency, interval_count, days_of_week, ends_at, occurrence_count, anchor_start)
+```
+
+Схема `realtime_db` на staging:
+
+```
+recurrence_rules: id, frequency, interval_count, days_of_week,
+                  ends_at, occurrence_count, created_at
+                  -- колонки anchor_start НЕТ
+```
+
+Колонку добавляет миграция `20260813120105_add_recurrence_anchor_start.up.sql`.
+При этом `schema_migrations` на staging показывает версию **20260821134237, dirty = f**,
+то есть база считает эту миграцию давно применённой. Колонки нет ни в одной схеме
+`realtime_db` (проверено по `information_schema.columns` без фильтра по схеме).
+
+Валидация в сервисе (`service/create.go:validateRecurrenceRule`) отрабатывает
+корректно и мою полезную нагрузку пропускает: `weekly`, `interval_count: 1`,
+`days_of_week: [1]` — все три ветки проверки проходят. Падение происходит ниже,
+на самом INSERT, и неперехваченная ошибка БД превращается в
+`500 INTERNAL_ERROR`, а не в предусмотренный `REALTIME_RECURRENCE_RULE_INVALID`.
+
+**Проверка на более широкий дрейф:** просмотрены все `ADD COLUMN` во всех
+миграциях realtime-service до применённой версии; отсутствует ровно одна колонка.
+Ещё два кандидата (`scheduled_meetings.requires_approval`, `.meeting_url`)
+оказались ложными — таблицу переименовали в `scheduled_events` миграцией
+`20260720130000`, и там обе колонки на месте.
+
+**Что это меняет.** Починка — не в календарном сервисе, а в приведении схемы
+staging в соответствие: `ALTER TABLE recurrence_rules ADD COLUMN anchor_start TIMESTAMPTZ;`
+плюс бэкфилл из миграции. И на проде, если схема там корректна, дефекта, скорее
+всего, нет вовсе — то есть Critical у ALK-3123 может быть завышен.
+
+## Уточнение к ALK-3368 (перебор пароля звонка)
+
+Тикет верен, но недоговаривает. В `api-gateway/internal/core/app/app.go` есть
+отдельное строгое семейство лимитов «публичных и брутфорсибельных роутов»,
+и в комментарии к нему прямо назван **подбор пароля**:
+
+```
+WithRoute("/api/v1/auth/login/user",      "auth-login",           20/мин)
+WithRoute("/api/v1/security/2fa/login",   "auth-2fa-login",       20/мин)
+WithRoute("/api/v1/meeting/guest/join",   "meeting-guest-join",   10/мин)
+WithRoute("/api/v1/meeting/guest/preview","meeting-guest-preview",10/мин)
+```
+
+`POST /api/v1/meeting/{id}/join` — тот самый путь, где проверяется пароль встречи
+для **авторизованного** пользователя, — в этот список не входит и попадает под
+общий лимит `300 запросов / 10 секунд`. Это защита от флуда, а не от перебора.
+
+В `service/password_gate.go:checkMeetingPassword` счётчика попыток тоже нет:
+сравнение bcrypt и возврат ошибки, без задержки и без учёта неудач.
+
+То есть гостевой вход от перебора закрыт, а авторизованный — нет, при одинаковом
+риске. Формулировка для тикета: не «лимитов нет вовсе», а «строгое семейство
+покрывает guest join и не покрывает authenticated join».
