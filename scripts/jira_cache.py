@@ -11,7 +11,7 @@ This mirrors the whole project once, then tops up by `updated >=` on later runs.
   scripts/jira_cache.py sync                  # first run full, then incremental
   scripts/jira_cache.py sync --full           # force a complete re-fetch
   scripts/jira_cache.py show ALK-3123
-  scripts/jira_cache.py list --status Done --since 7d
+  scripts/jira_cache.py list --open-bugs          # the dedup scope
   scripts/jira_cache.py list --keys ALK-3359,ALK-3358
   scripts/jira_cache.py grep 'recurrence'     # over summary + description
 
@@ -125,8 +125,14 @@ def cmd_sync(a):
           f"{time.time()-t0:.0f}s → {CACHE}", file=sys.stderr)
 
 
+OPEN_BUG_STATUSES = {"backlog", "ready", "in progress"}   # TESTING == closed here
+
+
 def rows(c, a):
     out = list(c["issues"].values())
+    if getattr(a, "open_bugs", False):
+        out = [i for i in out if (i["type"] or "").lower() == "bug"
+               and (i["status"] or "").lower() in OPEN_BUG_STATUSES]
     if getattr(a, "keys", None):
         want = {k.strip().upper() for k in a.keys.split(",")}
         out = [i for i in out if i["key"].upper() in want]
@@ -150,6 +156,9 @@ def main():
     for p in (li,):
         p.add_argument("--status"); p.add_argument("--type")
         p.add_argument("--since", help="e.g. 7d"); p.add_argument("--keys")
+        p.add_argument("--open-bugs", action="store_true",
+                       help="the dedup scope: Bugs in Backlog/Ready/In Progress. "
+                            "TESTING means closed in this project and is excluded.")
     g = sub.add_parser("grep"); g.add_argument("pattern")
     a = ap.parse_args()
 
