@@ -2,6 +2,8 @@
 
 Session start 13:22 Asia/Tashkent. RUN UNTIL 18:00.
 Workspace: QA Workspace (`W4QAF1XTURESO01`). Fixtures verified clean at start.
+Сборка staging на момент сессии: **v0-60-0-rc-16-bf2e6621eeea** (frontend).
+Определяется из серверного HTML: `curl -s https://airion-cargo.store/ | grep -o 'data-dpl-id="[^"]*"'`.
 
 Prior session 2026-08-23 filed 7 defects (ALK-3368, 3369, 3371, 3372, 3373, 3374, 3375).
 This pass targets surface **not** covered then, to avoid re-treading:

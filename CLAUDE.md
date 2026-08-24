@@ -13,6 +13,18 @@ Contents:
 - `seed/` — fixture seeder for staging (`seed.sh`, `seed_qa_fixtures.py`); see "QA fixtures".
 - `scripts/` — helper scripts. `alk_open_bugs.py` dumps the open ALK bugs through `twg` for report dedup (see Reporting); `callrig/` drives real WebRTC calls (see "Call testing rig").
 
+## Upstream: the product repos and the team's own QA process
+
+Source for the app under test, both private and readable with the local `gh` login:
+`AmirkhonMakhkamov/aloqa-frontend` (TypeScript pnpm monorepo) and `AmirkhonMakhkamov/aloqa-backend` (Go).
+
+- **Read `docs/qa/` in the frontend repo before inventing process here.** It already holds `p8-calls-qa-staging-checklist.md`, `staging-browser-evidence-runbook.md` and `2026-08-17-weekly-merged-pr-testing-progress.md`. The team's ship gate is **merged → QA green → Done**, so QA is expected to verify merged PRs rather than roam.
+- Their acceptance rule: a finding counts as evidence only when recorded against the **staging release tag and the SHA the build was cut from**. Put both in the session log and in any ticket filed.
+- Traces, videos, screenshots and `auth.*.json` are treated as raw sensitive artefacts — never attach them to Jira or GitHub; quote sanitized facts only.
+- Verdicts in their harness are `reproduced` / `not_reproduced` / `inconclusive`, where **`inconclusive` always means a missing precondition, never a pass**. Useful discipline for findings here too: name the precondition instead of calling a state absolute.
+- `packages/features/` — `admin calendar calls chat files search settings` — maps almost 1:1 to product areas, so a diff tells you what to test. Commit messages carry ALK ids (`fix(calls): … (ALK-3359)`), so `git log <lastTestedTag>..HEAD` names exactly which tickets are waiting on verification.
+- Use the source to decide **where** to look and to add a root-cause pointer to a ticket (ALK tickets often carry a `Precise root cause` section naming files and lines). Don't derive expected behaviour from it — the testing itself stays black-box.
+
 ## QA fixtures — use these accounts, don't create new ones
 
 `seed/seed.sh` seeds a permanent, isolated fixture set on staging. It is idempotent: re-run it any time the data looks wrong and it repairs drift rather than duplicating. `seed/seed.sh --verify` reports state without writing. You should never need to hand-create QA users again.
@@ -49,10 +61,11 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 ## Start of a session
 
 1. `seed/seed.sh --verify` — confirms staging is reachable and the fixtures are intact. Then `GET /api/v1/auth/me` in each browser to learn which account it holds (sessions persist between runs).
-2. Settings → Account → Language → English on every account you'll use.
-3. `scripts/alk_open_bugs.py --out <path>` once, up front — caches the open ALK bugs **with their descriptions** for the whole session, so dedup costs no further Jira calls. Re-run with `--refresh` before writing the report or filing, to catch tickets opened during the session.
-4. Create `AIRION-QA-<date>.md` and log as you go — one `### BUG-N [Severity] [backend|frontend] title` block per finding, with the request/response or DOM measurement that proves it.
-5. Severity: **Critical** = a feature is unusable (500s); **High** = wrong data, security/privacy, or a control that can't be reached; **Medium** = broken UX with a workaround; **Low** = cosmetic, copy, i18n.
+2. Record the deployed staging build — `curl -s https://airion-cargo.store/ | grep -o 'data-dpl-id="[^"]*"'` → e.g. `v0-60-0-rc-16-bf2e6621eeea`. It is in the server HTML only; the attribute is gone from the hydrated DOM, so read it with curl, not from the browser. Put it at the top of the session log. No equivalent stamp found for the backend. [24.08.26]
+3. Settings → Account → Language → English on every account you'll use.
+4. `scripts/alk_open_bugs.py --out <path>` once, up front — caches the open ALK bugs **with their descriptions** for the whole session, so dedup costs no further Jira calls. Re-run with `--refresh` before writing the report or filing, to catch tickets opened during the session.
+5. Create `AIRION-QA-<date>.md` and log as you go — one `### BUG-N [Severity] [backend|frontend] title` block per finding, with the request/response or DOM measurement that proves it.
+6. Severity: **Critical** = a feature is unusable (500s); **High** = wrong data, security/privacy, or a control that can't be reached; **Medium** = broken UX with a workaround; **Low** = cosmetic, copy, i18n.
 
 ## Session conventions
 
