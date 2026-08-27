@@ -518,7 +518,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     func toolbarDefaultItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
         var ids: [NSToolbarItem.Identifier] = [AppDelegate.idList]
-        ids += [.flexibleSpace, AppDelegate.idClose, AppDelegate.idVerdict]
+        ids += [.flexibleSpace, AppDelegate.idRepro, AppDelegate.idClose,
+                AppDelegate.idVerdict]
         return ids
     }
 
