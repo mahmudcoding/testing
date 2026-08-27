@@ -35,7 +35,13 @@ button{font:inherit;color:inherit;margin:0}
   border:3px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-track{background:transparent}
 
-.pane{max-width:660px;padding:22px 30px 34px}
+/* --inset is the width of the native sidebar when it is open. It is an overlay,
+   so without this it simply covers the first 250px of every line; the column is
+   660px in a window twice that, so there is room to step aside. */
+.pane{max-width:min(660px,calc(100vw - var(--inset,0px) - 60px));
+  margin-left:var(--inset,0px);padding:22px 30px 34px;
+  transition:margin-left .2s ease,max-width .2s ease}
+@media (prefers-reduced-motion:reduce){.pane{transition:none}}
 .empty{max-width:420px;margin:20vh auto;text-align:center;color:var(--label-2);
   line-height:1.6}
 
@@ -105,7 +111,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
 
 <script>
 let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={}, HANDOFF={};
-const TILE_LEFT=640;          // points this window keeps; the rig takes the rest
+const TILE_LEFT=480;          // points this window keeps; the rig takes the rest
 // V: verdicts. X: should-be rewrites. Both live on the server, not in
 // localStorage: the bench takes a free port on every launch and localStorage is
 // keyed by origin, port included, so browser-side state died with every restart.
@@ -316,6 +322,7 @@ async function saveRecord(){
 
 // called from AppKit
 window.__select=i=>{cur=i;render();};
+window.__inset=px=>document.documentElement.style.setProperty('--inset',px+'px');
 window.__repro=doRepro;
 window.__verdict=verdict;
 window.__save=saveRecord;

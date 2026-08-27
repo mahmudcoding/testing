@@ -295,6 +295,9 @@ final class RootVC: NSViewController {
     private let edge  = NSView()
     private var leading: NSLayoutConstraint!
     private(set) var isOpen = false
+    /// The list is an overlay, so it covers the content underneath it. Whoever
+    /// owns that content gets told to step aside by this much.
+    var onOpenChanged: ((CGFloat) -> Void)?
     static let width: CGFloat = 250
 
     init(detail: NSViewController, list: NSViewController) {
@@ -394,6 +397,7 @@ final class RootVC: NSViewController {
     func setOpen(_ open: Bool) {
         guard open != isOpen else { return }
         isOpen = open
+        onOpenChanged?(open ? RootVC.width : 0)
         if open { shade.isHidden = false }
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.2
@@ -582,7 +586,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         window.contentViewController = root
         // assigning contentViewController resizes the window to the view
         // controller's own size, so contentRect above does not survive it
-        window.minSize = NSSize(width: 520, height: 460)
+        window.minSize = NSSize(width: 420, height: 460)
 
         let tb = NSToolbar(identifier: "main")
         tb.delegate = self
@@ -595,11 +599,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         let restored = window.setFrameUsingName("ReproducerMain")
         window.makeKeyAndOrderFront(nil)
         if !restored {
-            window.setContentSize(NSSize(width: 1020, height: 700))
+            window.setContentSize(NSSize(width: 1180, height: 760))
             window.center()
         }
         NSApp.activate(ignoringOtherApps: true)
 
+        root.onOpenChanged = { [weak self] inset in
+            self?.web.evaluateJavaScript("window.__inset && __inset(\(Int(inset)))")
+        }
         sidebar.onSelect = { [weak self] i in
             self?.web.evaluateJavaScript("window.__select && __select(\(i))")
             self?.root.setOpen(false)      // an overlay gets out of the way once used
@@ -730,7 +737,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         if let cmd = d["cmd"] as? String {
             switch cmd {
             case "tile":
-                tileLeft(CGFloat(d["width"] as? Double ?? 640))
+                tileLeft(CGFloat(d["width"] as? Double ?? 480))
                 return
             case "saved":
                 let a = NSAlert()
