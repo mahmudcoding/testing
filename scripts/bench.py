@@ -18,7 +18,7 @@ A finding is reproducible when its report carries a repro block:
 
 Findings without one still open positioned; the bench says what is left to do.
 """
-import os, sys, re, json, html, shutil, subprocess, datetime, threading, webbrowser
+import os, sys, re, json, glob, html, shutil, subprocess, datetime, threading, webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -60,13 +60,62 @@ _repair_path()
 
 PORT = int(os.environ.get("BENCH_PORT", "8777"))
 SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
-REPORTS = [
-    ("A", "Calls · inside",       "reports/aloqa-calls-inside-qa-2026-08-26-A.html"),
-    ("B", "Calls · around",       "reports/aloqa-calls-around-qa-2026-08-26-B.html"),
-    ("C", "Chat",                 "reports/aloqa-chat-qa-2026-08-26-C-2.html"),
-    ("D", "Org · identity",       "reports/aloqa-org-qa-2026-08-26-D-2.html"),
-    ("E", "Workspace · calendar", "reports/aloqa-workspace-qa-2026-08-26-E-2.html"),
-]
+# One report per lane. PINNED is the set someone chose; discovery only overrides
+# a pin when it finds something STRICTLY newer, so a new report is picked up
+# without a code change and today's set can never be silently swapped for a
+# different one. That distinction is load-bearing: lane A has two reports of the
+# same date with no revision suffix — nine findings and one — separated only by
+# mtime, which a git checkout rewrites. Ranking alone would coin-flip between
+# them, and a wrong auto-pick looks exactly like a right one from inside the app.
+PINNED = {
+    "A": "reports/aloqa-calls-inside-qa-2026-08-26-A.html",
+    "B": "reports/aloqa-calls-around-qa-2026-08-26-B.html",
+    "C": "reports/aloqa-chat-qa-2026-08-26-C-2.html",
+    "D": "reports/aloqa-org-qa-2026-08-26-D-2.html",
+    "E": "reports/aloqa-workspace-qa-2026-08-26-E-2.html",
+}
+LANE_NAMES = {"A": "Calls · inside", "B": "Calls · around", "C": "Chat",
+              "D": "Org · identity", "E": "Workspace · calendar"}
+# aloqa-<area>-qa-<YYYY-MM-DD>-<LANE>[-<rev>].html
+REPORT_RE = re.compile(
+    r"aloqa-(?P<area>.+)-qa-(?P<date>\d{4}-\d{2}-\d{2})-(?P<lane>[A-Z])(?:-(?P<rev>\d+))?\.html$")
+
+
+def _rank(path):
+    m = REPORT_RE.search(os.path.basename(path))
+    return (m["date"], int(m["rev"] or 0)) if m else None
+
+
+def _pick_reports(log=print):
+    """The newest report per lane, unless the pin is already at least that new."""
+    found = {}
+    for path in sorted(glob.glob(os.path.join(REPO, "reports", "aloqa-*.html"))):
+        rel = os.path.relpath(path, REPO)
+        m = REPORT_RE.search(os.path.basename(rel))
+        if m:
+            found.setdefault(m["lane"], []).append(rel)
+
+    out = []
+    for lane in sorted(set(PINNED) | set(found)):
+        cands = found.get(lane, [])
+        pin = PINNED.get(lane)
+        pin_ok = pin and os.path.exists(os.path.join(REPO, pin))
+        newest = max(cands, key=_rank, default=None)
+        if pin_ok and (not newest or _rank(newest) <= _rank(pin)):
+            chosen, why = pin, ""
+        elif newest:
+            chosen = newest
+            why = ("  <- newer than the pinned %s" % os.path.basename(pin)) if pin_ok \
+                  else "  <- pinned report is missing"
+        else:
+            log(f"  lane {lane}: no report found, skipping")
+            continue
+        out.append((lane, LANE_NAMES.get(lane, lane), chosen))
+        log(f"  lane {lane}: {os.path.basename(chosen)}{why}")
+    return out
+
+
+REPORTS = _pick_reports(log=lambda *_: None)
 ACCOUNT = {'company owner':'owner','workspace owner':'owner','company admin':'admin',
            'plain member':'bob','second account':'carol','second browser':'carol',
            'guest':'guest','member in no channel':'dave','outside the workspace':'outsider',
@@ -392,6 +441,10 @@ if __name__ == "__main__":
     threading.Thread(target=load, daemon=True).start()
     print(f"\n  Review")
     print(f"  http://127.0.0.1:{PORT}\n")
+    # Say which five it chose. An auto-pick that goes unannounced is
+    # indistinguishable from the right one until someone judges the wrong report.
+    _pick_reports()
+    print()
     print("  Reproduce launches real browsers on your machine. Ctrl-C to stop.\n")
     if not os.environ.get("BENCH_NO_BROWSER"):      # the .app hosts its own window
         threading.Timer(0.8, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
