@@ -15,6 +15,7 @@ Contents:
 - `.playwright-mcp/` — auto-generated Playwright MCP snapshots/screenshots/console logs. Disposable; don't read through it for context.
 - `reports/` — HTML source of any published report. Write it here, publish with the Artifact tool, and record the resulting URL next to the file so a later session can pass it back as `url` and update in place; publishing without `url` creates a separate artifact. The tool can delete an artifact's *assets* but not the artifact itself — removing one is manual, via the claude.ai artifacts gallery. Reports share one stylesheet: start a new one by copying the previous report's file through `</style>`, then write your own `<body>` content under it.
 - `seed/` — fixture seeder for staging (`seed.sh`, `seed_qa_fixtures.py`); see "QA fixtures".
+- `verifications/` — what a person judged, one file per day: `verification-<date>.md` from Review's File → Save Record, `verification-<lane>-<date>.md` from `scripts/verify_run.py`. Both overwrite rather than append, and both regenerate from the whole current state, so pressing save twice costs nothing.
 - `scripts/hooks/` — project hooks. `sector_context.py` runs on every prompt and expands a named sector into its scope from `SECTORS.md`; silent when no sector is named, and fails open.
 - `scripts/` — helper scripts. `jira_cache.py` mirrors the whole ALK project locally so ticket lookups cost no Jira calls (see Reporting); `jira.py` files and comments; `jira_api.py` is the REST transport both use; `callrig/` drives real WebRTC calls (see "Call testing rig"); `bench.py` serves Review and drives a finding's snippet; `check_repro.py` and `verify_snippets.py` check the repro blocks statically and by running them (see Reporting).
 - `macapp/` — Review, the Mac app a person judges findings in. `build.sh` builds it into `~/Applications`; the chrome is AppKit and only the detail pane is the page in `reports/tools/bench-ui.html`.
@@ -136,10 +137,21 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
   nothing. Refusing is the contract working, not a failure.
 
   **Review** (`~/Applications/Review.app`, built by `macapp/build.sh`) is what a person uses:
-  it presses the snippet, tiles itself against the browser, ticks the steps live, and records
+  it presses the snippet, parks the browser beside itself, ticks the steps live, and records
   confirmed / not-a-bug into `verifications/verification-<date>.md` via File → Save Record. It carries **only findings
   whose snippet exists on disk** — no block means the finding is not in the app at all (`BENCH_ALL=1`
   overrides). `scripts/bench.py` is the same thing headless.
+
+  It reads one report per lane, choosing the newest `aloqa-<area>-qa-<date>-<LANE>[-<rev>].html` it
+  finds. A pinned set in `bench.py` is the floor: discovery only wins when it is strictly newer, because
+  two reports of the same date and revision cannot be ranked and a wrong pick reads exactly like a right
+  one from inside the app. The five it settled on are printed at startup — pass `BENCH_TILE_LEFT` to
+  change how much width the app keeps for itself.
+
+  Judging is kept in `~/.cache/aloqa-qa/reproducer-state.json`, not in the reports: the verdict, any
+  re-rated priority, and any rewritten «Ожидаемый результат». It saves itself as you work, survives a
+  restart, and is never written back into the report HTML — Save Record is what turns it into a file.
+  Changing one twice overwrites it, so the state is what you currently think, never a history.
 
   Two checks, and they answer different questions. `python3 scripts/check_repro.py` is static and
   instant: every block names a file that exists, honours the contract and carries its lane prefix.

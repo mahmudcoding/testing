@@ -2511,3 +2511,45 @@ you are assuming has to be recorded *beside* the number, not established once be
 It blocks new connections only. A block applied after the socket is open leaves the client fully
 connected while every indicator you would think to check says the block is in force. Routed rather
 than written, with the `setOffline` diff and the per-CDP-session note.
+
+---
+
+## 2026-08-27 — from the verification tooling
+
+### 23 · Twelve findings are right about a real bug and wrong in a detail
+
+The reverify pass flagged twelve where the defect holds but something beside it does not: a count, a
+quoted string, a title claiming more than the measurement shows. They are listed in the lane logs. None
+is filed, so nothing has reached a developer — but the detail is what a developer acts on first, and a
+wrong count beside a real finding is how the finding stops being believed.
+
+**Decision:** correct them in place before any of the twelve is filed, or leave them and correct at
+filing time. Correcting in place means re-publishing five reports.
+
+### 24 · Lane D's report disagrees with itself in one row
+
+`scripts/verify_report.py` reports a TITLE/ROW MISMATCH on `aloqa-org-qa-2026-08-26-D-2.html`, and lane
+D separately flagged one of its own counts as wrong (says 0 interactive elements where 2 were
+measured). Pre-existing, not a substitution — but both are in a published report.
+
+**Decision:** fix and republish D, or carry the mismatch.
+
+### 25 · What happens to a priority you change in Review
+
+Re-rating a finding writes to `~/.cache/aloqa-qa/reproducer-state.json` and shows up in
+`verifications/verification-<date>.md`. It does **not** touch the report HTML, so a report published
+today keeps the old severity for anyone reading it.
+
+**Decision:** whether a judging pass should fold its re-ratings and rewritten «Ожидаемый результат»
+back into the reports afterwards. It is a mechanical edit and I can do it, but it rewrites published
+documents, so it is yours to say.
+
+### 26 · Real 80% zoom in the rig browsers
+
+The rig page at 100% in a 1440px window shows less than it could. CSS zoom cannot do it — viewport
+units do not rescale, so the app paints at 80% inside a full-size window and leaves a band. Real browser
+zoom would work and is a Chrome launch flag (`--force-device-scale-factor`), because CDP Emulation
+overrides are dropped when the session detaches.
+
+**Decision:** whether to take it. It changes the device scale factor for **every** rig browser, and all
+88 snippets were verified at the default, so it wants a re-verification pass behind it.

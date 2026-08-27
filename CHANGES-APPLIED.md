@@ -3213,3 +3213,99 @@ filed in Jira.
 
 Contributed two of the queue's most consequential items — the guest-fixture over-privilege and the
 search-index gap — plus five self-corrections and the only checker anyone built.
+
+---
+
+# 2026-08-27
+
+## The app a person judges in — renamed Reproducer → Review
+
+**What** · 25 occurrences across `macapp/`, `scripts/bench.py`, `reports/tools/bench-ui.html` and the
+docs. The Reproduce button keeps its name — that is the action, not the app. Old
+`~/Applications/Reproducer.app` removed so there is one bundle.
+**Why** · Asked for. "Reproducer" described the half the app does not do: it stops one action short of
+the defect on purpose and leaves that action to the person.
+**Verified** · Built, relaunched, no stale references anywhere.
+**Reverted?** · No.
+
+## `scripts/bench.py` — node was missing whenever the app was opened normally
+
+**What** · `_repair_path()` puts the usual homebrew locations, then the login shell's, back on PATH at
+startup. If node genuinely is not there the app says so instead of blaming the rig.
+**Why** · A GUI app launched from Finder, the Dock or `open` inherits launchd's PATH, which has no
+homebrew. `ensure.sh` is driven by node, so it died on "node: command not found" and the app reported
+"The rig did not come up" — a browser problem that did not exist, on **every** finding. It worked
+whenever the binary was started from a terminal, which is how it was always tested, so the failure was
+invisible from the inside.
+**Reported by** · Mahmud, twice, as "setup failed".
+**Verified** · Reconstructed the failure with `env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin` and watched
+`ensure.sh` fail exactly as reported; then relaunched through `open` and drove findings from two lanes
+over the app's own API — both reproduced.
+**Reverted?** · No.
+
+## `scripts/bench.py` — one retry before declaring the rig down
+
+**What** · `ensure.sh` gets a second attempt; the message says "twice" when both fail, and the log
+carries both.
+**Why** · Bringing a browser up fails transiently — a fresh Chrome with no CDP page target yet, a port
+a dying one still holds — and `ensure.sh` repairs only what is missing, so a second go is cheap.
+**Verified** · Both paths watched with `run()` stubbed: two attempts when it never recovers, one
+recovery that carries the run past the browsers stage.
+**Reverted?** · No.
+
+## `scripts/bench.py` — the server outlived the app
+
+**What** · A watchdog thread exits when the parent process goes away.
+**Why** · The app stops the server in `applicationWillTerminate`, which a hard kill never runs. Fourteen
+orphans accumulated in one afternoon of rebuilds, all parsing reports, until a fresh launch was slow
+enough that the app sat on "Taking longer than usual". Self-inflicted by the rebuild loop, but it would
+bite anyone force-quitting.
+**Verified** · Started the server from a shell, killed the shell with `-9`, watched the server exit.
+**Reverted?** · No.
+
+## `scripts/verify_queue.py` — the parser was dropping whole sections
+
+**What** · Section blocks are matched as `class="block..."`, not the bare `class="block"`.
+**Why** · Reports carry modifier classes (`block expect`, `block triage`) and every section inside one
+was invisible. **«Ожидаемый результат» was missing from 52 of the 88 findings** — lane C lost all 30,
+lane B 11 of 12 — and six findings whose result is a measurement with no prose rendered with nothing
+said at all.
+**Reported by** · Mahmud, as "where is the SHOULD BE block?".
+**Verified** · 36/88 → 88/88, counted per lane. Reported now falls back to «Проблема», and the editable
+Should be always renders so there is something to write into.
+**Reverted?** · No.
+
+## `scripts/bench.py` — reports are discovered, not hardcoded
+
+**What** · Newest `aloqa-<area>-qa-<date>-<LANE>[-<rev>].html` per lane, with the previous five kept as
+a floor: discovery only wins when strictly newer. The chosen set prints at startup.
+**Why** · Publishing a new report changed nothing until someone edited `bench.py`, and nothing said so.
+**Verified** · Watched both paths fire — a 2026-08-28 report and a `-C-3` revision were each picked up
+and labelled, other lanes unmoved, temp files removed. The floor is what stops a coin flip: lane A has
+two reports of the same date and revision, nine findings and one, separable only by mtime, which a git
+checkout rewrites.
+**Reverted?** · No.
+
+## `snip/a-side-askreturn.mjs` — the last snippet that would not verify
+
+**What** · Closes the host's Side Rooms panel before reading the row menu, and records `rowMenuOpened`
+so an empty menu can no longer be confused with a menu that never opened.
+**Why** · The host creates the side room, so his Side Rooms panel stays open and covers the call
+toolbar; the Participants button is present but unclickable, `openPeople` returns having done nothing,
+and the row menu reads empty. The product was never involved — the finding's own measurement had used
+that very menu.
+**Verified** · Twice from a reset state. **88 of 88 snippets now reach their screen.**
+**Reverted?** · No. Trap recorded in `scripts/callrig/SELECTORS.md`.
+
+## Review — what a person can do with a finding
+
+**What** · Priority is a control, not a label: re-rate a finding and the choice is stored beside the
+verdict; choosing the report's own rating clears the override rather than storing it. The crumb shows
+Frontend/Backend from the `[FE-WEB]`/`[BE]` tag instead of the lane name, which named the test setup.
+Records moved to `verifications/`. Previous/next in the toolbar; the verdicts are a checkmark and a
+cross; the steps caption says how many steps the script was ever going to do.
+**Why** · All asked for. The steps one matters most: one tick and two blanks read as "it stopped",
+when it was a successful hand-over — the remaining steps are the judging itself.
+**Verified** · Drove each control and read the state file back, including the clear-the-override path.
+**Reverted?** · Two attempts were: an 80% page zoom (CSS zoom does not rescale viewport units, so the
+app laid out at 80% inside a full-size window) and the window growing while the list is open.

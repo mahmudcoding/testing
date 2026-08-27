@@ -156,7 +156,14 @@ leftover camera line from the control above, already present at 3 ms.
 Guest half (403) not re-measured yet — see BUG-8 work below.
 
 Repro snippet: `scripts/callrig/snip/a-side-askreturn.mjs` (driver alice, accounts alice,bob).
-Ran twice, `ready: true`. It picks whichever neighbouring "Ask …" item the menu offers as the control,
+Ran twice, `ready: true`.
+
+> **27.08, later:** this one refused in the harness pass with `menuOnParticipant: []`, and it was not
+> the product. When the host is the one who creates the side room his Side Rooms panel stays open, and
+> it covers the call toolbar — the Participants button is in the DOM but not clickable, `openPeople`
+> returns having done nothing, and the row menu reads empty. The snippet now closes that panel first
+> and records `rowMenuOpened`, so an empty menu can no longer be confused with a menu that never
+> opened. Verified twice from a reset state. Trap in `scripts/callrig/SELECTORS.md`. It picks whichever neighbouring "Ask …" item the menu offers as the control,
 because the host's menu shows the camera item or the unmute item depending on the participant's
 media state, and both were verified to put a line on his screen.
 
