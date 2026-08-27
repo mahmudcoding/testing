@@ -298,6 +298,7 @@ final class RootVC: NSViewController {
     private let edge  = NSView()
     private var leading: NSLayoutConstraint!
     private var panelW: NSLayoutConstraint!
+    private var restoreWidth: CGFloat?
     private(set) var isOpen = false
     /// The list is an overlay, so it covers the content underneath it. Whoever
     /// owns that content gets told to step aside by this much.
@@ -384,22 +385,7 @@ final class RootVC: NSViewController {
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        fitPanel()
         paint()
-    }
-
-    /// The list covers the whole window when the window is too narrow to hold
-    /// both. Tiled beside a browser the window is ~480pt, and a 250pt list
-    /// sharing that leaves the finding 230pt to wrap into — which reads as the
-    /// sidebar having resized the content rather than covered it. Selecting a
-    /// row closes the list, so covering costs nothing.
-    private func fitPanel() {
-        let full = view.bounds.width
-        guard full > 1 else { return }
-        let w = full < RootVC.width * 2.5 ? full : RootVC.width
-        guard abs(panelW.constant - w) > 0.5 else { return }
-        panelW.constant = w
-        if !isOpen { leading.constant = -w }
     }
 
     /// Layer colours do not follow light/dark on their own.
@@ -411,12 +397,40 @@ final class RootVC: NSViewController {
         }
     }
 
+    /// Grow the window while the list is open, instead of letting the list eat
+    /// the finding.
+    ///
+    /// The list slides OVER the content — on a wide window the text behind it is
+    /// cut mid-word, not reflowed. But tiled beside a browser the window is only
+    /// 480pt, and 250pt of list over that leaves a strip too narrow to read, which
+    /// is indistinguishable from the content having been squeezed to nothing. So
+    /// the window borrows the width it needs from the browser next to it, and
+    /// gives it straight back on close.
+    private func widenIfCramped(_ open: Bool) {
+        guard let w = view.window, let scr = w.screen ?? NSScreen.main else { return }
+        let needed = RootVC.width + 420
+        if open {
+            let f = w.frame
+            guard f.width < needed else { return }
+            restoreWidth = f.width
+            let width = min(needed, scr.visibleFrame.width)
+            w.setFrame(NSRect(x: f.minX, y: f.minY, width: width, height: f.height),
+                       display: true, animate: false)
+        } else if let back = restoreWidth {
+            restoreWidth = nil
+            let f = w.frame
+            w.setFrame(NSRect(x: f.minX, y: f.minY, width: back, height: f.height),
+                       display: true, animate: false)
+        }
+    }
+
     @objc private func shadeClicked() { setOpen(false) }
     @objc func toggle() { setOpen(!isOpen) }
 
     func setOpen(_ open: Bool) {
         guard open != isOpen else { return }
         isOpen = open
+        widenIfCramped(open)
         onOpenChanged?(open ? RootVC.width : 0)
         if open { shade.isHidden = false }
         NSAnimationContext.runAnimationGroup({ ctx in
