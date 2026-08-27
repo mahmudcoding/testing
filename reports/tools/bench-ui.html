@@ -97,19 +97,6 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   margin-bottom:22px;font-size:12.5px;line-height:1.5;max-width:62ch}
 .note-box b{display:block;font-weight:600;margin-bottom:3px}
 
-details.more{margin-bottom:22px}
-details.more summary{list-style:none;cursor:default;color:var(--accent);font-size:12.5px}
-details.more summary::-webkit-details-marker{display:none}
-details.more summary::before{content:"\25B6";font-size:8px;margin-right:5px;
-  display:inline-block;vertical-align:1px}
-details.more[open] summary::before{content:"\25BC"}
-details.more .body{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--label-2);
-  max-width:62ch}
-details.more pre{margin:8px 0 0;background:var(--group);border:1px solid var(--sep-solid);
-  border-radius:6px;padding:10px;font:11px/1.55 ui-monospace,Menlo,monospace;
-  color:var(--label-2);white-space:pre-wrap;word-break:break-word;
-  max-height:280px;overflow:auto;-webkit-user-select:text;user-select:text}
-
 code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
   background:var(--raised);padding:.1em .35em;border-radius:4px}
 </style>
@@ -227,9 +214,7 @@ function render(){
       <p>${rich(f.expected)}</p></div>`:''}
     ${b==='idle'&&f.steps.length?`<div class="sec"><div class="cap">Steps</div>
       <ol class="steps">${f.steps.map(s=>`<li>${rich(s)}</li>`).join('')}</ol></div>`:''}
-    ${(f.problem||f.measure)?`<details class="more"><summary>Background</summary>
-      ${f.problem?`<div class="body">${rich(f.problem)}</div>`:''}
-      ${f.measure?`<pre>${esc(f.measure)}</pre>`:''}</details>`:''}
+
 `;
 
   // #play is re-created by every render, so it is re-bound by every render
