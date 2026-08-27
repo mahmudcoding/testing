@@ -186,13 +186,9 @@ ol.steps li.done .st{text-decoration:line-through;text-decoration-color:var(--li
   transition:.12s}
 .play:hover:not(:disabled){filter:brightness(1.07)}
 .play:disabled{opacity:.55;cursor:default}
-.play kbd{font:600 10px/1 "IBM Plex Mono",monospace;background:rgba(0,0,0,.16);
-  border-radius:4px;padding:3px 5px}
 .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);
   border-top-color:var(--on-accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.rmeta{font-size:13.5px;color:var(--ink-2);line-height:1.55;flex:1;min-width:200px}
-.rmeta b{color:var(--ink);font-weight:600}
 .out{margin:0 28px 20px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
 .out-h{padding:12px 16px;background:var(--surface-2);
   font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;
@@ -318,10 +314,7 @@ function render(){
     </div>
 
     <div class="repro">
-      <button class="play" id="play">▶ Reproduce <kbd>R</kbd></button>
-      <div class="rmeta">${f.repro&&f.repro.snippet
-        ? `Runs <b>${esc(f.repro.snippet)}</b> — launches ${f.accounts.map(esc).join(' and ')}, builds the state, stops on the defect.`
-        : `No repro script recorded for this finding. Pressing this brings up <b>${f.accounts.map(esc).join(' and ')}</b> so you can follow the steps yourself.`}</div>
+      <button class="play" id="play">▶ Reproduce</button>
     </div>
 
     ${res?`<div class="out">
