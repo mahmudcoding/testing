@@ -69,9 +69,10 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   border-top:1px solid var(--sep);font-size:11.5px;color:var(--label-2);flex-wrap:wrap}
 .did .ck{color:var(--ok);font-weight:700}
 .did details{margin-left:auto}
+.did details[open]{flex-basis:100%;margin-left:0;margin-top:4px}
 .did summary{list-style:none;cursor:default;color:var(--accent);font-size:11.5px}
 .did summary::-webkit-details-marker{display:none}
-.did pre{flex-basis:100%;margin:8px 0 0;background:var(--content);
+.did pre{margin:8px 0 0;background:var(--content);
   border:1px solid var(--sep-solid);border-radius:6px;padding:8px 10px;
   font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--label-2);
   white-space:pre-wrap;word-break:break-word;max-height:170px;overflow:auto;
@@ -179,8 +180,8 @@ function action(f){
     <p class="now" style="font-size:14px;font-weight:400">${rich(r.left||'The script did not finish.')}</p>
     <div class="did">
       <button class="push" id="play">Try again</button>
-      <details><summary>Show rig output</summary></details>
-      <pre>${esc(r.log||'')}</pre></div></div>`;
+      <details><summary>Show rig output</summary>
+        <pre>${esc(r.log||'')}</pre></details></div></div>`;
 
   if(b==='ready'){
     const n=Math.min(r.stepsDone||0,f.steps.length);
@@ -193,8 +194,8 @@ function action(f){
       <div class="did">
         ${n?`<span class="ck">✓</span> Step${n>1?'s':''} ${n>1?'1–'+n:'1'} already done for you`
            :'<span></span>'}
-        <details><summary>Show rig output</summary></details>
-        <pre>${esc(r.log||'')}</pre>
+        <details><summary>Show rig output</summary>
+          <pre>${esc(r.log||'')}</pre></details>
       </div></div>`;
   }
 
@@ -243,6 +244,8 @@ function render(){
       <button class="push" id="save">Save record…</button>
     </div>`;
 
+  // #play is re-created by every render, so it is re-bound by every render
+  const p=document.getElementById('play'); if(p)p.onclick=doRepro;
   document.getElementById('note').oninput=e=>{
     V[f.id]=Object.assign({v:''},V[f.id],{note:e.target.value}); store();};
   document.getElementById('save').onclick=saveRecord;
