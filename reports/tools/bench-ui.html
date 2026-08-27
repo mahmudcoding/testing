@@ -83,9 +83,6 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .dl-row.mine{color:var(--label);font-weight:600;
   background:color-mix(in srgb,var(--accent-fill) 14%,transparent)}
 .dl-row.mine .arrow{color:var(--accent);font-weight:700}
-.turn{margin-left:auto;align-self:center;font:600 9.5px/1 inherit;letter-spacing:.07em;
-  text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);
-  border-radius:99px;padding:3px 7px;white-space:nowrap}
 .run-line{margin:0;height:20px;display:flex;align-items:center;gap:8px;
   font:500 13px/1 inherit;color:var(--label)}
 .run-line .ck{color:var(--ok);font-weight:700}
@@ -186,8 +183,7 @@ function action(f){
                    : st==='doing' ? '<span class="spinner sm"></span>'
                    : st==='mine' ? '<span class="ck arrow">▸</span>'
                    : '<span class="ck">○</span>';
-        return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span>${
-          st==='mine' ? '<span class="turn">your turn</span>' : ''}</div>`;
+        return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span></div>`;
       }).join('')}</div>` : ''}
       <p class="now-sub slot">${note}</p>
       <div class="did"><span></span>
