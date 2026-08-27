@@ -137,7 +137,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 
   **Reproducer** (`~/Applications/Reproducer.app`, built by `macapp/build.sh`) is what a person uses:
   it presses the snippet, tiles itself against the browser, ticks the steps live, and records
-  confirmed / not-a-bug into `verification-<date>.md` via File → Save Record. It carries **only findings
+  confirmed / not-a-bug into `verifications/verification-<date>.md` via File → Save Record. It carries **only findings
   whose snippet exists on disk** — no block means the finding is not in the app at all (`BENCH_ALL=1`
   overrides). `scripts/bench.py` is the same thing headless.
 

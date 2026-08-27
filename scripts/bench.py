@@ -6,7 +6,7 @@
 Runs on your machine so it can actually drive the rig. Reproduce launches the
 browsers a finding needs, signs them in, runs the finding's repro snippet, and
 stops with the defect on screen. You judge. Verdicts are written to
-verification-<date>.md.
+verifications/verification-<date>.md.
 
 A finding is reproducible when its report carries a repro block:
 
@@ -376,9 +376,12 @@ class H(BaseHTTPRequestHandler):
                                               ensure_ascii=False))
         if u.path == "/api/record":
             date = datetime.date.today().isoformat()
-            p = os.path.join(REPO, f"verification-{date}.md")
+            d = os.path.join(REPO, "verifications")
+            os.makedirs(d, exist_ok=True)
+            p = os.path.join(d, f"verification-{date}.md")
             with open(p, "w", encoding="utf-8") as fh: fh.write(payload.get("md", ""))
-            return self._send(200, json.dumps({"ok": True, "path": os.path.basename(p)}))
+            return self._send(200, json.dumps(
+                {"ok": True, "path": os.path.relpath(p, REPO)}))
         self._send(404, "{}")
 
 if __name__ == "__main__":

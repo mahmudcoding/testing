@@ -6,7 +6,7 @@
   scripts/verify_run.py reports/<file>.html D --dry         # show plan, launch nothing
 
 You perform the trigger and you judge. This only removes setup and ordering.
-Verdicts are written to verification-<lane>-<date>.md as a signed record.
+Verdicts are written to verifications/verification-<lane>-<date>.md as a signed record.
 """
 import sys, os, json, subprocess, datetime, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -69,7 +69,9 @@ def main():
                    key=lambda kv: (tuple(accounts_for(kv[0][1])), -len(kv[1]), kv[0][0]))
 
     date = datetime.date.today().isoformat()
-    outp = os.path.join(REPO, f"verification-{lane}-{date}.md")
+    outd = os.path.join(REPO, "verifications")
+    os.makedirs(outd, exist_ok=True)
+    outp = os.path.join(outd, f"verification-{lane}-{date}.md")
     log  = open(outp, 'a', encoding='utf-8')
     log.write(f"\n# Human verification — {os.path.basename(path)}, lane {lane}\n"
               f"_started {datetime.datetime.now():%Y-%m-%d %H:%M}_\n\n")
