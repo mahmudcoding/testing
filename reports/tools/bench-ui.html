@@ -75,10 +75,7 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .mk{flex:none;width:14px;display:inline-flex;align-items:center;justify-content:center;
   align-self:flex-start;height:calc(13px * 1.45);color:var(--label-3)}
 .dl-row.done .mk{color:var(--ok);font-weight:700}
-.dl-row.mine .mk{color:var(--accent);font-weight:700}
-.dl-row.mine{color:var(--label);font-weight:600;animation:handoff .3s ease-out}
 /* fade only: a translate here was itself the sideways nudge on the row */
-@keyframes handoff{from{opacity:.45}to{opacity:1}}
 .spinner.sm{width:10px;height:10px;border-width:1.6px;flex:none}
 .spinner{display:inline-block;width:12px;height:12px;vertical-align:-1px;
   border:2px solid var(--label-3);border-top-color:var(--accent-fill);
@@ -110,7 +107,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
 <div class="pane" id="main"><div class="empty">Loading…</div></div>
 
 <script>
-let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={}, HANDOFF={};
+let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={};
 const TILE_LEFT=480;          // points this window keeps; the rig takes the rest
 // V: verdicts. X: should-be rewrites. Both live on the server, not in
 // localStorage: the bench takes a free port on every launch and localStorage is
@@ -176,15 +173,17 @@ function stepRows(f){
   const b=beat(f), r=R[f.id];
   const n = b==='ready' ? Math.min(r.stepsDone||0, f.steps.length)
           : b==='running' ? (LIVE[f.id]||0) : 0;
-  const mineIdx = b==='ready' && HANDOFF[f.id] && n < f.steps.length ? n : -1;
   return f.steps.map((x,i)=>{
+    // Only two things are marked: what the script did, and — while it is still
+    // going — the one it is on. Nothing marks the step that is yours. A ▸ on it
+    // was read as "the run stopped here", which is the opposite of what it meant.
     // before a run there is nothing pending yet, so the list reads as ordinary
     // steps; dimming only means "not reached" once something is actually running
-    const st = i<n ? 'done' : (i===mineIdx ? 'mine'
+    const st = i<n ? 'done'
              : (b==='running' ? (i===n ? 'doing' : 'pending')
-                              : (b==='ready' ? 'pending' : 'plain')));
+                              : (b==='ready' ? 'pending' : 'plain'));
     const mark = st==='doing' ? '<span class="mk"><span class="spinner sm"></span></span>'
-               : `<span class="mk">${st==='done' ? '✓' : st==='mine' ? '▸' : '○'}</span>`;
+               : `<span class="mk">${st==='done' ? '✓' : '○'}</span>`;
     return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span></div>`;
   }).join('');
 }
@@ -256,7 +255,7 @@ async function watchProgress(f){
 
 async function doRepro(){
   const f=Q[cur]; if(!f||RUN[f.id])return;
-  RUN[f.id]=true; LIVE[f.id]=0; delete R[f.id]; delete HANDOFF[f.id]; render();
+  RUN[f.id]=true; LIVE[f.id]=0; delete R[f.id]; render();
   // clear the screen for the run: this window left, the rig window right
   window.webkit?.messageHandlers?.app?.postMessage({cmd:'tile', width:TILE_LEFT});
   watchProgress(f);
@@ -269,7 +268,6 @@ async function doRepro(){
   delete RUN[f.id]; render();
   // let the script's final tick be seen on its own before the row becomes the
   // person's to act on -- both changing in one frame reads as a glitch
-  setTimeout(()=>{ HANDOFF[f.id]=true; if(Q[cur]===f) render(); }, 650);
 }
 
 let lastVerdictAt=0;
