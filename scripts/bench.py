@@ -18,7 +18,7 @@ A finding is reproducible when its report carries a repro block:
 
 Findings without one still open positioned; the bench says what is left to do.
 """
-import os, sys, re, json, html, subprocess, datetime, threading, webbrowser
+import os, sys, re, json, html, shutil, subprocess, datetime, threading, webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -26,6 +26,37 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 from verify_queue import parse, roles_needed, surface, preflight
+
+def _repair_path():
+    """Put node back on PATH.
+
+    A GUI app launched from Finder, the Dock or `open` inherits launchd's PATH
+    — /usr/bin:/bin:/usr/sbin:/sbin — which has no homebrew in it. ensure.sh
+    then dies on "node: command not found" and the app reports "The rig did not
+    come up", which describes a browser problem that does not exist. It only
+    ever worked when the binary was started from a terminal, so the bug is
+    invisible to anyone testing it that way.
+    """
+    if shutil.which("node"):
+        return
+    path = os.environ.get("PATH", "")
+    parts = path.split(os.pathsep)
+    for d in ("/opt/homebrew/bin", "/usr/local/bin", os.path.expanduser("~/.local/bin")):
+        if d not in parts and os.path.exists(os.path.join(d, "node")):
+            path = d + os.pathsep + path
+    os.environ["PATH"] = path
+    if shutil.which("node"):
+        return
+    # nvm, asdf and friends put it somewhere only the login shell knows
+    try:
+        found = subprocess.run([os.environ.get("SHELL", "/bin/zsh"), "-lc", "command -v node"],
+                               text=True, capture_output=True, timeout=20).stdout.strip()
+        if found:
+            os.environ["PATH"] = os.path.dirname(found) + os.pathsep + os.environ["PATH"]
+    except Exception:
+        pass
+
+_repair_path()
 
 PORT = int(os.environ.get("BENCH_PORT", "8777"))
 SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
@@ -202,8 +233,11 @@ def reproduce(item):
         if rc == 0:
             break
     if rc != 0:
-        return {"ok": False, "stage": "browsers", "log": "\n".join(log),
-                "left": "The rig did not come up, twice. Fix that, then press Reproduce again."}
+        why = ("node is not installed, or not where this app can see it — the rig "
+               "is driven by node and nothing can run without it."
+               if not shutil.which("node")
+               else "The rig did not come up, twice. Fix that, then press Reproduce again.")
+        return {"ok": False, "stage": "browsers", "log": "\n".join(log), "left": why}
 
     # put the rig window where it is not under the app before anything runs
     driver0 = (item.get("repro") or {}).get("accounts", ",".join(accts)).split(",")[0].strip()
