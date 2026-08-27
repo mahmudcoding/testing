@@ -174,7 +174,12 @@ def reproduce(item):
 
     # put the rig window where it is not under the app before anything runs
     driver0 = (item.get("repro") or {}).get("accounts", ",".join(accts)).split(",")[0].strip()
-    run(["./scripts/callrig/d", f"{lane}:{driver0 or accts[0]}", "snip/_tile.mjs"], timeout=60)
+    driver0 = driver0 or accts[0]
+    run(["./scripts/callrig/d", f"{lane}:{driver0}", "snip/_tile.mjs"], timeout=60)
+    # A locale finding has to leave the app in that locale, so it cannot restore
+    # anything itself -- and every other snippet matches English strings. Without
+    # this, judging one non-English finding breaks every finding judged after it.
+    run(["./scripts/callrig/d", f"{lane}:{driver0}", "snip/_lang-en.mjs"], timeout=90)
 
     rep = item.get("repro")
     if not rep or not rep.get("snippet"):
