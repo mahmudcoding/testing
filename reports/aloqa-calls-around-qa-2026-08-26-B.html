@@ -121,6 +121,12 @@
     <div class="chips"><span class="chip sev">High</span><span class="chip area">backend</span></div>
     <h2>[BE][CALLS] Ведущий вышел из звонка с одобрением входа — впустить стучащегося больше некому, и ведущему нигде об этом не сообщают</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="alice,carol,guest"
+         data-snippet="b-host-left-knock.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:alice snip/b-host-left-knock.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Звонок с режимом <code>Wait for admission</code> перестаёт принимать людей в тот момент,
@@ -209,6 +215,12 @@ GET /api/v1/meeting/&lt;id&gt;/waiting          403
     <div class="chips"><span class="chip sev">High</span><span class="chip area">backend</span></div>
     <h2>[BE][CALLS] Гость, потерявший связь из side room, навсегда занимает место в звонке — и живого человека туда уже не пускают</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="guest,alice"
+         data-snippet="b-guest-sideroom-seat.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:guest snip/b-guest-sideroom-seat.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Гость, у которого браузер умер, пока он находился в side room, остаётся полноценным
@@ -282,6 +294,12 @@ GET /api/v1/meeting/&lt;id&gt;/waiting          403
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
     <h2>[BE][CALLS] Ожидающий перезагрузил страницу — ведущий впускает его, но в звонок никто не приходит</h2>
+
+    <div class="block repro" data-lane="B" data-accounts="carol,alice"
+         data-snippet="b-admit-after-reload.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:carol snip/b-admit-after-reload.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -370,6 +388,12 @@ POST …/participants/&lt;pid&gt;/admit   204  → гость попадает �
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] После неотвеченного приглашения строка участника навсегда остаётся «Ringing…» — позвать его снова нельзя</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="bob,alice"
+         data-snippet="b-ringing-stuck.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:bob snip/b-ringing-stuck.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Ведущий зовёт коллегу в идущий звонок через <code>Add to call</code>. Тот не отвечает,
@@ -447,6 +471,12 @@ POST …/participants/&lt;pid&gt;/admit   204  → гость попадает �
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] Ведущий убрал пароль со звонка — стоящий у парольного барьера остаётся перед ним, и войти ему нечем</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="alice,carol"
+         data-snippet="b-password-barrier.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:alice snip/b-password-barrier.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Человек открыл звонок с паролем и стоит на экране ввода. Ведущий в это время снимает
@@ -512,6 +542,12 @@ POST …/participants/&lt;pid&gt;/admit   204  → гость попадает �
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS][GUESTS] На гостевом экране поле пароля подписано «private meetings only», хотя без него в публичный звонок не пустят</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="guest,alice"
+         data-snippet="b-guest-pw.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:guest snip/b-guest-pw.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Гость открывает ссылку-приглашение на публичный звонок, защищённый паролем, и видит поле
@@ -565,6 +601,12 @@ input.required = false</pre>
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] В истории приглашённого групповой звонок выглядит одинаково, принял он приглашение, отклонил или не ответил</h2>
+
+    <div class="block repro" data-lane="B" data-accounts="bob,alice"
+         data-snippet="b-invitee-history.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:bob snip/b-invitee-history.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -647,6 +689,12 @@ input.required = false</pre>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS][GUESTS] Гостю по нерабочей ссылке говорят, что дело в ссылке, а не в том, что звонок кончился, и не дают ни одной кнопки</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="guest,alice"
+         data-snippet="b-guest-deadlink.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:guest snip/b-guest-deadlink.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Внешний участник открывает присланную ссылку-приглашение после того, как звонок уже
@@ -718,6 +766,12 @@ input.required = false</pre>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] Запущенная встреча остаётся в списке запланированных с кнопкой «Start call», которая ничего не делает</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="alice"
+         data-snippet="b-sched-start.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:alice snip/b-sched-start.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Ведущий запускает запланированную встречу прямо с её карточки в разделе Calls.
@@ -782,6 +836,12 @@ input.required = false</pre>
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] На странице идущего звонка все участники показаны как пробывшие в нём 0:00</h2>
+
+    <div class="block repro" data-lane="B" data-accounts="carol,alice"
+         data-snippet="b-live-duration.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:carol snip/b-live-duration.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -850,6 +910,12 @@ input.required = false</pre>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] Журнал звонка пишет «Meeting ended for everyone», хотя звонок никто не завершал</h2>
 
+    <div class="block repro" data-lane="B" data-accounts="carol,alice"
+         data-snippet="b-endlog.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:carol snip/b-endlog.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Когда из звонка выходит последний участник, звонок закрывается сам. В журнале на странице
@@ -915,6 +981,12 @@ GET /api/v1/meeting/&lt;id&gt;/events?limit=100    200
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] Журнал звонка никогда не отмечает, что запись остановлена</h2>
+
+    <div class="block repro" data-lane="B" data-accounts="alice"
+         data-snippet="b-rec-log.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d b:alice snip/b-rec-log.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>

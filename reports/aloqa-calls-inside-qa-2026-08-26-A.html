@@ -195,6 +195,12 @@ PATCH /api/v1/meeting/{meetingId} {"name":"&lt;новое имя&gt;"} -> 200</p
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] Список заблокированных участников не обновляется у второго модератора: бан и разбан видит только тот, кто их сделал</h2>
 
+    <div class="block repro" data-lane="A" data-accounts="alice,bob,carol"
+         data-snippet="a-blocked-costale.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d a:alice snip/a-blocked-costale.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Панель <code>Participants</code> показывает ведущему и co-host раздел
@@ -287,6 +293,12 @@ PATCH /api/v1/meeting/{meetingId} {"name":"&lt;новое имя&gt;"} -> 200</p
   <article>
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] Выбор микрофона в звонке не переключает микрофон: звук уходит на системный по умолчанию, а в списке отмеченным остаётся прежний</h2>
+
+    <div class="block repro" data-lane="A" data-accounts="alice"
+         data-snippet="a-mic-select.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d a:alice snip/a-mic-select.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -390,6 +402,12 @@ PATCH /api/v1/meeting/{meetingId} {"name":"&lt;новое имя&gt;"} -> 200</p
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS][SIDE ROOMS] Действие «Ask to return to main room» не работает ни для кого: залогиненному участнику ничего не показывают, для гостя запрос падает с 403</h2>
+
+    <div class="block repro" data-lane="A" data-accounts="alice,bob"
+         data-snippet="a-side-askreturn.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d a:alice snip/a-side-askreturn.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -555,6 +573,12 @@ Accept -> POST /api/v1/meeting/{meetingId}/join -> 403
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS] Отзыв демонстрации экрана не сопровождается видимым сообщением тому, кто показывал</h2>
 
+    <div class="block repro" data-lane="A" data-accounts="alice,bob"
+         data-snippet="a-revoke-share.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d a:alice snip/a-revoke-share.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Ведущий может оборвать чужую демонстрацию экрана действием
@@ -629,6 +653,12 @@ Accept -> POST /api/v1/meeting/{meetingId}/join -> 403
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS][SIDE ROOMS] Только что созданная пустая Side Room недоступна как назначение в «Move to Side Room»</h2>
+
+    <div class="block repro" data-lane="A" data-accounts="alice,bob,carol"
+         data-snippet="a-side-emptyroom.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d a:alice snip/a-side-emptyroom.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -790,6 +820,12 @@ Accept -> POST /api/v1/meeting/{meetingId}/join -> 403
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALLS][SIDE ROOMS] Реакция, отправленная внутри Side Room, показывается всем в главном звонке</h2>
+
+    <div class="block repro" data-lane="A" data-accounts="bob,alice,carol"
+         data-snippet="a-side-reaction.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d a:bob snip/a-side-reaction.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
