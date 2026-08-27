@@ -76,7 +76,7 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   color:var(--label-3);margin-bottom:2px}
 .dl-row{display:flex;gap:7px;align-items:flex-start;line-height:1.45;
   padding:5px 8px;margin:0 -8px;border-radius:6px}
-.donelist.live{margin-top:12px;padding-top:12px;border-top:1px solid var(--sep);gap:2px}
+.donelist.live{gap:2px}
 .dl-row.pending{color:var(--label-3)}
 .dl-row.pending .ck{color:var(--label-3);font-weight:400}
 .dl-row.doing{color:var(--label)}
@@ -176,15 +176,10 @@ function action(f){
     const ready = b==='ready';
     const n = ready ? Math.min(r.stepsDone||0, f.steps.length) : (LIVE[f.id]||0);
     const mineIdx = ready && n < f.steps.length ? n : -1;
-    const line = ready
-      ? `<span class="ck">✓</span>The browser is set up and waiting`
-      : `<span class="spinner"></span>${n ? 'Working through the steps…'
-                                          : 'Launching '+who+'…'}`;
     const note = ready ? rich(r.left||'')
-      : 'Up to a minute the first time — the browser has to start and sign in.';
+      : (n ? 'Working through the steps…'
+           : 'Starting '+who+' — up to a minute the first time.');
     return `<div class="act live col">
-      <div class="now-cap">${ready ? 'Your turn — in the browser window' : 'Reproducing'}</div>
-      <p class="run-line">${line}</p>
       ${f.steps.length ? `<div class="donelist live">${f.steps.map((x,i)=>{
         const st = i<n ? 'done' : (i===mineIdx ? 'mine' : (!ready && i===n ? 'doing' : 'pending'));
         const mark = st==='done' ? '<span class="ck">✓</span>'
