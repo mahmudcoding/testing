@@ -68,15 +68,9 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .did{display:flex;align-items:center;gap:6px;margin-top:14px;padding-top:12px;
   border-top:1px solid var(--sep);font-size:11.5px;color:var(--label-2);flex-wrap:wrap}
 .did .ck{color:var(--ok);font-weight:700}
-.did details{margin-left:auto}
-.did details[open]{flex-basis:100%;margin-left:0;margin-top:4px}
-.did summary{list-style:none;cursor:default;color:var(--accent);font-size:11.5px}
-.did summary::-webkit-details-marker{display:none}
-.did pre{margin:8px 0 0;background:var(--content);
-  border:1px solid var(--sep-solid);border-radius:6px;padding:8px 10px;
-  font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--label-2);
-  white-space:pre-wrap;word-break:break-word;max-height:170px;overflow:auto;
-  -webkit-user-select:text;user-select:text}
+.link{margin-left:auto;background:none;border:0;padding:0;cursor:default;
+  color:var(--accent);font-size:11.5px}
+.link:disabled{color:var(--label-3)}
 .spinner{display:inline-block;width:12px;height:12px;vertical-align:-1px;
   border:2px solid var(--label-3);border-top-color:var(--accent-fill);
   border-radius:50%;animation:sp .7s linear infinite}
@@ -180,8 +174,7 @@ function action(f){
     <p class="now" style="font-size:14px;font-weight:400">${rich(r.left||'The script did not finish.')}</p>
     <div class="did">
       <button class="push" id="play">Try again</button>
-      <details><summary>Show rig output</summary>
-        <pre>${esc(r.log||'')}</pre></details></div></div>`;
+      <button class="push" id="copylog">Copy details</button></div></div>`;
 
   if(b==='ready'){
     const n=Math.min(r.stepsDone||0,f.steps.length);
@@ -192,15 +185,14 @@ function action(f){
       <p class="now">${rich(mine||r.left)}</p>
       ${mine?`<p class="now-sub">${rich(r.left)}</p>`:''}
       <div class="did">
-        ${n?`<span class="ck">✓</span> Step${n>1?'s':''} ${n>1?'1–'+n:'1'} already done for you`
-           :'<span></span>'}
-        <details><summary>Show rig output</summary>
-          <pre>${esc(r.log||'')}</pre></details>
+        ${n?`<span class="ck">✓</span> Step${n>1?'s':''} ${n>1?'1–'+n:'1'} already done for you`:'<span></span>'}
+        <button class="link" id="closebr">Close browser</button>
       </div></div>`;
   }
 
   if(b==='judged') return `<div class="act">
     <button class="push" id="play">Reproduce again</button>
+    <button class="push" id="closebr">Close browser</button>
     <p class="hint"><b>${({y:'Confirmed as a bug',n:'Not a bug',s:'Skipped'})[rec.v]}</b>${
       rec.note?' — '+esc(rec.note):''}<br>Change the verdict in the toolbar at any time.</p>
     </div>`;
@@ -246,6 +238,10 @@ function render(){
 
   // #play is re-created by every render, so it is re-bound by every render
   const p=document.getElementById('play'); if(p)p.onclick=doRepro;
+  const cb=document.getElementById('closebr'); if(cb)cb.onclick=()=>closeBrowser(cb,f);
+  const c=document.getElementById('copylog');
+  if(c)c.onclick=()=>{navigator.clipboard.writeText((R[f.id]||{}).log||'');
+    c.textContent='Copied'; setTimeout(()=>{c.textContent='Copy details';},1600);};
   document.getElementById('note').oninput=e=>{
     V[f.id]=Object.assign({v:''},V[f.id],{note:e.target.value}); store();};
   document.getElementById('save').onclick=saveRecord;
@@ -270,6 +266,17 @@ function verdict(v){
   const n=document.getElementById('note');
   V[f.id]={v,note:n?n.value.trim():'',at:new Date().toISOString()};
   store(); if(cur<Q.length-1)cur++; render();
+}
+
+async function closeBrowser(btn,f){
+  btn.disabled=true; const was=btn.textContent; btn.textContent='Closing…';
+  try{
+    const r=await fetch('/api/close',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lane:f.lane})});
+    const j=await r.json();
+    btn.textContent = j.ok ? 'Closed' : 'Could not close';
+  }catch(e){ btn.textContent='Could not close'; }
+  setTimeout(()=>{btn.disabled=false; btn.textContent=was;},2200);
 }
 
 async function saveRecord(){

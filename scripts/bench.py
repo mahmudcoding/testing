@@ -212,6 +212,13 @@ class H(BaseHTTPRequestHandler):
             it = items.get(payload.get("id"))
             if not it: return self._send(404, json.dumps({"ok": False, "left": "unknown finding"}))
             return self._send(200, json.dumps(reproduce(it), ensure_ascii=False))
+        if u.path == "/api/close":
+            lane = str(payload.get("lane", ""))
+            if not re.fullmatch(r"[A-Za-z]", lane):        # never shell a free string
+                return self._send(400, json.dumps({"ok": False, "log": "bad lane"}))
+            rc, out = run(["./scripts/callrig/stop.sh", lane.lower()], timeout=90)
+            return self._send(200, json.dumps({"ok": rc == 0, "log": out.strip()},
+                                              ensure_ascii=False))
         if u.path == "/api/record":
             date = datetime.date.today().isoformat()
             p = os.path.join(REPO, f"verification-{date}.md")
