@@ -106,7 +106,11 @@ ol.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;
   flex-direction:column;gap:2px;max-width:70ch}
 ol.steps li{counter-increment:s;display:flex;gap:13px;padding:9px 10px;border-radius:7px;
   font-size:15px;line-height:1.55;cursor:pointer;transition:background .12s}
-ol.steps li:hover{background:var(--surface-2)}
+ol.steps li.mine{background:var(--accent-soft);border:1px solid var(--accent)}
+ol.steps li.mine .st{color:var(--ink)}
+ol.steps li .tag{flex:none;align-self:center;font:600 10px/1 "IBM Plex Mono",ui-monospace,Menlo,monospace;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);
+  border:1px solid var(--accent);border-radius:99px;padding:5px 8px}
 ol.steps li::before{content:counter(s);flex:none;width:22px;height:22px;margin-top:1px;
   border:1px solid var(--line);border-radius:50%;
   font:500 11px/20px "IBM Plex Mono",monospace;text-align:center;color:var(--ink-3)}
@@ -297,6 +301,8 @@ function render(){
     +'to a report and it appears here.</div>';return;}
   cur=Math.max(0,Math.min(cur,Q.length-1));
   const f=Q[cur], rec=V[f.id]||{}, res=R[f.id];
+  // steps the snippet performed — only trust it from a run that reached the state
+  const done=(res&&res.ok&&res.stage==='reproduced')?Math.min(res.stepsDone||0,f.steps.length):0;
   renderSetup(f,cur>0?Q[cur-1]:null);
   const warns=[...(f.notes||[]).map(n=>['Check the fixture first',n]),
     ...(f.drift?[['Summary table disagrees with this title','The report’s own summary row reads: “'+f.drift+'”']]:[])];
@@ -326,8 +332,11 @@ function render(){
     </div>`:''}
 
     ${warns.map(w=>`<div class="warn"><b>${esc(w[0])}</b>${rich(w[1])}</div>`).join('')}
-    ${f.steps.length?`<div class="sect"><h2>Do this</h2><ol class="steps">${
-      f.steps.map(s=>`<li><span class="st">${rich(s)}</span></li>`).join('')}</ol></div>`:''}
+    ${f.steps.length?`<div class="sect"><h2>${done?'The script did this':'Do this'}</h2>
+      <ol class="steps">${f.steps.map((s,i)=>{
+        const did=i<done, yours=i===done&&done>0;
+        return `<li class="${did?'done':yours?'mine':''}"><span class="st">${rich(s)}</span>${
+          yours?'<span class="tag">your turn</span>':''}</li>`;}).join('')}</ol></div>`:''}
     ${f.actual?`<div class="sect"><h2>You should see</h2>
       <div class="claim">${rich(f.actual)}</div></div>`:''}
     ${f.expected?`<div class="sect"><h2>Should be instead</h2>
@@ -338,7 +347,6 @@ function render(){
     </details></div>`:''}
   </div>`;
 
-  document.querySelectorAll('ol.steps li').forEach(li=>li.onclick=()=>li.classList.toggle('done'));
   document.getElementById('play').onclick=doRepro;
   ['Y','N','S'].forEach(c=>document.getElementById('b'+c)
     .setAttribute('aria-pressed',rec.v===c.toLowerCase()));

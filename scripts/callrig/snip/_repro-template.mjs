@@ -17,7 +17,12 @@
  * a single night, and none of them looked wrong at the time.
  */
 export default async ({ page, pages, ctx, browser }) => {
-  const out = { ready: false, asserted: {}, leftToDo: '' };
+  // stepsDone: how many of the report's numbered steps this script performs,
+  // counting from the first. The bench ticks those off for the human and
+  // highlights the next one as theirs, so nobody re-does setup by hand.
+  // Count the steps in the finding, not the actions here — one step is often
+  // several clicks. Leave it 0 until the setup has actually succeeded.
+  const out = { ready: false, asserted: {}, stepsDone: 0, leftToDo: '' };
 
   // ── 1. GET THERE ────────────────────────────────────────────────────────
   // Navigate and build whatever state the finding needs: create the channel,
@@ -47,6 +52,7 @@ export default async ({ page, pages, ctx, browser }) => {
   // it and say what they should be looking at. Naming one concrete control beats
   // restating the repro steps.
   out.ready = true;
+  out.stepsDone = 2;   // steps 1-2 of the finding are done; step 3 is the human's
   out.leftToDo = 'Open the message menu on the pinned message and click Edit. '
                + 'Watch whether an editor opens.';
   return out;

@@ -2,7 +2,7 @@
  * Report: lane E, "[FE-WEB][SHELL] Reset all в Display settings не сбрасывает тему"
  * Sets theme Dark / density Compact / font XL, then stops — you press Reset all. */
 export default async ({ page }) => {
-  const out = { ready: false, asserted: {}, leftToDo: '' };
+  const out = { ready: false, asserted: {}, stepsDone: 0, leftToDo: '' };
   await page.goto('https://airion-cargo.store/w/W4QEF1XTURESO01/chat/saved',
                   { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1500);
@@ -60,6 +60,7 @@ export default async ({ page }) => {
     return out;
   }
   out.ready = true;
+  out.stepsDone = 2;   // panel opened, values chosen; pressing Reset all is step 3
   out.leftToDo = 'Theme, density and font size are now set away from their defaults '
                + `(selected: ${out.asserted.pressed.join(', ') || 'see the panel'}). `
                + 'Press Reset all and watch whether the theme goes back with the others.';

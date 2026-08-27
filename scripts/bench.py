@@ -152,10 +152,32 @@ def reproduce(item):
     rc, out = run(["./scripts/callrig/d", f"{lane}:{driver}", f"snip/{name}"])
     log.append(out.strip() or "(no output)")
 
-    left = "Snippet finished. Compare what you see against the claim above."
-    m = re.search(r'"leftToDo"\s*:\s*"([^"]*)"', out)
-    if m: left = m.group(1)
-    return {"ok": rc == 0, "stage": "reproduced", "log": "\n".join(log), "left": left}
+    res = _snippet_result(out)
+    left = res.get("leftToDo") or "Snippet finished. Compare what you see against the claim above."
+    return {"ok": rc == 0, "stage": "reproduced", "log": "\n".join(log), "left": left,
+            "stepsDone": int(res.get("stepsDone") or 0),
+            "asserted": res.get("asserted") or None}
+
+def _snippet_result(out):
+    """The object a repro snippet returned, from drive.mjs's stdout.
+
+    drive.mjs prints the return value as JSON, but rig noise shares the stream.
+    Counting braces is wrong -- a brace inside a string breaks it -- so try to
+    decode at every "{" and keep the widest object that parses. Widest, not
+    last: the nested "asserted" object also parses, and it is not the result.
+    Returns {} when nothing parses; the caller falls back.
+    """
+    dec, best, best_len = json.JSONDecoder(), {}, 0
+    i = out.find('{')
+    while i != -1:
+        try:
+            obj, consumed = dec.raw_decode(out[i:])
+            if isinstance(obj, dict) and consumed >= best_len:
+                best, best_len = obj, consumed
+        except ValueError:
+            pass
+        i = out.find('{', i + 1)
+    return best
 
 UI = os.path.join(REPO, "reports", "tools", "bench-ui.html")
 
