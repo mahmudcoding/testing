@@ -76,6 +76,15 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .dl-row.pending{color:var(--label-3)}
 .dl-row.pending .ck{color:var(--label-3);font-weight:400}
 .dl-row.doing{color:var(--label)}
+.dl-row.mine{color:var(--label);font-weight:600;font-size:14.5px;
+  background:color-mix(in srgb,var(--accent-fill) 14%,transparent);
+  border-radius:6px;padding:5px 8px;margin:2px -8px}
+.dl-row.mine .arrow{color:var(--accent);font-weight:700}
+.turn{margin-left:auto;align-self:center;font:600 9.5px/1 inherit;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);
+  border-radius:99px;padding:3px 7px;white-space:nowrap}
+.run-line{margin:0 0 2px;display:flex;align-items:center;gap:8px;
+  font:500 13px/1.4 inherit;color:var(--label)}
 .spinner.sm{width:10px;height:10px;border-width:1.6px;flex:none;margin-top:2px}
 .link{margin-left:auto;background:none;border:0;padding:0;cursor:pointer;
   color:var(--accent);font-size:11.5px}
@@ -152,46 +161,32 @@ function action(f){
   const b=beat(f), r=R[f.id], rec=V[f.id]||{};
   const who=f.accounts.map(a=>`<b>${esc(a)}</b>`).join(' and ');
 
-  if(b==='running'){
-    const n=LIVE[f.id]||0;
+  // Running and ready are the same card. The step list is the view; finishing
+  // only changes which row is live and who owns it — replacing the whole panel
+  // at the end threw away the thing the person was already reading.
+  if(b==='running' || b==='ready'){
+    const ready = b==='ready';
+    const n = ready ? Math.min(r.stepsDone||0, f.steps.length) : (LIVE[f.id]||0);
+    const mineIdx = ready && n < f.steps.length ? n : -1;
     return `<div class="act live col">
-      <div class="now-cap">Reproducing</div>
-      <p class="now"><span class="spinner"></span> ${n
-        ? 'Working through the steps…'
-        : 'Launching '+who+'…'}</p>
-      ${n?'':`<p class="now-sub">Up to a minute the first time — the browser has to
-        start and sign in. Leave it alone.</p>`}
-      ${f.steps.length?`<div class="donelist live">${f.steps.map((x,i)=>{
-        const state = i<n ? 'done' : i===n ? 'doing' : 'pending';
-        const mark = state==='done' ? '<span class="ck">✓</span>'
-                   : state==='doing' ? '<span class="spinner sm"></span>'
+      <div class="now-cap">${ready ? 'Your turn — in the browser window' : 'Reproducing'}</div>
+      ${ready ? '' : `<p class="run-line"><span class="spinner"></span>${n
+        ? 'Working through the steps…' : 'Launching '+who+'…'}</p>`}
+      ${(!ready && !n) ? `<p class="now-sub">Up to a minute the first time — the browser
+        has to start and sign in. Leave it alone.</p>` : ''}
+      ${f.steps.length ? `<div class="donelist live">${f.steps.map((x,i)=>{
+        const st = i<n ? 'done' : (i===mineIdx ? 'mine' : (!ready && i===n ? 'doing' : 'pending'));
+        const mark = st==='done' ? '<span class="ck">✓</span>'
+                   : st==='doing' ? '<span class="spinner sm"></span>'
+                   : st==='mine' ? '<span class="ck arrow">▸</span>'
                    : '<span class="ck">○</span>';
-        return `<div class="dl-row ${state}">${mark}<span>${rich(x)}</span></div>`;
-      }).join('')}</div>`:''}
+        return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span>${
+          st==='mine' ? '<span class="turn">your turn</span>' : ''}</div>`;
+      }).join('')}</div>` : ''}
+      ${ready && r.left ? `<p class="now-sub">${rich(mineIdx<0 ? r.left : r.left)}</p>` : ''}
+      ${ready ? `<div class="did"><span></span>
+        <button class="link" id="closebr">Close browser</button></div>` : ''}
     </div>`;
-  }
-
-  if(b==='failed') return `<div class="act col">
-    <div class="now-cap" style="color:var(--no)">Setup failed</div>
-    <p class="now" style="font-size:14px;font-weight:400">${rich(r.left||'The script did not finish.')}</p>
-    <div class="did">
-      <button class="push" id="play">Try again</button>
-      <button class="push" id="copylog">Copy details</button></div></div>`;
-
-  if(b==='ready'){
-    const n=Math.min(r.stepsDone||0,f.steps.length);
-    // the report's own wording for the remaining action, not the script's paraphrase
-    const mine = n && n<f.steps.length ? f.steps[n] : null;
-    return `<div class="act live col">
-      <div class="now-cap">Now — in the browser window</div>
-      <p class="now">${rich(mine||r.left)}</p>
-      ${mine?`<p class="now-sub">${rich(r.left)}</p>`:''}
-      <div class="did">
-        ${n?`<div class="donelist"><div class="dl-cap">Done for you</div>${
-          f.steps.slice(0,n).map(x=>`<div class="dl-row"><span class="ck">✓</span>
-            <span>${rich(x)}</span></div>`).join('')}</div>`:'<span></span>'}
-        <button class="link" id="closebr">Close browser</button>
-      </div></div>`;
   }
 
   if(b==='judged') return `<div class="act">
