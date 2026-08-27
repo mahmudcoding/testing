@@ -60,6 +60,7 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   padding:5px 8px;margin:0 -8px;border-radius:6px}
 .donelist.live{gap:2px;max-width:62ch}
 .dl-row.pending{color:var(--label-3)}
+.dl-row.plain{color:var(--label-2)}
 .dl-row.doing{color:var(--label)}
 /* one fixed box for every marker: the glyphs are different widths, so letting
    them size themselves shifted the step text sideways when the state changed */
@@ -144,8 +145,11 @@ function stepRows(f){
           : b==='running' ? (LIVE[f.id]||0) : 0;
   const mineIdx = b==='ready' && HANDOFF[f.id] && n < f.steps.length ? n : -1;
   return f.steps.map((x,i)=>{
+    // before a run there is nothing pending yet, so the list reads as ordinary
+    // steps; dimming only means "not reached" once something is actually running
     const st = i<n ? 'done' : (i===mineIdx ? 'mine'
-             : (b==='running' && i===n ? 'doing' : 'pending'));
+             : (b==='running' ? (i===n ? 'doing' : 'pending')
+                              : (b==='ready' ? 'pending' : 'plain')));
     const mark = st==='doing' ? '<span class="mk"><span class="spinner sm"></span></span>'
                : `<span class="mk">${st==='done' ? '✓' : st==='mine' ? '▸' : '○'}</span>`;
     return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span></div>`;
@@ -176,10 +180,10 @@ function render(){
       rich((R[f.id]||{}).left||'The script did not finish.')}</div>`:''}
     ${f.actual?`<div class="sec bad"><div class="cap">Reported</div>
       <p>${rich(f.actual)}</p></div>`:''}
-    ${f.expected?`<div class="sec"><div class="cap">Should be</div>
-      <p>${rich(f.expected)}</p></div>`:''}
     ${f.steps.length?`<div class="sec"><div class="cap">Steps</div>
       <div class="donelist live">${stepRows(f)}</div></div>`:''}
+    ${f.expected?`<div class="sec"><div class="cap">Should be</div>
+      <p>${rich(f.expected)}</p></div>`:''}
 
 `;
 

@@ -448,7 +448,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     var reproItem: NSToolbarItem!
     var verdictItem: NSToolbarItem!
     let reproButton = HandButton()
-    let closeButton = HandButton()
     let verdict = HandSegmented(labels: ["Confirmed", "Not a bug", "Skip"],
                                 trackingMode: .selectOne, target: nil, action: nil)
 
@@ -508,7 +507,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     // MARK: toolbar
 
     static let idList = NSToolbarItem.Identifier("list")
-    static let idClose = NSToolbarItem.Identifier("closebr")
     static let idRepro = NSToolbarItem.Identifier("repro")
     static let idVerdict = NSToolbarItem.Identifier("verdict")
 
@@ -518,8 +516,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     func toolbarDefaultItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
         var ids: [NSToolbarItem.Identifier] = [AppDelegate.idList]
-        ids += [.flexibleSpace, AppDelegate.idRepro, AppDelegate.idClose,
-                AppDelegate.idVerdict]
+        ids += [.flexibleSpace, AppDelegate.idRepro, AppDelegate.idVerdict]
         return ids
     }
 
@@ -542,33 +539,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             return it
         case AppDelegate.idRepro:
             reproButton.bezelStyle = .texturedRounded
-            reproButton.title = "Reproduce"
-            if #available(macOS 11.0, *) {
-                reproButton.image = NSImage(systemSymbolName: "play.fill", accessibilityDescription: nil)
-                reproButton.imagePosition = .imageLeading
-            }
+            reproButton.title = ""
+            reproButton.imagePosition = .imageOnly
             reproButton.target = self
-            reproButton.action = #selector(hitRepro)
             reproButton.isEnabled = false
             let it = NSToolbarItem(itemIdentifier: id)
             it.view = reproButton
             it.label = "Reproduce"
-            it.toolTip = "Drive the browser to this defect (R)"
             reproItem = it
-            return it
-        case AppDelegate.idClose:
-            closeButton.bezelStyle = .texturedRounded
-            if #available(macOS 11.0, *) {
-                closeButton.image = NSImage(systemSymbolName: "xmark.circle",
-                                            accessibilityDescription: "Close the browser")
-            } else { closeButton.title = "Close" }
-            closeButton.target = self
-            closeButton.action = #selector(hitClose)
-            closeButton.isEnabled = false
-            let it = NSToolbarItem(itemIdentifier: id)
-            it.view = closeButton
-            it.label = "Close"
-            it.toolTip = "Close the browser this run opened"
             return it
         case AppDelegate.idVerdict:
             verdict.segmentStyle = .texturedRounded
@@ -642,10 +620,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         let beat = d["beat"] as? String ?? "idle"
         sidebar.set(rows, cur: cur)
         reproButton.isEnabled = !rows.isEmpty && beat != "running"
-        reproButton.title = beat == "running" ? "Running…" : "Reproduce"
         // Judging before looking stays possible, but the control is only live
         // once this finding has actually been run.
-        closeButton.isEnabled = d["canClose"] as? Bool ?? false
+        // one control: it offers to run the finding, or to put away the browser
+        // that run opened — never both, because only one is ever possible
+        let canClose = d["canClose"] as? Bool ?? false
+        if #available(macOS 11.0, *) {
+            reproButton.image = NSImage(
+                systemSymbolName: canClose ? "xmark.circle" : "play.fill",
+                accessibilityDescription: canClose ? "Close the browser" : "Reproduce")
+        }
+        reproButton.action = canClose ? #selector(hitClose) : #selector(hitRepro)
+        reproButton.toolTip = canClose ? "Close the browser this run opened"
+                                       : "Drive the browser to this defect (R)"
         verdict.isEnabled = !rows.isEmpty && beat != "running"
         let v = d["verdict"] as? String ?? ""
         verdict.selectedSegment = ["y": 0, "n": 1, "s": 2][v] ?? -1
