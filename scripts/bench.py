@@ -18,7 +18,7 @@ A finding is reproducible when its report carries a repro block:
 
 Findings without one still open positioned; the bench says what is left to do.
 """
-import os, sys, re, json, glob, html, shutil, subprocess, datetime, threading, webbrowser
+import os, sys, re, json, glob, html, shutil, subprocess, datetime, threading, time, webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -433,7 +433,28 @@ class H(BaseHTTPRequestHandler):
                 {"ok": True, "path": os.path.relpath(p, REPO)}))
         self._send(404, "{}")
 
+def _exit_with_parent():
+    """Stop when whatever started us stops.
+
+    The app terminates this server in applicationWillTerminate, but a hard kill
+    never runs that, and the server is then reparented to launchd and lives on
+    holding a port. Fourteen of them accumulated in one afternoon of rebuilds,
+    all parsing reports and competing for the machine, until the next launch
+    took so long the app showed "Taking longer than usual".
+    """
+    first = os.getppid()
+    if first <= 1:
+        return                                  # already orphaned, nothing to watch
+    def watch():
+        while True:
+            time.sleep(3)
+            if os.getppid() != first:           # reparented: our parent is gone
+                os._exit(0)
+    threading.Thread(target=watch, daemon=True).start()
+
+
 if __name__ == "__main__":
+    _exit_with_parent()
     # Bind and start serving straight away, and parse the reports on a
     # background thread. Parsing five reports takes seconds; if we did it first
     # the port would not exist yet and anything waiting on us would conclude we
