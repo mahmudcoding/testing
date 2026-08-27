@@ -157,6 +157,12 @@
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Неудавшееся удаление показано как выполненное, а сообщение остаётся у всех остальных</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice,bob"
+         data-snippet="c-fail-delete.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-fail-delete.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Если запрос на удаление не проходит, автор всё равно видит на месте сообщения
@@ -237,6 +243,12 @@
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT][CHANNEL DETAILS] Кнопка Remove в списке участников канала не делает ничего</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-remove-member.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-remove-member.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Владелец канала открывает <code>Channel details</code> → <code>Members</code>
@@ -313,6 +325,12 @@
   <article>
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Кнопка Unmute notifications не снимает приглушение</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-unmute-dead.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-unmute-dead.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -402,6 +420,12 @@ localStorage не меняется, приглушение остаётся
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Переход к давнему сообщению молча не доходит до цели — и по кнопке «Jump to pinned message», и по ссылке</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-jump-pinned.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-jump-pinned.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -508,6 +532,12 @@ localStorage не меняется, приглушение остаётся
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT][THREADS] В треде форматирование молча меняет жест отправки, а видимая подсказка говорит обратное</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-thread-send-gesture.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-thread-send-gesture.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Под каждым полем ввода есть строка о том, чем отправлять сообщение. Когда
@@ -582,6 +612,12 @@ Cmd+Enter   → ответ отправлен, появился "Replies (1)"</p
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
     <h2>[BE][CHAT] Про @all и @here приходит «You were mentioned», но на странице Mentions их нет</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="carol,alice"
+         data-snippet="c-mention-all-missing.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:carol snip/c-mention-all-missing.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -664,6 +700,12 @@ GET /api/v1/messaging/channels/&lt;ch&gt;/messages
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
     <h2>[BE][CHAT][THREADS] После удаления сообщения с тредом ответы становятся недостижимы, а панель обещает их и предлагает бесконечный Retry</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-thread-orphan.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-thread-orphan.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Если удалить сообщение, у которого есть тред, ответы в нём перестают открываться.
@@ -739,6 +781,12 @@ GET …/thread?limit=1   404,  ещё раз   404
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT][SAVED MESSAGES] Убрать сообщение из Saved Messages можно только действием, которое обещает удалить его навсегда</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-saved-no-unsave.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-saved-no-unsave.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>На странице <code>Saved Messages</code> у сохранённой записи нет действия
@@ -813,6 +861,12 @@ Delete → "Delete permanently? | This will permanently delete this message.
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
     <h2>[BE][CHAT] Архивный канал не заморожен: отправка отбивается, а правка сообщений, реакции, закрепление и переименование проходят</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-archived-not-frozen.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-archived-not-frozen.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Архивация выглядит как заморозка: поля ввода в канале нет, отправка отбивается
@@ -886,6 +940,12 @@ GET /api/v1/messaging/channels/&lt;ch&gt;/messages
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] В архивном канале пункт Edit предлагается и не делает ничего</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-archived-edit-noop.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-archived-edit-noop.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>В архивном канале меню сообщения содержит <code>Edit</code>. Пункт активен, клик
@@ -953,6 +1013,12 @@ GET /api/v1/messaging/channels/&lt;ch&gt;/messages
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] После правки сообщения текст, начинавшийся с «-», «#» или «&gt;», превращается в разметку</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-edit-markdown.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-edit-markdown.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1032,6 +1098,12 @@ PATCH /api/v1/messaging/channels/&lt;ch&gt;/messages/&lt;id&gt;
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT][THREADS] Цитата ответа в треде показывает служебное экранирование markdown</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-thread-quote-escape.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-thread-quote-escape.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Внутри треда у каждого ответа есть действие <code>Reply here</code> — оно
@@ -1100,6 +1172,12 @@ PATCH /api/v1/messaging/channels/&lt;ch&gt;/messages/&lt;id&gt;
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Переключатель Send as file не влияет ни на запрос, ни на результат</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-sendasfile-noop.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-sendasfile-noop.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1171,6 +1249,12 @@ POST /api/v1/messaging/messages
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Переименование канала не проверяет имя, хотя форма создания приводит его к слагу</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-rename-no-slug.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-rename-no-slug.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Одно и то же поле «имя канала» ведёт себя по-разному в двух местах. При создании
@@ -1235,6 +1319,12 @@ GET /api/v1/channels/&lt;ch&gt; → name "Project Alpha Two"
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT][THREADS] Удалённый ответ остаётся в открытой панели треда вместе с прежним счётчиком</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-thread-del-stale.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-thread-del-stale.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1311,6 +1401,12 @@ GET /api/v1/channels/&lt;ch&gt; → name "Project Alpha Two"
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
     <h2>[BE][CHAT] Ответивший в треде не узнаёт о следующих ответах: ни уведомления, ни отметки, ни способа подписаться</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="bob,alice,carol"
+         data-snippet="c-thread-no-notify.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:bob snip/c-thread-no-notify.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Человек отвечает в треде — например, задаёт вопрос — и о том, что ему
@@ -1374,6 +1470,12 @@ document.visibilityState=visible во всех пробах
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Заметка в <code>Saved Messages</code> — единственное своё сообщение без <code>Edit</code> и <code>Reply</code></h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-saved-note-actions.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-saved-note-actions.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>У страницы <code>Saved Messages</code> есть композер, и написанное там
@@ -1429,6 +1531,12 @@ document.visibilityState=visible во всех пробах
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] В <code>Channel details</code> не видно предела длины <code>Name</code> и <code>Topic</code>, а ошибка не говорит, что не так</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-details-length.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-details-length.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1507,6 +1615,12 @@ Name, 300 символов
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] <code>Dismiss preview</code> убирает карточку ссылки только до следующего показа канала</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-dismiss-preview.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-dismiss-preview.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Под сообщением со ссылкой рисуется карточка предпросмотра, и у сообщения
@@ -1565,6 +1679,12 @@ Dismiss preview (второй раз)    ссылок 1, карточки нет
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Команда <code>/me</code>, выбранная из меню, не применяется — в канал уходит текст «<code>/me …</code>»</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-slash-me.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-slash-me.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1646,6 +1766,12 @@ Dismiss preview (второй раз)    ссылок 1, карточки нет
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Набранная целиком команда-эмотикон по Enter стирает всё, что набрано после неё</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-shrug-eats-tail.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-shrug-eats-tail.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Если команду не выбирать из списка, а набрать целиком вместе с текстом
@@ -1710,6 +1836,12 @@ Dismiss preview (второй раз)    ссылок 1, карточки нет
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Напечатанное <code>@имя</code> выглядит как упоминание, но упоминанием не отправляется</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice,carol"
+         data-snippet="c-typed-mention.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-typed-mention.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1802,6 +1934,12 @@ Dismiss preview (второй раз)    ссылок 1, карточки нет
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
     <h2>[BE][CHAT] Состояние приглушения не отдаётся сервером: на другом устройстве канал показан обычным, хотя уведомления не приходят</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice,dave"
+         data-snippet="c-mute-not-synced.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-mute-not-synced.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Приглушив канал на одном устройстве, на другом устройстве того же аккаунта
@@ -1884,6 +2022,12 @@ Dismiss preview (второй раз)    ссылок 1, карточки нет
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Панель Channel details, открытая с клавиатуры, остаётся практически недостижимой</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-details-keyboard.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-details-keyboard.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Нажатие Enter на кнопке <code>Channel details</code> открывает панель, но фокус
@@ -1950,6 +2094,12 @@ Escape при этом работает правильно: панель зак�
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] При любой ошибке загрузки у вложения написано «сервер отклонил файл»</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-upload-error-copy.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-upload-error-copy.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -2022,6 +2172,12 @@ Escape при этом работает правильно: панель зак�
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Неудачная отправка стирает набранное сообщение, а тост советует повторить</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-failed-send-clears.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-failed-send-clears.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -2111,6 +2267,12 @@ Escape при этом работает правильно: панель зак�
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Композер предлагает выбрать файлы, которые затем отвергает как неподдерживаемые</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-accept-rejects.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-accept-rejects.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Диалог выбора файла в композере открывается с <code>accept</code>, куда входят
@@ -2197,6 +2359,12 @@ Escape при этом работает правильно: панель зак�
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Copy text копирует технический username вместо имени человека</h2>
 
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-copytext-username.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-copytext-username.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>В сообщении с упоминанием на экране написано имя человека, а в буфер обмена
@@ -2258,6 +2426,12 @@ Escape при этом работает правильно: панель зак�
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT][A11Y] Озвучка нового сообщения читает служебное экранирование markdown</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice,bob"
+         data-snippet="c-a11y-escape.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-a11y-escape.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -2332,6 +2506,12 @@ Escape при этом работает правильно: панель зак�
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CHAT] Список ролей канала печатает внутренний id роли отдельной строкой</h2>
+
+    <div class="block repro" data-lane="C" data-accounts="alice"
+         data-snippet="c-role-id-visible.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d c:alice snip/c-role-id-visible.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
