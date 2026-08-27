@@ -44,11 +44,15 @@ fi
 # to 15, which keeps the machine off swap with room for one spare.
 sector_cap() {
   case "$1" in
-    A) echo 4 ;;   # calls, inside: "the full rig, 3-4 browsers"
-    B) echo 3 ;;   # calls, around: "2 browsers plus a separate guest window"
-    C) echo 3 ;;   # chat: "2-3 browsers"
-    D) echo 3 ;;   # org/identity: 2 concurrent, plus one kept signed out for /signup etc.
-    E) echo 2 ;;   # workspace: "mostly a single browser; a second for presence"
+    # Counted from the accounts each sector's repro blocks actually name. No one
+    # finding needs more than three, but browsers accumulate as you work through
+    # a lane, so the cap has to cover the distinct accounts it touches -- B, C
+    # and D each reach four, and the fourth launch was being refused mid-run.
+    A) echo 4 ;;   # calls, inside: alice, bob, carol
+    B) echo 4 ;;   # calls, around: alice, bob, carol, guest
+    C) echo 4 ;;   # chat: alice, bob, carol, dave
+    D) echo 4 ;;   # org/identity: alice, carol, owner, outsider
+    E) echo 3 ;;   # workspace: alice, bob, and a slot spare
     *) echo 3 ;;   # free lanes carrying no sector
   esac
 }
