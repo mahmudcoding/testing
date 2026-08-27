@@ -37,6 +37,17 @@ struct Row {
     var verdict: String     // "", "y", "n", "s"
 }
 
+/// AppKit leaves the arrow over buttons; the web card now shows a hand, and a
+/// cursor that changes on one control and not its neighbour is worse than
+/// either rule applied consistently.
+final class HandButton: NSButton {
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+}
+
+final class HandSegmented: NSSegmentedControl {
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+}
+
 // ── source-list cell ─────────────────────────────────────────────────────────
 final class RowCell: NSTableCellView {
     let dot = NSView()
@@ -436,9 +447,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     var reproItem: NSToolbarItem!
     var verdictItem: NSToolbarItem!
-    let reproButton = NSButton()
-    let verdict = NSSegmentedControl(labels: ["Confirmed", "Not a bug", "Skip"],
-                                     trackingMode: .selectOne, target: nil, action: nil)
+    let reproButton = HandButton()
+    let verdict = HandSegmented(labels: ["Confirmed", "Not a bug", "Skip"],
+                                trackingMode: .selectOne, target: nil, action: nil)
 
     func applicationDidFinishLaunching(_ n: Notification) {
         port = freePort()
@@ -513,7 +524,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
                  willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
         switch id {
         case AppDelegate.idList:
-            let b = NSButton()
+            let b = HandButton()
             b.bezelStyle = .texturedRounded
             b.title = ""
             if #available(macOS 11.0, *) {
