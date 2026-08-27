@@ -231,7 +231,9 @@ function render(){
       rich((R[f.id]||{}).left||'The script did not finish.')}</div>`:''}
     ${(f.actual||f.problem)?`<div class="sec bad"><div class="cap">Reported</div>
       <p>${rich(f.actual||f.problem)}</p></div>`:''}
-    ${f.steps.length?`<div class="sec"><div class="cap">Steps</div>
+    ${f.steps.length?`<div class="sec"><div class="cap">Steps${
+      b==='ready'?` · the app did ${Math.min((R[f.id]||{}).stepsDone||0,f.steps.length)} of ${f.steps.length}`:''
+    }</div>
       <div class="donelist live">${stepRows(f)}</div></div>`:''}
     <div class="sec"><div class="cap">Should be</div>
       <p class="ed" id="exp" contenteditable="plaintext-only"
