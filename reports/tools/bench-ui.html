@@ -51,6 +51,22 @@ button{font:inherit;color:inherit;margin:0}
 .tag{padding:2px 6px;border-radius:4px;background:var(--raised);
   font-size:11px;color:var(--label-2)}
 .tag.Critical,.tag.High{background:var(--no-bg);color:var(--no)}
+/* Priority is the one thing here you can change, so it is the one thing that
+   looks changeable: a real select, chip-sized, with a chevron. */
+.pri{appearance:none;-webkit-appearance:none;color-scheme:dark light;
+  font:inherit;font-size:11px;line-height:1.45;padding:2px 17px 2px 6px;
+  border:0;border-radius:4px;background:var(--raised);color:var(--label-2);
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),
+    linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 9px) 52%,calc(100% - 6px) 52%;
+  background-size:3px 3px,3px 3px;background-repeat:no-repeat}
+.pri:hover{background-color:var(--raised-2,var(--raised));filter:brightness(1.25)}
+.pri:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.pri.Critical,.pri.High{background-color:var(--no-bg);color:var(--no)}
+.pri.moved{box-shadow:inset 0 0 0 1px currentColor}
+.side{display:inline-flex;align-items:center;gap:4px}
+.side::before{content:'';width:5px;height:5px;border-radius:1px;
+  background:currentColor;opacity:.75}
 h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:balance}
 
 /* one box on the page, and it is the one holding a control */
@@ -112,16 +128,20 @@ const TILE_LEFT=480;          // points this window keeps; the rig takes the res
 // V: verdicts. X: should-be rewrites. Both live on the server, not in
 // localStorage: the bench takes a free port on every launch and localStorage is
 // keyed by origin, port included, so browser-side state died with every restart.
-let V={}, X={}, saveTimer=null;
+let V={}, X={}, P={}, saveTimer=null;
 const push=()=>{
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({verdicts:V,expected:X})}).catch(()=>{});
+      body:JSON.stringify({verdicts:V,expected:X,priority:P})}).catch(()=>{});
   },250);
 };
 const store=push, storeX=push;
 const expectedOf=f=>(X[f.id]!==undefined ? X[f.id] : (f.expected||''));
+const LEVELS=['Critical','High','Medium','Low'];
+// what the report said, unless it has been re-rated here
+const sevOf=f=>(P[f.id]||(f.sev==='?'?'Medium':f.sev));
+const moved=f=>!!P[f.id]&&P[f.id]!==f.sev;
 const esc=s=>(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 const rich=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 const short=t=>t.replace(/^(\[[^\]]+\])+\s*/,'');
@@ -201,9 +221,12 @@ function render(){
 
   el.innerHTML=`
     <div class="crumb">
-      <span class="tag ${f.sev==='?'?'':f.sev}">${f.sev==='?'?'Unrated':f.sev}</span>
+      <select class="pri ${sevOf(f)}${moved(f)?' moved':''}" id="pri"
+              title="${moved(f)?'Re-rated here — the report said '+esc(f.sev):'Priority'}"
+              aria-label="Priority">${LEVELS.map(l=>
+        `<option${l===sevOf(f)?' selected':''}>${l}</option>`).join('')}</select>
       <span class="tag">${esc(sentence(f.area))}</span>
-      <span>${esc(f.laneName)}</span>
+      <span class="side">${f.side==='backend'?'Backend':'Frontend'}</span>
       <span class="n">${cur+1} of ${Q.length}</span>
     </div>
     <h1>${rich(short(f.title))}</h1>
@@ -224,6 +247,12 @@ function render(){
   const c=document.getElementById('copylog');
   if(c)c.onclick=()=>{navigator.clipboard.writeText((R[f.id]||{}).log||'');
     c.textContent='Copied'; setTimeout(()=>{c.textContent='Copy details';},1600);};
+  const pr=document.getElementById('pri');
+  if(pr)pr.onchange=()=>{
+    // choosing the report's own rating is not an override, it is a reset
+    if(pr.value===f.sev) delete P[f.id]; else P[f.id]=pr.value;
+    push(); render();
+  };
   const ex=document.getElementById('exp');
   if(ex){
     ex.oninput=()=>{
@@ -309,7 +338,8 @@ async function saveRecord(){
   L.forEach(x=>{const rs=F.filter(f=>f.lane===x&&V[f.id]&&V[f.id].v); if(!rs.length)return;
     out.push(`## Lane ${x} — ${rs[0].laneName}`,'');
     rs.forEach(f=>{const r=V[f.id];
-      out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG'})[r.v]}** · [${f.sev}] ${f.title}`);
+      out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG'})[r.v]}** · [${sevOf(f)}${
+        moved(f)?' — report said '+f.sev:''}] · ${f.side==='backend'?'BE':'FE'} · ${f.title}`);
       if(X[f.id]!==undefined) out.push(`  - Should be (rewritten): ${X[f.id]}`);
       if(r.note)out.push(`  - ${r.note}`);}); out.push('');});
   const res=await fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -341,7 +371,7 @@ Promise.all([
   fetch('/api/findings').then(r=>r.json()),
   fetch('/api/state').then(r=>r.json()).catch(()=>({})),
 ]).then(([d,st])=>{
-  V=st.verdicts||{}; X=st.expected||{};
+  V=st.verdicts||{}; X=st.expected||{}; P=st.priority||{};
   F=d; Q=allFindings(); render();
 }).catch(e=>{document.getElementById('main').innerHTML=
   '<div class="empty">Could not load findings — is scripts/bench.py running?</div>';});

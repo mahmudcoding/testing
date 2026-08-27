@@ -117,6 +117,10 @@ def _load_uncached():
             items.append({
                 "id": f"{lane}:{i}", "n": n, "lane": lane, "laneName": name,
                 "title": f["title"], "sev": f["severity"], "area": f["area"],
+                # reports tag the title [BE] or [FE-WEB]; that is where the
+                # finding says which side it lives on
+                "side": "backend" if "[BE]" in f["title"].split("]")[0] + "]"
+                        else "frontend",
                 "surface": surface(f), "roles": roles, "accounts": accts,
                 "steps": f["steps"], "actual": f.get("Фактический результат",""),
                 "measure": f.get("Фактический результат_measure",""),
