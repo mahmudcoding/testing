@@ -224,13 +224,22 @@ async function doRepro(){
   setTimeout(()=>{ HANDOFF[f.id]=true; if(Q[cur]===f) render(); }, 650);
 }
 
+let lastVerdictAt=0;
 function verdict(v){
   const f=Q[cur]; if(!f)return;
-  if(!v){ delete V[f.id]; store(); render(); return; }   // cleared, not judged
-  // no auto-advance: paired with clear-on-reclick it meant a stray double click
-  // judged the next finding too, and that one was never looked at
+  if(!v){ delete V[f.id]; store(); render(); return; }   // cleared: stay put
+  // Judging moves to the next finding, so a second click lands on a different
+  // one. Swallow it: a double press should not record a verdict on something
+  // that was never looked at.
+  const now=Date.now();
+  // sync, not a bare return: the button toggled itself on the click we are
+  // discarding, so it has to be told to go back to what is actually recorded
+  if(now-lastVerdictAt<400){ sync(); return; }
+  lastVerdictAt=now;
   V[f.id]={v,at:new Date().toISOString()};
-  store(); render();
+  store();
+  if(cur<Q.length-1)cur++;
+  render();
 }
 
 let CLOSING=false;
