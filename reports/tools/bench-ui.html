@@ -21,6 +21,9 @@
 }}
 
 *{box-sizing:border-box}
+/* when the Reproduce button is removed from the DOM mid-run, WebKit moves focus
+   to the block that replaced it and draws a ring round it */
+.act, .act *{outline:none}
 html,body{height:100%}
 body{margin:0;background:var(--content);color:var(--label);
   font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
@@ -71,20 +74,24 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .donelist{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .dl-cap{font:600 10.5px/1.3 inherit;letter-spacing:.06em;text-transform:uppercase;
   color:var(--label-3);margin-bottom:2px}
-.dl-row{display:flex;gap:7px;align-items:flex-start;line-height:1.45}
-.donelist.live{margin-top:14px;padding-top:12px;border-top:1px solid var(--sep);gap:5px}
+.dl-row{display:flex;gap:7px;align-items:flex-start;line-height:1.45;
+  padding:5px 8px;margin:0 -8px;border-radius:6px}
+.donelist.live{margin-top:12px;padding-top:12px;border-top:1px solid var(--sep);gap:2px}
 .dl-row.pending{color:var(--label-3)}
 .dl-row.pending .ck{color:var(--label-3);font-weight:400}
 .dl-row.doing{color:var(--label)}
-.dl-row.mine{color:var(--label);font-weight:600;font-size:14.5px;
-  background:color-mix(in srgb,var(--accent-fill) 14%,transparent);
-  border-radius:6px;padding:5px 8px;margin:2px -8px}
+.dl-row.mine{color:var(--label);font-weight:600;
+  background:color-mix(in srgb,var(--accent-fill) 14%,transparent)}
 .dl-row.mine .arrow{color:var(--accent);font-weight:700}
 .turn{margin-left:auto;align-self:center;font:600 9.5px/1 inherit;letter-spacing:.07em;
   text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);
   border-radius:99px;padding:3px 7px;white-space:nowrap}
-.run-line{margin:0 0 2px;display:flex;align-items:center;gap:8px;
-  font:500 13px/1.4 inherit;color:var(--label)}
+.run-line{margin:0;height:20px;display:flex;align-items:center;gap:8px;
+  font:500 13px/1 inherit;color:var(--label)}
+.run-line .ck{color:var(--ok);font-weight:700}
+/* the note slot holds a hint while running and the script's context after, so
+   it is sized for the taller of the two and never resizes between them */
+.now-sub.slot{min-height:3.3em}
 .spinner.sm{width:10px;height:10px;border-width:1.6px;flex:none;margin-top:2px}
 .link{margin-left:auto;background:none;border:0;padding:0;cursor:pointer;
   color:var(--accent);font-size:11.5px}
@@ -161,19 +168,23 @@ function action(f){
   const b=beat(f), r=R[f.id], rec=V[f.id]||{};
   const who=f.accounts.map(a=>`<b>${esc(a)}</b>`).join(' and ');
 
-  // Running and ready are the same card. The step list is the view; finishing
-  // only changes which row is live and who owns it — replacing the whole panel
-  // at the end threw away the thing the person was already reading.
+  // Running and ready are the same card, and the same *shape*: every slot is
+  // present from the first frame and only its contents change. Anything that
+  // appears or grows at the end shifts what the person is reading, which is
+  // exactly when they are least able to afford it.
   if(b==='running' || b==='ready'){
     const ready = b==='ready';
     const n = ready ? Math.min(r.stepsDone||0, f.steps.length) : (LIVE[f.id]||0);
     const mineIdx = ready && n < f.steps.length ? n : -1;
+    const line = ready
+      ? `<span class="ck">✓</span>The browser is set up and waiting`
+      : `<span class="spinner"></span>${n ? 'Working through the steps…'
+                                          : 'Launching '+who+'…'}`;
+    const note = ready ? rich(r.left||'')
+      : 'Up to a minute the first time — the browser has to start and sign in.';
     return `<div class="act live col">
       <div class="now-cap">${ready ? 'Your turn — in the browser window' : 'Reproducing'}</div>
-      ${ready ? '' : `<p class="run-line"><span class="spinner"></span>${n
-        ? 'Working through the steps…' : 'Launching '+who+'…'}</p>`}
-      ${(!ready && !n) ? `<p class="now-sub">Up to a minute the first time — the browser
-        has to start and sign in. Leave it alone.</p>` : ''}
+      <p class="run-line">${line}</p>
       ${f.steps.length ? `<div class="donelist live">${f.steps.map((x,i)=>{
         const st = i<n ? 'done' : (i===mineIdx ? 'mine' : (!ready && i===n ? 'doing' : 'pending'));
         const mark = st==='done' ? '<span class="ck">✓</span>'
@@ -183,9 +194,9 @@ function action(f){
         return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span>${
           st==='mine' ? '<span class="turn">your turn</span>' : ''}</div>`;
       }).join('')}</div>` : ''}
-      ${ready && r.left ? `<p class="now-sub">${rich(mineIdx<0 ? r.left : r.left)}</p>` : ''}
-      ${ready ? `<div class="did"><span></span>
-        <button class="link" id="closebr">Close browser</button></div>` : ''}
+      <p class="now-sub slot">${note}</p>
+      <div class="did"><span></span>
+        <button class="link" id="closebr"${ready ? '' : ' hidden'}>Close browser</button></div>
     </div>`;
   }
 
