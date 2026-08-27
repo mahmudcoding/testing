@@ -175,7 +175,7 @@ function action(f){
         return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span></div>`;
       }).join('')}</div>` : ''}
       <div class="did"><span></span>
-        <button class="link${ready ? '' : ' held'}" id="closebr">Close browser</button></div>
+        <button class="link${ready ? '' : ' held'}" id="closebr">Close</button></div>
     </div>`;
   }
 
@@ -275,7 +275,7 @@ async function closeBrowser(btn,f){
     }
     btn.textContent='Could not close';
   }catch(e){ btn.textContent='Could not close'; }
-  setTimeout(()=>{btn.disabled=false; btn.textContent='Close browser';},2200);
+  setTimeout(()=>{btn.disabled=false; btn.textContent='Close';},2200);
 }
 
 async function saveRecord(){
