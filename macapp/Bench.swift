@@ -350,9 +350,9 @@ final class RootVC: NSViewController {
 
         leading = panel.leadingAnchor.constraint(equalTo: root.leadingAnchor,
                                                  constant: -RootVC.width)
-        // Fixed. The panel slides over the content and nothing else moves: not
-        // the window, not the detail pane, which stays pinned to all four edges
-        // of the root the whole time.
+        // Set to the window's width by fitPanel(). The panel slides over the
+        // content and nothing else moves: not the window, not the detail pane,
+        // which stays pinned to all four edges of the root the whole time.
         panelW = panel.widthAnchor.constraint(equalToConstant: RootVC.width)
         NSLayoutConstraint.activate([
             d.leadingAnchor.constraint(equalTo: root.leadingAnchor),
@@ -387,7 +387,18 @@ final class RootVC: NSViewController {
 
     override func viewDidLayout() {
         super.viewDidLayout()
+        fitPanel()
         paint()
+    }
+
+    /// The list is as wide as the window. It still overlays — the finding does
+    /// not move under it — so at full width it simply covers the finding while
+    /// it is open, and selecting a row puts it away again.
+    private func fitPanel() {
+        let w = view.bounds.width
+        guard w > 1, abs(panelW.constant - w) > 0.5 else { return }
+        panelW.constant = w
+        if !isOpen { leading.constant = -w }
     }
 
     /// Layer colours do not follow light/dark on their own.
