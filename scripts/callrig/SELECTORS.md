@@ -192,3 +192,40 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
 - Radix popper items are not `[role=option]`/`[role=menuitem]`; they are plain
   nodes under `[data-radix-popper-content-wrapper]`. `window.__qa.popperPick()`
   handles the walk-up.
+
+## Calls — state that gates a control
+
+- **A meeting is created with `screen_share_mode: "on_request"`**, so a
+  participant's control reads `Request to share`, not `Share screen`, and a
+  snippet matching the latter finds nothing and reports the participant never
+  shared. The per-participant device permission does **not** lift it — the
+  dialog reads `Currently Allowed` while the button stays a request. Set the
+  meeting's own mode first:
+  `PATCH /api/v1/meeting/<id>/settings {"screen_share_mode":"allowed_all"}`.
+  The full settings object also carries `mic_mode`, `camera_mode`,
+  `who_can_open_rooms`, `who_can_see_guest_link`, `max_rooms`, `max_video_height`
+  — none of them on `GET /meeting/<id>`, which is a different shape.
+- **A co-host cannot be moderated.** Over a co-host the host's row menu drops
+  `Revoke screen sharing`, `Mute`, and the rest, so the menu comes back empty or
+  short. That reads exactly like a stale client and has cost half an hour twice.
+  Remove co-host first, or check `Remove co-host` is in the items before
+  concluding a control is missing.
+- **Ending a meeting needs `POST /api/v1/meeting/<id>/end`.** `cancel` answers
+  409 once a meeting has started. A meeting left `active` blocks the next call
+  from starting at all — the route stays on `/w/<ws>/calls` and never reaches
+  `/call/<id>` — and the window that left it looks perfectly clean, so this is
+  invisible from the client. `GET /api/v1/workspace/<ws>/meetings/active` lists
+  them.
+- **A rig window narrower than about 960 px drops the call header and toolbar
+  entirely.** "Is he in a side room" and "is the button there" then both answer
+  no for a window that is merely small.
+
+## Settings
+
+- The **language picker's own options are localized**, so they cannot be matched
+  by an English string on a second run. The dialog lists exactly four in a fixed
+  order — English, Russian, Uzbek, Uzbek (Cyrillic) — so pick by position and
+  verify against `document.documentElement.lang`.
+- Font-size buttons read `XS S M L XL` on screen and
+  `Extra small … Extra large` to the accessibility tree. Matching only the
+  accessible name silently misses; match either.
