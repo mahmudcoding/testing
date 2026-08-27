@@ -230,7 +230,13 @@ def reproduce(item):
 
     res = _snippet_result(out)
     left = res.get("leftToDo") or "Snippet finished. Compare what you see against the claim above."
-    return {"ok": rc == 0, "stage": "reproduced", "log": "\n".join(log), "left": left,
+    # The exit code only says the script ran. A snippet that could not reach the
+    # state returns ready:false and says so -- reporting that as a successful
+    # setup is how someone ends up judging a screen the finding is not about.
+    ready = bool(res.get("ready"))
+    return {"ok": rc == 0 and ready,
+            "stage": "reproduced" if ready else "failed",
+            "log": "\n".join(log), "left": left,
             "stepsDone": int(res.get("stepsDone") or 0),
             "asserted": res.get("asserted") or None}
 
