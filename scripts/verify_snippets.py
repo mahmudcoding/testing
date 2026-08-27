@@ -64,7 +64,11 @@ def verify(lane):
     if not rows:
         print(f"lane {lane}: no blocks yet")
         return []
-    accts = sorted({a for _, a in rows})
+    # every account any block names, not just the drivers: a snippet reaches for
+    # its other participants itself, and one that was never launched surfaces as
+    # a connect error that looks exactly like a broken snippet
+    accts = sorted({a for names in block_accts.values() for a in names}
+                   | {a for _, a in rows})
     env = dict(os.environ, QA_LANE=lane)
     print(f"lane {lane}: {len(rows)} snippets, accounts {' '.join(accts)}", flush=True)
     for a in accts:                       # launch is a no-op if it is already up
