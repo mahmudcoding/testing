@@ -162,7 +162,13 @@ def run(cmd, timeout=420, slow=False):
 def reproduce(item):
     """Bring the browsers up, then run the finding's repro snippet if it has one."""
     log, lane = [], item["lane"].lower()
-    accts = item["accounts"] or ["alice"]
+    # The block's data-accounts is authoritative: whoever wrote the snippet named
+    # the browsers it drives. item["accounts"] is a guess derived from the
+    # finding's prose, and where the two differ the snippet was driven against a
+    # browser that had never been brought up.
+    rep0 = item.get("repro") or {}
+    accts = [a.strip() for a in rep0.get("accounts", "").split(",") if a.strip()] \
+            or item["accounts"] or ["alice"]
     PROGRESS[item["id"]] = 0
 
     log.append(f"$ ./scripts/callrig/ensure.sh {lane} {' '.join(accts)}")
