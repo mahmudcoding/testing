@@ -1,427 +1,302 @@
-<title>Bug Verification Bench</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<title>Reproducer</title>
 <style>
+/* Detail pane only. The sidebar, toolbar and verdict control are real AppKit —
+   see macapp/Bench.swift. This document styles content, not chrome. */
 :root{
-  --ground:#f6f6f8; --surface:#fff; --surface-2:#eff0f4; --line:#dcdee6;
-  --ink:#181b22; --ink-2:#4a4f5e; --ink-3:#767c8c;
-  --accent:#a8681f; --accent-soft:#f3e6d3; --accent-ink:#7d4d13; --on-accent:#fffaf3;
-  --ok:#2b7355; --ok-soft:#dcefe6; --no:#9d3f49; --no-soft:#f6e0e2;
-  --skip:#6a7183; --skip-soft:#e6e8ee; --warn:#8a6510; --warn-soft:#faeecf;
-  --shadow:0 1px 2px rgba(20,22,30,.06),0 8px 24px -12px rgba(20,22,30,.18);
-  --r:10px;
+  color-scheme:light dark;
+  --content:#ffffff; --group:#ffffff; --raised:#f2f2f5;
+  --sep:#0000001a; --sep-solid:#dcdcdf;
+  --label:#000000; --label-2:#3c3c4399; --label-3:#3c3c434d;
+  --accent:#0066cc; --accent-fill:#0a84ff;
+  --ok:#1d7f4e; --no:#c0392f; --no-bg:#fceceb; --accent-wash:#f0f7ff;
+  --btn:linear-gradient(#ffffff,#f7f7f8); --btn-line:#c8c8cc;
 }
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
-  --ground:#101218; --surface:#181b22; --surface-2:#1f232c; --line:#2b3038;
-  --ink:#e7e9f0; --ink-2:#a8aec0; --ink-3:#7b8294;
-  --accent:#d59a4e; --accent-soft:#33281a; --accent-ink:#e8b877; --on-accent:#1a1206;
-  --ok:#5fb894; --ok-soft:#1a2e26; --no:#d9848d; --no-soft:#2e1c1f;
-  --skip:#8f97a9; --skip-soft:#232830; --warn:#d8b45f; --warn-soft:#2c2617;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --content:#1e1e1e; --group:#262628; --raised:#2e2e31;
+  --sep:#ffffff14; --sep-solid:#3a3a3d;
+  --label:#ffffff; --label-2:#ebebf599; --label-3:#ebebf54d;
+  --accent:#4da3ff; --accent-fill:#0a84ff;
+  --ok:#4cd18c; --no:#ff6961; --no-bg:#33191b; --accent-wash:#16202c;
+  --btn:linear-gradient(#4a4a4e,#414145); --btn-line:#5a5a5f;
 }}
-:root[data-theme="dark"]{
-  --ground:#101218; --surface:#181b22; --surface-2:#1f232c; --line:#2b3038;
-  --ink:#e7e9f0; --ink-2:#a8aec0; --ink-3:#7b8294;
-  --accent:#d59a4e; --accent-soft:#33281a; --accent-ink:#e8b877; --on-accent:#1a1206;
-  --ok:#5fb894; --ok-soft:#1a2e26; --no:#d9848d; --no-soft:#2e1c1f;
-  --skip:#8f97a9; --skip-soft:#232830; --warn:#d8b45f; --warn-soft:#2c2617;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
-}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--ink);
-  font-family:"Golos Text",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
-  padding-bottom:104px}
-.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
-code{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.88em;
-  background:var(--surface-2);padding:.1em .35em;border-radius:4px;color:var(--ink)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+html,body{height:100%}
+body{margin:0;background:var(--content);color:var(--label);
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;overflow-y:auto}
+button{font:inherit;color:inherit;margin:0}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-thumb{background:var(--label-3);border-radius:6px;
+  border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
 
-/* ── top bar ─────────────────────────────── */
-.top{position:sticky;top:0;z-index:20;background:var(--surface);
-  border-bottom:1px solid var(--line)}
-.top-in{max-width:1080px;margin:0 auto;padding:12px 24px;
-  display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.brand{font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
-.brand span{color:var(--ink-3);font-weight:500}
-.lanes{display:flex;gap:4px;flex:1;flex-wrap:wrap}
-.lane-btn{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.04em;
-  padding:7px 11px;border-radius:7px;border:1px solid var(--line);
-  background:transparent;color:var(--ink-2);cursor:pointer;transition:.12s}
-.lane-btn:hover{border-color:var(--accent);color:var(--ink)}
-.lane-btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);
-  color:var(--accent-ink)}
-.lane-btn b{font-weight:600}
-.lane-btn i{font-style:normal;opacity:.65;margin-left:5px}
-.ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2);
-  border-radius:7px;padding:7px 12px;font:500 13px/1 "Golos Text",sans-serif;cursor:pointer}
-.ghost:hover{border-color:var(--accent);color:var(--ink)}
-.bar{height:3px;background:var(--surface-2);position:relative;overflow:hidden}
-.bar>i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
+.pane{max-width:660px;padding:22px 30px 34px}
+.empty{max-width:420px;margin:20vh auto;text-align:center;color:var(--label-2);
+  line-height:1.6}
 
-/* ── setup banner ────────────────────────── */
-.setup{max-width:1080px;margin:20px auto 0;padding:0 24px}
-.setup-in{background:var(--accent-soft);border:1px solid var(--accent);
-  border-radius:var(--r);padding:14px 18px;display:flex;gap:14px;align-items:flex-start}
-.setup-in.same{background:var(--surface);border-color:var(--line)}
-.setup-k{font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--accent-ink);white-space:nowrap;padding-top:3px}
-.setup.same .setup-k{color:var(--ink-3)}
-.setup-v{font-size:14px;color:var(--ink);line-height:1.5}
-.setup-v b{font-weight:600}
-.acct{font-family:"IBM Plex Mono",monospace;font-size:12.5px;
-  background:var(--surface);border:1px solid var(--line);border-radius:5px;
-  padding:1px 7px;margin-right:4px;display:inline-block}
+.crumb{display:flex;align-items:center;gap:6px;margin-bottom:8px;
+  font-size:11px;color:var(--label-2)}
+.crumb .n{margin-left:auto;font-variant-numeric:tabular-nums}
+.tag{padding:2px 6px;border-radius:4px;background:var(--raised);
+  font-size:11px;color:var(--label-2)}
+.tag.Critical,.tag.High{background:var(--no-bg);color:var(--no)}
+h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:balance}
 
-/* ── finding card ────────────────────────── */
-main{max-width:1080px;margin:0 auto;padding:20px 24px 40px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  box-shadow:var(--shadow);overflow:hidden}
-.card-head{padding:22px 28px 18px;border-bottom:1px solid var(--line)}
-.meta{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.chip{font:600 10.5px/1 "IBM Plex Mono",monospace;letter-spacing:.07em;
-  text-transform:uppercase;padding:5px 9px;border-radius:5px;white-space:nowrap}
-.chip.High{background:var(--no-soft);color:var(--no)}
-.chip.Medium{background:var(--accent-soft);color:var(--accent-ink)}
-.chip.Low{background:var(--skip-soft);color:var(--skip)}
-.chip.q{background:var(--surface-2);color:var(--ink-3)}
-.chip.area{background:var(--surface-2);color:var(--ink-2)}
-.counter{margin-left:auto;font:500 12px/1 "IBM Plex Mono",monospace;color:var(--ink-3)}
-h1{margin:0;font-size:24px;line-height:1.28;font-weight:600;letter-spacing:-.015em;
-  text-wrap:balance}
-h1 code{font-size:.85em}
-.warn{margin:14px 28px 0;background:var(--warn-soft);border-left:3px solid var(--warn);
-  border-radius:0 6px 6px 0;padding:11px 15px;font-size:13.5px;color:var(--ink);line-height:1.5}
-.warn b{color:var(--warn);font-weight:600;font-family:"IBM Plex Mono",monospace;
-  font-size:11px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px}
-.sect{padding:22px 28px;border-bottom:1px solid var(--line)}
-.sect:last-child{border-bottom:0}
-.sect h2{margin:0 0 10px;font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.11em;
-  text-transform:uppercase;color:var(--ink-3)}
-.claim{font-size:17.5px;line-height:1.6;color:var(--ink);max-width:66ch}
-.body{font-size:15px;line-height:1.6;color:var(--ink-2);max-width:66ch}
-ol.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;
-  flex-direction:column;gap:2px;max-width:70ch}
-ol.steps li{counter-increment:s;display:flex;gap:13px;padding:9px 10px;border-radius:7px;
-  font-size:15px;line-height:1.55;cursor:pointer;transition:background .12s}
-ol.steps li.mine{background:var(--accent-soft);border:1px solid var(--accent)}
-ol.steps li.mine .st{color:var(--ink)}
-ol.steps li .tag{flex:none;align-self:center;font:600 10px/1 "IBM Plex Mono",ui-monospace,Menlo,monospace;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);
-  border:1px solid var(--accent);border-radius:99px;padding:5px 8px}
-ol.steps li::before{content:counter(s);flex:none;width:22px;height:22px;margin-top:1px;
-  border:1px solid var(--line);border-radius:50%;
-  font:500 11px/20px "IBM Plex Mono",monospace;text-align:center;color:var(--ink-3)}
-ol.steps li.done{color:var(--ink-3)}
-ol.steps li.done::before{content:"✓";background:var(--ok-soft);border-color:var(--ok);
-  color:var(--ok);font-size:12px}
-ol.steps li.done .st{text-decoration:line-through;text-decoration-color:var(--line)}
+/* one box on the page, and it is the one holding a control */
+.act{background:var(--group);border:1px solid var(--sep-solid);border-radius:8px;
+  padding:16px 18px;margin-bottom:26px;display:flex;gap:16px;align-items:flex-start}
+.act.live{border-color:var(--accent-fill);background:var(--accent-wash)}
+.act.col{display:block}
+.go{flex:none;background:var(--accent-fill);border:1px solid transparent;
+  border-radius:6px;color:#fff;font:500 13px/1 inherit;padding:7px 16px;cursor:default;
+  display:inline-flex;align-items:center;gap:6px}
+.go:hover{filter:brightness(1.07)}
+.go:disabled{opacity:.5}
+.push{background:var(--btn);border:1px solid var(--btn-line);border-radius:6px;
+  padding:4px 12px;font-size:13px;cursor:default}
+.push:hover{filter:brightness(.97)}
+.hint{margin:0;font-size:12.5px;line-height:1.5;color:var(--label-2)}
+.hint b{font-weight:600;color:var(--label)}
 
-/* ── action bar ──────────────────────────── */
-.act{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);
-  border-top:1px solid var(--line);box-shadow:0 -6px 24px -14px rgba(0,0,0,.4)}
-.act-in{max-width:1080px;margin:0 auto;padding:14px 24px;display:flex;gap:10px;
-  align-items:center;flex-wrap:wrap}
-.v{border:1px solid var(--line);background:var(--surface);border-radius:8px;
-  padding:11px 18px;font:600 14px/1 "Golos Text",sans-serif;cursor:pointer;
-  display:flex;align-items:center;gap:9px;transition:.12s}
-.v kbd{font:600 10px/1 "IBM Plex Mono",monospace;background:var(--surface-2);
-  border:1px solid var(--line);border-radius:4px;padding:3px 5px;color:var(--ink-3)}
-.v.ok{color:var(--ok);border-color:var(--ok)}
-.v.ok:hover,.v.ok[aria-pressed="true"]{background:var(--ok-soft)}
-.v.no{color:var(--no);border-color:var(--no)}
-.v.no:hover,.v.no[aria-pressed="true"]{background:var(--no-soft)}
-.v.sk{color:var(--skip)}
-.v.sk:hover,.v.sk[aria-pressed="true"]{background:var(--skip-soft)}
-.note{flex:1;min-width:180px;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:8px;padding:11px 13px;font:400 14px "Golos Text",sans-serif;color:var(--ink)}
-.note::placeholder{color:var(--ink-3)}
-.nav{display:flex;gap:6px;margin-left:auto}
-.nav button{width:38px;height:38px;border:1px solid var(--line);background:var(--surface);
-  border-radius:8px;color:var(--ink-2);cursor:pointer;font-size:15px}
-.nav button:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}
-.nav button:disabled{opacity:.35;cursor:default}
+.now-cap{font:600 10.5px/1.3 inherit;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:6px}
+.now{margin:0;font:600 17px/1.35 inherit;letter-spacing:-.008em}
+.now-sub{margin:8px 0 0;font-size:12.5px;line-height:1.5;color:var(--label-2)}
 
-/* ── drawer ──────────────────────────────── */
-.scrim{position:fixed;inset:0;background:rgba(10,12,16,.5);z-index:40;display:none}
-.scrim.open{display:block}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,92vw);z-index:41;
-  background:var(--surface);border-left:1px solid var(--line);
-  transform:translateX(100%);transition:transform .22s ease,visibility 0s .22s;
-  visibility:hidden;display:flex;flex-direction:column}
-.drawer.open{transform:none;visibility:visible;transition:transform .22s ease}
-.dh{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;
-  align-items:center;gap:12px}
-.dh h3{margin:0;font-size:15px;font-weight:600;flex:1}
-.dl{flex:1;overflow-y:auto;padding:8px}
-.row{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;
-  cursor:pointer;font-size:13.5px;line-height:1.45;color:var(--ink-2);
-  border-left:3px solid transparent}
-.row:hover{background:var(--surface-2)}
-.row.cur{background:var(--surface-2);border-left-color:var(--accent);color:var(--ink)}
-.row .n{font:500 11px/1.5 "IBM Plex Mono",monospace;color:var(--ink-3);flex:none;width:22px}
-.dot{flex:none;width:8px;height:8px;border-radius:50%;margin-top:5px;
-  background:var(--line)}
-.dot.y{background:var(--ok)} .dot.n{background:var(--no)} .dot.s{background:var(--skip)}
-.df{padding:16px 22px;border-top:1px solid var(--line);display:flex;gap:10px;
-  flex-wrap:wrap;align-items:center}
-.tally{font:500 12px/1.5 "IBM Plex Mono",monospace;color:var(--ink-3);flex:1}
-.solid{background:var(--accent);border:1px solid var(--accent);color:var(--on-accent);border-radius:8px;
-  padding:10px 15px;font:600 13px/1 "Golos Text",sans-serif;cursor:pointer}
-.empty{padding:60px 28px;text-align:center;color:var(--ink-3);font-size:15px}
-@media(max-width:640px){
-  h1{font-size:20px} .claim{font-size:16px} .act-in{padding:11px 16px}
-  .top-in{padding:10px 16px} main{padding:16px} .setup{padding:0 16px}
-}
-</style>
-<style>
-/* ── reproduce ─────────────────────────── */
-.repro{padding:20px 28px;border-bottom:1px solid var(--line);
-  display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
-.play{background:var(--accent);border:1px solid var(--accent);color:var(--on-accent);
-  border-radius:9px;padding:14px 22px;font:600 15px/1 "Golos Text",sans-serif;
-  cursor:pointer;display:flex;align-items:center;gap:10px;white-space:nowrap;
-  transition:.12s}
-.play:hover:not(:disabled){filter:brightness(1.07)}
-.play:disabled{opacity:.55;cursor:default}
-.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);
-  border-top-color:var(--on-accent);border-radius:50%;animation:sp .7s linear infinite}
+.did{display:flex;align-items:center;gap:6px;margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--sep);font-size:11.5px;color:var(--label-2);flex-wrap:wrap}
+.did .ck{color:var(--ok);font-weight:700}
+.did details{margin-left:auto}
+.did summary{list-style:none;cursor:default;color:var(--accent);font-size:11.5px}
+.did summary::-webkit-details-marker{display:none}
+.did pre{flex-basis:100%;margin:8px 0 0;background:var(--content);
+  border:1px solid var(--sep-solid);border-radius:6px;padding:8px 10px;
+  font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--label-2);
+  white-space:pre-wrap;word-break:break-word;max-height:170px;overflow:auto;
+  -webkit-user-select:text;user-select:text}
+.spinner{display:inline-block;width:12px;height:12px;vertical-align:-1px;
+  border:2px solid var(--label-3);border-top-color:var(--accent-fill);
+  border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.out{margin:0 28px 20px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-.out-h{padding:12px 16px;background:var(--surface-2);
-  font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--ink-3);display:flex;align-items:center;gap:9px}
-.out-h .pip{width:7px;height:7px;border-radius:50%;background:var(--ok)}
-.out-h.bad .pip{background:var(--no)}
-.left{padding:16px;font-size:15.5px;line-height:1.55;color:var(--ink);
-  background:var(--accent-soft);border-bottom:1px solid var(--line)}
-.left b{font:600 10.5px/1 "IBM Plex Mono",monospace;letter-spacing:.09em;
-  text-transform:uppercase;color:var(--accent-ink);display:block;margin-bottom:6px}
-details.raw{border-top:0}
-details.raw summary{padding:10px 16px;cursor:pointer;font:500 12px "IBM Plex Mono",monospace;
-  color:var(--ink-3);list-style:none}
-details.raw summary::-webkit-details-marker{display:none}
-details.raw summary:before{content:"▸ ";}
-details.raw[open] summary:before{content:"▾ ";}
-details.raw pre{margin:0;padding:0 16px 14px;font:400 12px/1.6 "IBM Plex Mono",monospace;
-  color:var(--ink-2);white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto}
-.norep{background:var(--surface-2);color:var(--ink-2)}
-.norep b{color:var(--ink-3)}
-</style>
-<style>
-details.more summary{cursor:pointer;list-style:none;font:600 11px/1 "IBM Plex Mono",monospace;
-  letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+
+/* prose sections: label + text, spacing instead of chrome */
+.sec{margin-bottom:22px}
+.sec > .cap{font:600 10.5px/1.3 inherit;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--label-3);margin-bottom:6px}
+.sec p{margin:0;font-size:13.5px;line-height:1.58;max-width:62ch}
+.sec.bad p{color:var(--label)}
+
+.steps{margin:0;padding:0;list-style:none;counter-reset:s;max-width:62ch}
+.steps li{counter-increment:s;display:flex;gap:9px;padding:3px 0;
+  font-size:13.5px;line-height:1.5;color:var(--label-2)}
+.steps li::before{content:counter(s) ".";flex:none;width:14px;text-align:right;
+  color:var(--label-3);font-variant-numeric:tabular-nums}
+
+.note-box{background:var(--no-bg);border-radius:8px;padding:11px 14px;
+  margin-bottom:22px;font-size:12.5px;line-height:1.5;max-width:62ch}
+.note-box b{display:block;font-weight:600;margin-bottom:3px}
+
+details.more{margin-bottom:22px}
+details.more summary{list-style:none;cursor:default;color:var(--accent);font-size:12.5px}
 details.more summary::-webkit-details-marker{display:none}
-details.more summary:before{content:"▸ "}
-details.more[open] summary:before{content:"▾ "}
-pre.meas{margin:12px 0 0;padding:14px;background:var(--surface-2);border-radius:8px;
-  font:400 12px/1.6 "IBM Plex Mono",monospace;color:var(--ink-2);white-space:pre-wrap;
-  word-break:break-word;max-height:340px;overflow:auto}
+details.more summary::before{content:"\25B6";font-size:8px;margin-right:5px;
+  display:inline-block;vertical-align:1px}
+details.more[open] summary::before{content:"\25BC"}
+details.more .body{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--label-2);
+  max-width:62ch}
+details.more pre{margin:8px 0 0;background:var(--group);border:1px solid var(--sep-solid);
+  border-radius:6px;padding:10px;font:11px/1.55 ui-monospace,Menlo,monospace;
+  color:var(--label-2);white-space:pre-wrap;word-break:break-word;
+  max-height:280px;overflow:auto;-webkit-user-select:text;user-select:text}
+
+.foot{display:flex;align-items:center;gap:8px;padding-top:6px;
+  border-top:1px solid var(--sep);margin-top:4px}
+input.note{flex:1;min-width:60px;font:13px/1 inherit;color:var(--label);
+  background:var(--content);border:1px solid var(--btn-line);border-radius:6px;
+  padding:5px 8px;-webkit-user-select:text;user-select:text}
+input.note::placeholder{color:var(--label-3)}
+input.note:focus{outline:none;border-color:var(--accent-fill);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-fill) 22%,transparent)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
+  background:var(--raised);padding:.1em .35em;border-radius:4px}
 </style>
-<div class="top">
-  <div class="top-in">
-    <div class="brand">Verification bench <span>· local</span></div>
-    <div class="lanes" id="lanes"></div>
-    <button class="ghost" id="openList">All findings</button>
-  </div>
-  <div class="bar"><i id="prog" style="width:0%"></i></div>
-</div>
 
-<div class="setup" id="setup"></div>
-<main id="main"><div class="empty">Loading…</div></main>
-
-<div class="act"><div class="act-in">
-  <button class="v ok" id="bY">Confirmed <kbd>Y</kbd></button>
-  <button class="v no" id="bN">Not a bug <kbd>N</kbd></button>
-  <button class="v sk" id="bS">Skip <kbd>S</kbd></button>
-  <input class="note" id="note" placeholder="Note — what you saw, or why it isn't one (optional)">
-  <div class="nav">
-    <button id="bP" title="Previous (←)">←</button>
-    <button id="bX" title="Next (→)">→</button>
-  </div>
-</div></div>
-
-<div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" aria-label="All findings">
-  <div class="dh"><h3>All findings</h3><button class="ghost" id="closeList">Close</button></div>
-  <div class="dl" id="list"></div>
-  <div class="df">
-    <div class="tally" id="tally"></div>
-    <button class="solid" id="save">Save record</button>
-    <button class="ghost" id="reset">Reset</button>
-  </div>
-</aside>
+<div class="pane" id="main"><div class="empty">Loading…</div></div>
 
 <script>
-let F = [], lane = null, cur = 0, Q = [], R = {};   // R: id -> repro result
+let F=[], lane=null, cur=0, Q=[], R={}, RUN={};
 const KEY='aloqa-bench-v1'; let V={};
 try{ V=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
-const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(V)); }catch(e){} };
+const store=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(V)); }catch(e){} };
 const esc=s=>(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 const rich=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 const short=t=>t.replace(/^(\[[^\]]+\])+\s*/,'');
-
+// reports shout the area tag; macOS chrome does not
+const sentence=t=>(t||'').replace(/[A-Za-z][A-Za-z-]*/g,
+  w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
 const key=f=>f.accounts.join('+')+'|'+f.surface;
+
 const inLane=()=>{const rs=F.filter(f=>f.lane===lane),g={};
   rs.forEach(f=>(g[key(f)]=g[key(f)]||[]).push(f));
   return Object.values(g).sort((a,b)=>a[0].accounts.join().localeCompare(b[0].accounts.join())
     ||b.length-a.length).flat();};
 
-function renderLanes(){
-  const L=[...new Set(F.map(f=>f.lane))];
-  document.getElementById('lanes').innerHTML=L.map(x=>{
-    const rs=F.filter(f=>f.lane===x), d=rs.filter(f=>V[f.id]).length;
-    return `<button class="lane-btn" data-l="${x}" aria-pressed="${x===lane}">
-      <b>${x}</b> ${esc(rs[0].laneName)} <i>${d}/${rs.length}</i></button>`;}).join('');
-  document.querySelectorAll('.lane-btn').forEach(b=>b.onclick=()=>{
-    lane=b.dataset.l; Q=inLane(); cur=0; render();});
+/* Which beat of arm -> look -> judge this finding is on. The pane and the
+   native toolbar are both a function of this, so the live step is unambiguous. */
+function beat(f){
+  if(!f) return 'idle';
+  if(RUN[f.id]) return 'running';
+  const r=R[f.id];
+  if(r&&!r.ok) return 'failed';
+  if(r) return 'ready';
+  return V[f.id]&&V[f.id].v ? 'judged' : 'idle';
 }
 
-function renderSetup(f,prev){
-  const same=prev&&key(prev)===key(f), el=document.getElementById('setup');
-  el.className='setup'+(same?' same':'');
-  el.innerHTML=`<div class="setup-in${same?' same':''}">
-    <div class="setup-k">${same?'same browsers':'browsers'}</div>
-    <div class="setup-v">${same?'Unchanged from the last finding.'
-      :`${f.accounts.map(a=>`<span class="acct">${esc(a)}</span>`).join('')} on lane ${f.lane} · ${esc(f.surface)}`}</div></div>`;
+/* Everything AppKit needs to keep the sidebar and toolbar in step. */
+function sync(){
+  const f=Q[cur];
+  window.webkit?.messageHandlers?.app?.postMessage({
+    rows:Q.map(x=>({id:x.id,title:short(x.title),verdict:(V[x.id]||{}).v||''})),
+    cur, beat:beat(f), verdict:f?((V[f.id]||{}).v||''):'',
+    lane:f?f.laneName:''
+  });
+}
+
+function action(f){
+  const b=beat(f), r=R[f.id], rec=V[f.id]||{};
+  const who=f.accounts.map(a=>`<b>${esc(a)}</b>`).join(' and ');
+
+  if(b==='running') return `<div class="act live col">
+    <div class="now-cap">Setting up</div>
+    <p class="now"><span class="spinner"></span> Launching ${who}…</p>
+    <p class="now-sub">Up to a minute the first time — the browser has to start and
+      sign in. Leave it alone.</p></div>`;
+
+  if(b==='failed') return `<div class="act col">
+    <div class="now-cap" style="color:var(--no)">Setup failed</div>
+    <p class="now" style="font-size:14px;font-weight:400">${rich(r.left||'The script did not finish.')}</p>
+    <div class="did">
+      <button class="push" id="play">Try again</button>
+      <details><summary>Show rig output</summary></details>
+      <pre>${esc(r.log||'')}</pre></div></div>`;
+
+  if(b==='ready'){
+    const n=Math.min(r.stepsDone||0,f.steps.length);
+    // the report's own wording for the remaining action, not the script's paraphrase
+    const mine = n && n<f.steps.length ? f.steps[n] : null;
+    return `<div class="act live col">
+      <div class="now-cap">Now — in the browser window</div>
+      <p class="now">${rich(mine||r.left)}</p>
+      ${mine?`<p class="now-sub">${rich(r.left)}</p>`:''}
+      <div class="did">
+        ${n?`<span class="ck">✓</span> Step${n>1?'s':''} ${n>1?'1–'+n:'1'} already done for you`
+           :'<span></span>'}
+        <details><summary>Show rig output</summary></details>
+        <pre>${esc(r.log||'')}</pre>
+      </div></div>`;
+  }
+
+  if(b==='judged') return `<div class="act">
+    <button class="push" id="play">Reproduce again</button>
+    <p class="hint"><b>${({y:'Confirmed as a bug',n:'Not a bug',s:'Skipped'})[rec.v]}</b>${
+      rec.note?' — '+esc(rec.note):''}<br>Change the verdict in the toolbar at any time.</p>
+    </div>`;
+
+  return `<div class="act">
+    <button class="go" id="play">▶ Reproduce</button></div>`;
 }
 
 function render(){
-  renderLanes();
-  if(!Q.length){document.getElementById('main').innerHTML=
-    '<div class="empty">Nothing to verify.<br><br>'
-    +'The bench carries only findings with a repro script in '
+  const el=document.getElementById('main');
+  if(!Q.length){el.innerHTML='<div class="empty">Nothing to verify.<br><br>'
+    +'Reproducer carries only findings with a repro script in '
     +'<code>scripts/callrig/snip/</code>. Add a <code>data-snippet</code> repro block '
-    +'to a report and it appears here.</div>';return;}
+    +'to a report and it shows up here.</div>';sync();return;}
   cur=Math.max(0,Math.min(cur,Q.length-1));
-  const f=Q[cur], rec=V[f.id]||{}, res=R[f.id];
-  // steps the snippet performed — only trust it from a run that reached the state
-  const done=(res&&res.ok&&res.stage==='reproduced')?Math.min(res.stepsDone||0,f.steps.length):0;
-  renderSetup(f,cur>0?Q[cur-1]:null);
+  const f=Q[cur], rec=V[f.id]||{}, b=beat(f);
   const warns=[...(f.notes||[]).map(n=>['Check the fixture first',n]),
-    ...(f.drift?[['Summary table disagrees with this title','The report’s own summary row reads: “'+f.drift+'”']]:[])];
+    ...(f.drift?[['The report contradicts itself','Its own summary row reads: “'+f.drift+'”']]:[])];
 
-  document.getElementById('main').innerHTML=`<div class="card">
-    <div class="card-head">
-      <div class="meta">
-        <span class="chip ${f.sev==='?'?'q':f.sev}">${f.sev==='?'?'unrated':f.sev}</span>
-        <span class="chip area">${esc(f.area)}</span>
-        <span class="counter">${cur+1} / ${Q.length}</span>
-      </div>
-      <h1>${rich(short(f.title))}</h1>
+  el.innerHTML=`
+    <div class="crumb">
+      <span class="tag ${f.sev==='?'?'':f.sev}">${f.sev==='?'?'Unrated':f.sev}</span>
+      <span class="tag">${esc(sentence(f.area))}</span>
+      <span class="n">${cur+1} of ${Q.length}</span>
     </div>
+    <h1>${rich(short(f.title))}</h1>
+    ${action(f)}
+    ${warns.map(w=>`<div class="note-box"><b>${esc(w[0])}</b>${rich(w[1])}</div>`).join('')}
+    ${f.actual?`<div class="sec bad"><div class="cap">Reported</div>
+      <p>${rich(f.actual)}</p></div>`:''}
+    ${f.expected?`<div class="sec"><div class="cap">Should be</div>
+      <p>${rich(f.expected)}</p></div>`:''}
+    ${b==='idle'&&f.steps.length?`<div class="sec"><div class="cap">Steps</div>
+      <ol class="steps">${f.steps.map(s=>`<li>${rich(s)}</li>`).join('')}</ol></div>`:''}
+    ${(f.problem||f.measure)?`<details class="more"><summary>Background</summary>
+      ${f.problem?`<div class="body">${rich(f.problem)}</div>`:''}
+      ${f.measure?`<pre>${esc(f.measure)}</pre>`:''}</details>`:''}
+    <div class="foot">
+      <input class="note" id="note" placeholder="Note (optional)" value="${esc(rec.note||'')}">
+      <button class="push" id="save">Save record…</button>
+    </div>`;
 
-    <div class="repro">
-      <button class="play" id="play">▶ Reproduce</button>
-    </div>
-
-    ${res?`<div class="out">
-      <div class="out-h ${res.ok?'':'bad'}"><span class="pip"></span>${esc(res.stage)}</div>
-      <div class="left ${res.stage==='positioned'?'norep':''}">
-        <b>Now do this</b>${rich(res.left)}</div>
-      <details class="raw"><summary>rig output</summary><pre>${esc(res.log)}</pre></details>
-    </div>`:''}
-
-    ${warns.map(w=>`<div class="warn"><b>${esc(w[0])}</b>${rich(w[1])}</div>`).join('')}
-    ${f.steps.length?`<div class="sect"><h2>${done?'The script did this':'Do this'}</h2>
-      <ol class="steps">${f.steps.map((s,i)=>{
-        const did=i<done, yours=i===done&&done>0;
-        return `<li class="${did?'done':yours?'mine':''}"><span class="st">${rich(s)}</span>${
-          yours?'<span class="tag">your turn</span>':''}</li>`;}).join('')}</ol></div>`:''}
-    ${f.actual?`<div class="sect"><h2>You should see</h2>
-      <div class="claim">${rich(f.actual)}</div></div>`:''}
-    ${f.expected?`<div class="sect"><h2>Should be instead</h2>
-      <div class="claim">${rich(f.expected)}</div></div>`:''}
-    ${(f.problem||f.measure)?`<div class="sect"><details class="more"><summary>Background</summary>
-      ${f.problem?`<div class="body" style="margin-top:12px">${rich(f.problem)}</div>`:''}
-      ${f.measure?`<pre class="meas">${esc(f.measure)}</pre>`:''}
-    </details></div>`:''}
-  </div>`;
-
-  document.getElementById('play').onclick=doRepro;
-  ['Y','N','S'].forEach(c=>document.getElementById('b'+c)
-    .setAttribute('aria-pressed',rec.v===c.toLowerCase()));
-  document.getElementById('note').value=rec.note||'';
-  document.getElementById('bP').disabled=cur===0;
-  document.getElementById('bX').disabled=cur===Q.length-1;
-  document.getElementById('prog').style.width=(Object.keys(V).length/F.length*100)+'%';
-  renderList();
+  document.getElementById('note').oninput=e=>{
+    V[f.id]=Object.assign({v:''},V[f.id],{note:e.target.value}); store();};
+  document.getElementById('save').onclick=saveRecord;
+  document.documentElement.scrollTop=0;
+  sync();
 }
 
 async function doRepro(){
-  const f=Q[cur], b=document.getElementById('play');
-  b.disabled=true; b.innerHTML='<span class="spin"></span> Running…';
+  const f=Q[cur]; if(!f||RUN[f.id])return;
+  RUN[f.id]=true; delete R[f.id]; render();
   try{
     const r=await fetch('/api/repro',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({id:f.id})});
     R[f.id]=await r.json();
   }catch(e){ R[f.id]={ok:false,stage:'failed',log:String(e),
-    left:'The bench could not reach the rig. Is scripts/bench.py still running?'}; }
-  render();
-}
-
-function renderList(){
-  document.getElementById('list').innerHTML=Q.map((f,i)=>{
-    const r=V[f.id]||{};
-    return `<div class="row ${i===cur?'cur':''}" data-i="${i}"><span class="n">${i+1}</span>
-      <span class="dot ${r.v||''}"></span><span>${esc(short(f.title).slice(0,76))}</span></div>`;}).join('');
-  document.querySelectorAll('.row').forEach(r=>r.onclick=()=>{cur=+r.dataset.i;closeDrawer();render();});
-  const c={y:0,n:0,s:0}; F.forEach(f=>{const r=V[f.id]; if(r&&c[r.v]!==undefined)c[r.v]++;});
-  document.getElementById('tally').innerHTML=
-    `${c.y} confirmed · ${c.n} not a bug · ${c.s} skipped<br>${Object.keys(V).length} of ${F.length} judged`;
+    left:'Could not reach the rig. Is scripts/bench.py still running?'}; }
+  delete RUN[f.id]; render();
 }
 
 function verdict(v){
   const f=Q[cur]; if(!f)return;
-  V[f.id]={v,note:document.getElementById('note').value.trim(),at:new Date().toISOString()};
-  save(); if(cur<Q.length-1)cur++; render();
+  const n=document.getElementById('note');
+  V[f.id]={v,note:n?n.value.trim():'',at:new Date().toISOString()};
+  store(); if(cur<Q.length-1)cur++; render();
 }
-document.getElementById('bY').onclick=()=>verdict('y');
-document.getElementById('bN').onclick=()=>verdict('n');
-document.getElementById('bS').onclick=()=>verdict('s');
-document.getElementById('bP').onclick=()=>{cur--;render();};
-document.getElementById('bX').onclick=()=>{cur++;render();};
-document.getElementById('note').oninput=e=>{const f=Q[cur];if(!f)return;
-  V[f.id]=Object.assign({v:''},V[f.id],{note:e.target.value});save();};
 
-const openDrawer=()=>{document.getElementById('drawer').classList.add('open');
-  document.getElementById('scrim').classList.add('open');};
-const closeDrawer=()=>{document.getElementById('drawer').classList.remove('open');
-  document.getElementById('scrim').classList.remove('open');};
-document.getElementById('openList').onclick=openDrawer;
-document.getElementById('closeList').onclick=closeDrawer;
-document.getElementById('scrim').onclick=closeDrawer;
-
-document.getElementById('save').onclick=async()=>{
+async function saveRecord(){
   const L=[...new Set(F.map(f=>f.lane))], out=['# Human verification record','',
     `_${new Date().toLocaleString()}_`,''];
-  L.forEach(x=>{const rs=F.filter(f=>f.lane===x&&V[f.id]); if(!rs.length)return;
+  L.forEach(x=>{const rs=F.filter(f=>f.lane===x&&V[f.id]&&V[f.id].v); if(!rs.length)return;
     out.push(`## Lane ${x} — ${rs[0].laneName}`,'');
     rs.forEach(f=>{const r=V[f.id];
-      out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG',s:'SKIPPED'})[r.v]||'noted'}** · [${f.sev}] ${f.title}`);
+      out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG',s:'SKIPPED'})[r.v]}** · [${f.sev}] ${f.title}`);
       if(r.note)out.push(`  - ${r.note}`);}); out.push('');});
   const res=await fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({md:out.join('\n')})});
   const j=await res.json(); const b=document.getElementById('save');
-  b.textContent='Saved to '+j.path; setTimeout(()=>b.textContent='Save record',2200);
-};
-document.getElementById('reset').onclick=()=>{
-  if(confirm('Clear every verdict?')){V={};save();render();}};
+  b.textContent='Saved'; setTimeout(()=>{const x=document.getElementById('save');
+    if(x)x.textContent='Save record…';},2000);
+}
+
+// called from AppKit
+window.__select=i=>{cur=i;render();};
+window.__repro=doRepro;
+window.__verdict=verdict;
 
 addEventListener('keydown',e=>{
   // Cmd+R must stay Reload and Cmd+S must not mark the finding skipped:
   // a bare letter is a shortcut, the same letter under a modifier is not ours.
   if(e.metaKey||e.ctrlKey||e.altKey)return;
-  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.isContentEditable){
+  if(e.target.tagName==='INPUT'||e.target.isContentEditable){
     if(e.key==='Escape')e.target.blur(); return;}
   const k=e.key.toLowerCase();
   if(k==='r'){doRepro();e.preventDefault();}
   else if('yns'.includes(k)){verdict(k);e.preventDefault();}
-  else if(e.key==='ArrowRight'&&cur<Q.length-1){cur++;render();}
-  else if(e.key==='ArrowLeft'&&cur>0){cur--;render();}
-  else if(e.key==='Escape')closeDrawer();
 });
 
 fetch('/api/findings').then(r=>r.json()).then(d=>{

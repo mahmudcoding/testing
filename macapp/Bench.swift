@@ -1,7 +1,12 @@
-// Verification Bench — a native shell around the local bench server.
+// Reproducer — a Mac app around the local bench server.
 //
-// Starts scripts/bench.py on a free port, shows it in a real window, and stops
-// the server when the window closes. No dependencies beyond the system.
+// The chrome is real AppKit, not CSS pretending: an NSSplitViewController with a
+// vibrant source-list sidebar under a unified NSToolbar. Only the detail pane is
+// a web view. That distinction is the whole reason it reads as a Mac app —
+// vibrancy, the source-list selection, the toolbar and the tracking separator
+// cannot be imitated in a page.
+//
+// Starts scripts/bench.py on a free port and stops it when the app quits.
 
 import AppKit
 import WebKit
@@ -26,12 +31,220 @@ func freePort() -> Int {
     return Int(UInt16(bigEndian: a.sin_port))
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
+struct Row {
+    var id: String
+    var title: String
+    var verdict: String     // "", "y", "n", "s"
+}
+
+// ── source-list cell ─────────────────────────────────────────────────────────
+final class RowCell: NSTableCellView {
+    let dot = NSView()
+    let label = NSTextField(labelWithString: "")
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        dot.wantsLayer = true
+        dot.layer?.cornerRadius = 4
+        dot.translatesAutoresizingMaskIntoConstraints = false
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: NSFont.systemFontSize)
+        label.maximumNumberOfLines = 2
+        label.lineBreakMode = .byTruncatingTail
+        label.cell?.wraps = true
+        label.cell?.isScrollable = false
+        label.cell?.usesSingleLineMode = false
+        label.cell?.truncatesLastVisibleLine = true
+        addSubview(dot); addSubview(label)
+        NSLayoutConstraint.activate([
+            dot.leadingAnchor.constraint(equalTo: leadingAnchor),
+            dot.topAnchor.constraint(equalTo: topAnchor, constant: 7),
+            dot.widthAnchor.constraint(equalToConstant: 8),
+            dot.heightAnchor.constraint(equalToConstant: 8),
+            label.leadingAnchor.constraint(equalTo: dot.trailingAnchor, constant: 8),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+        textField = label
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    // usesAutomaticRowHeights measures the cell, and the label only reports a
+    // two-line height once it knows the width it must wrap into.
+    override func layout() {
+        super.layout()
+        label.preferredMaxLayoutWidth = label.bounds.width
+    }
+
+    func fill(_ r: Row) {
+        label.stringValue = r.title
+        switch r.verdict {
+        case "y": dot.layer?.backgroundColor = NSColor.systemGreen.cgColor
+        case "n": dot.layer?.backgroundColor = NSColor.systemRed.cgColor
+        case "s": dot.layer?.backgroundColor = NSColor.tertiaryLabelColor.cgColor
+        default:  dot.layer?.backgroundColor = NSColor.quaternaryLabelColor.cgColor
+        }
+    }
+}
+
+// ── sidebar ──────────────────────────────────────────────────────────────────
+final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
+    var rows: [Row] = []
+    var onSelect: ((Int) -> Void)?
+    let table = NSTableView()
+    private var suppress = false
+
+    override func loadView() {
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.automaticallyAdjustsContentInsets = true
+
+        let col = NSTableColumn(identifier: .init("t"))
+        col.resizingMask = .autoresizingMask
+        table.addTableColumn(col)
+        table.headerView = nil
+        table.dataSource = self
+        table.delegate = self
+        table.rowSizeStyle = .custom
+        table.rowHeight = 38
+        table.backgroundColor = .clear
+        table.selectionHighlightStyle = .regular
+        if #available(macOS 11.0, *) { table.style = .sourceList }
+        scroll.documentView = table
+        view = scroll
+    }
+
+    func set(_ rs: [Row], cur: Int) {
+        rows = rs
+        table.reloadData()
+        guard cur >= 0, cur < rs.count else { return }
+        suppress = true
+        table.selectRowIndexes(IndexSet(integer: cur), byExtendingSelection: false)
+        table.scrollRowToVisible(cur)
+        suppress = false
+    }
+
+    func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+
+    func tableView(_ t: NSTableView, viewFor col: NSTableColumn?, row: Int) -> NSView? {
+        let id = NSUserInterfaceItemIdentifier("cell")
+        let cell = (t.makeView(withIdentifier: id, owner: self) as? RowCell) ?? {
+            let c = RowCell(frame: .zero); c.identifier = id; return c
+        }()
+        cell.fill(rows[row])
+        return cell
+    }
+
+    func tableViewSelectionDidChange(_ n: Notification) {
+        guard !suppress, table.selectedRow >= 0 else { return }
+        onSelect?(table.selectedRow)
+    }
+}
+
+/// Detail pane: the web view, with a native launch panel over it until the
+/// server is up. A page pretending to be a launch screen would flash white and
+/// show the wrong font before the real one loads.
+final class DetailVC: NSViewController {
+    let web: WKWebView
+    private let overlay = NSView()
+    private let phase = NSTextField(labelWithString: "")
+    private let bar = NSProgressIndicator()
+    private let detail = NSTextField(wrappingLabelWithString: "")
+    private let detailScroll = NSScrollView()
+
+    init(web: WKWebView) { self.web = web; super.init(nibName: nil, bundle: nil) }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func loadView() {
+        let root = NSView()
+        web.translatesAutoresizingMaskIntoConstraints = false
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.wantsLayer = true
+        root.addSubview(web); root.addSubview(overlay)
+        NSLayoutConstraint.activate([
+            web.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            web.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            web.topAnchor.constraint(equalTo: root.topAnchor),
+            web.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            overlay.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            overlay.topAnchor.constraint(equalTo: root.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+        ])
+
+        phase.font = .systemFont(ofSize: 12)
+        phase.textColor = .secondaryLabelColor
+        phase.alignment = .center
+        bar.isIndeterminate = false
+        bar.minValue = 0; bar.maxValue = 1; bar.doubleValue = 0
+        bar.controlSize = .small
+
+        detail.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
+        detail.textColor = .secondaryLabelColor
+        detailScroll.documentView = detail
+        detailScroll.hasVerticalScroller = true
+        detailScroll.drawsBackground = false
+        detailScroll.isHidden = true
+
+        let stack = NSStackView(views: [phase, bar, detailScroll])
+        stack.orientation = .vertical
+        stack.alignment = .centerX
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        overlay.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            stack.widthAnchor.constraint(lessThanOrEqualTo: overlay.widthAnchor, constant: -80),
+            bar.widthAnchor.constraint(equalToConstant: 220),
+            detailScroll.widthAnchor.constraint(equalToConstant: 420),
+            detailScroll.heightAnchor.constraint(lessThanOrEqualToConstant: 150),
+        ])
+        view = root
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        overlay.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
+    }
+
+    func progress(_ text: String, _ value: Double) {
+        overlay.isHidden = false
+        phase.stringValue = text
+        bar.isHidden = false
+        bar.animator().doubleValue = value
+    }
+
+    func failed(_ text: String, log: String) {
+        overlay.isHidden = false
+        phase.stringValue = text
+        phase.textColor = .systemRed
+        bar.isHidden = true
+        detail.stringValue = log
+        detailScroll.isHidden = log.isEmpty
+    }
+
+    func done() { overlay.isHidden = true }
+}
+
+// ── app ──────────────────────────────────────────────────────────────────────
+final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
+                         WKNavigationDelegate, WKScriptMessageHandler {
     var window: NSWindow!
     var web: WKWebView!
+    var split: NSSplitViewController!
+    var detailVC: DetailVC!
+    var sidebar = SidebarVC()
     var server: Process?
     var port = 0
     var log = ""
+
+    var reproItem: NSToolbarItem!
+    var verdictItem: NSToolbarItem!
+    let reproButton = NSButton()
+    let verdict = NSSegmentedControl(labels: ["Confirmed", "Not a bug", "Skip"],
+                                     trackingMode: .selectOne, target: nil, action: nil)
 
     func applicationDidFinishLaunching(_ n: Notification) {
         port = freePort()
@@ -40,31 +253,142 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         waitForServer(attempt: 0)
     }
 
-    func buildWindow() {
-        window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1180, height: 860),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered, defer: false)
-        window.title = "Verification Bench"
-        // No .fullSizeContentView: the web view would cover the title bar and
-        // swallow the drag, leaving the window unmovable.
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isMovableByWindowBackground = true
-        window.minSize = NSSize(width: 720, height: 560)
-        window.center()
-        window.setFrameAutosaveName("BenchWindow")
+    // MARK: window
 
+    func buildWindow() {
         let cfg = WKWebViewConfiguration()
         cfg.defaultWebpagePreferences.allowsContentJavaScript = true
+        cfg.userContentController.add(self, name: "app")
         web = WKWebView(frame: .zero, configuration: cfg)
         web.navigationDelegate = self
-        web.setValue(false, forKey: "drawsBackground")
-        window.contentView = web
+
+        let sideItem = NSSplitViewItem(sidebarWithViewController: sidebar)
+        sideItem.minimumThickness = 170
+        sideItem.maximumThickness = 320
+        if #available(macOS 11.0, *) { sideItem.allowsFullHeightLayout = true }
+        sideItem.canCollapse = true
+        detailVC = DetailVC(web: web)
+        let mainItem = NSSplitViewItem(viewController: detailVC)
+        mainItem.minimumThickness = 420
+
+        split = NSSplitViewController()
+        split.addSplitViewItem(sideItem)
+        split.addSplitViewItem(mainItem)
+
+        window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1020, height: 700),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.title = "Reproducer"
+        window.contentViewController = split
+        // assigning contentViewController resizes the window to the view
+        // controller's own size, so contentRect above does not survive it
+        window.setContentSize(NSSize(width: 1020, height: 700))
+        window.minSize = NSSize(width: 720, height: 480)
+
+        let tb = NSToolbar(identifier: "main")
+        tb.delegate = self
+        tb.displayMode = .iconOnly
+        tb.allowsUserCustomization = false
+        window.toolbar = tb
+        if #available(macOS 11.0, *) { window.toolbarStyle = .unified }
+
+        window.setFrameAutosaveName("ReproducerMain")
+        if !window.setFrameUsingName("ReproducerMain") { window.center() }
         window.makeKeyAndOrderFront(nil)
+        split.splitView.setPosition(218, ofDividerAt: 0)
         NSApp.activate(ignoringOtherApps: true)
-        showStatus("Starting the bench…", detail: "Reading the reports — this takes a few seconds.")
+
+        sidebar.onSelect = { [weak self] i in
+            self?.web.evaluateJavaScript("window.__select && __select(\(i))")
+        }
+        detailVC.progress("Starting the local server…", 0.12)
     }
+
+    // MARK: toolbar
+
+    static let idRepro = NSToolbarItem.Identifier("repro")
+    static let idVerdict = NSToolbarItem.Identifier("verdict")
+
+    func toolbarAllowedItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
+        toolbarDefaultItemIdentifiers(t)
+    }
+
+    func toolbarDefaultItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
+        var ids: [NSToolbarItem.Identifier] = [.toggleSidebar]
+        if #available(macOS 11.0, *) { ids.append(.sidebarTrackingSeparator) }
+        ids += [.flexibleSpace, AppDelegate.idVerdict]
+        return ids
+    }
+
+    func toolbar(_ t: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
+                 willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        switch id {
+        case AppDelegate.idRepro:
+            reproButton.bezelStyle = .texturedRounded
+            reproButton.title = "Reproduce"
+            if #available(macOS 11.0, *) {
+                reproButton.image = NSImage(systemSymbolName: "play.fill", accessibilityDescription: nil)
+                reproButton.imagePosition = .imageLeading
+            }
+            reproButton.target = self
+            reproButton.action = #selector(hitRepro)
+            reproButton.isEnabled = false
+            let it = NSToolbarItem(itemIdentifier: id)
+            it.view = reproButton
+            it.label = "Reproduce"
+            it.toolTip = "Drive the browser to this defect (R)"
+            reproItem = it
+            return it
+        case AppDelegate.idVerdict:
+            verdict.segmentStyle = .texturedRounded
+            verdict.selectedSegment = -1
+            verdict.target = self
+            verdict.action = #selector(hitVerdict)
+            verdict.isEnabled = false
+            let it = NSToolbarItem(itemIdentifier: id)
+            it.view = verdict
+            it.label = "Verdict"
+            verdictItem = it
+            return it
+        default:
+            return nil
+        }
+    }
+
+    @objc func hitRepro() { web.evaluateJavaScript("window.__repro && __repro()") }
+
+    @objc func hitVerdict() {
+        let v = ["y", "n", "s"]
+        let i = verdict.selectedSegment
+        guard i >= 0, i < v.count else { return }
+        web.evaluateJavaScript("window.__verdict && __verdict('\(v[i])')")
+    }
+
+    @objc func reloadPage() { web.reload() }
+
+    // MARK: bridge
+
+    func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
+        guard let d = m.body as? [String: Any] else { return }
+        let raw = d["rows"] as? [[String: Any]] ?? []
+        let rows = raw.map { Row(id: $0["id"] as? String ?? "",
+                                 title: $0["title"] as? String ?? "",
+                                 verdict: $0["verdict"] as? String ?? "") }
+        let cur = d["cur"] as? Int ?? 0
+        let beat = d["beat"] as? String ?? "idle"
+        sidebar.set(rows, cur: cur)
+        reproButton.isEnabled = !rows.isEmpty && beat != "running"
+        reproButton.title = beat == "running" ? "Running…" : "Reproduce"
+        // Judging before looking stays possible, but the control is only live
+        // once this finding has actually been run.
+        verdict.isEnabled = !rows.isEmpty && beat != "running"
+        let v = d["verdict"] as? String ?? ""
+        verdict.selectedSegment = ["y": 0, "n": 1, "s": 2][v] ?? -1
+        if let t = d["lane"] as? String { window.subtitle = t }
+    }
+
+    // MARK: server
 
     func startServer() {
         let py = ["/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"]
@@ -85,16 +409,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             }
         }
         do { try p.run(); server = p }
-        catch { showStatus("Could not start the bench server.",
-                           detail: "\(error.localizedDescription)\n\nExpected: \(REPO)/scripts/bench.py") }
+        catch { detailVC.failed("Could not start the bench server.",
+                                log: "\(error.localizedDescription)\n\nExpected: \(REPO)/scripts/bench.py") }
     }
 
     func waitForServer(attempt: Int) {
         guard attempt < 45 else {
-            showStatus("The bench server did not come up.",
-                       detail: log.isEmpty ? "No output from scripts/bench.py." : log)
+            detailVC.failed("The server did not come up.",
+                            log: log.isEmpty ? "No output from scripts/bench.py." : log)
             return
         }
+        // the bar tracks the poll, easing toward 0.9 so it never looks stalled
+        detailVC.progress(attempt == 0 ? "Reading the reports…" : "Still reading the reports…",
+                          0.15 + 0.75 * (1 - pow(0.93, Double(attempt + 1))))
         // /api/ping is cheap and, on first call, blocks until the reports are
         // parsed — so a reply means genuinely ready, not merely listening.
         var rq = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/api/ping")!)
@@ -113,21 +440,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         }.resume()
     }
 
-    func showStatus(_ title: String, detail: String) {
-        let esc = { (s: String) in s
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;") }
-        web.loadHTMLString("""
-        <html><head><meta name="color-scheme" content="light dark"><style>
-        :root{color-scheme:light dark}
-        body{margin:0;height:100vh;display:flex;flex-direction:column;justify-content:center;
-          align-items:center;gap:14px;font:400 15px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;
-          background:Canvas;color:CanvasText;padding:40px;text-align:center}
-        h1{margin:0;font-size:17px;font-weight:600}
-        pre{font:400 12px/1.6 ui-monospace,Menlo,monospace;opacity:.65;max-width:70ch;
-          white-space:pre-wrap;text-align:left;margin:0}
-        </style></head><body><h1>\(esc(title))</h1><pre>\(esc(detail))</pre></body></html>
-        """, baseURL: nil)
+    func webView(_ w: WKWebView, didFinish n: WKNavigation!) {
+        detailVC.progress("Ready", 1.0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { self.detailVC.done() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
@@ -143,15 +458,38 @@ app.delegate = delegate
 app.setActivationPolicy(.regular)
 
 let menu = NSMenu()
+
 let appItem = NSMenuItem()
 menu.addItem(appItem)
 let appMenu = NSMenu()
-appMenu.addItem(withTitle: "About Verification Bench", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+appMenu.addItem(withTitle: "About Reproducer",
+                action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
 appMenu.addItem(.separator())
-appMenu.addItem(withTitle: "Reload", action: #selector(WKWebView.reload(_:)), keyEquivalent: "r")
+appMenu.addItem(withTitle: "Hide Reproducer", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
 appMenu.addItem(.separator())
-appMenu.addItem(withTitle: "Quit Verification Bench", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+appMenu.addItem(withTitle: "Quit Reproducer",
+                action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 appItem.submenu = appMenu
-app.mainMenu = menu
 
+let editItem = NSMenuItem()
+menu.addItem(editItem)
+let editMenu = NSMenu(title: "Edit")
+editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+editMenu.addItem(.separator())
+editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+editItem.submenu = editMenu
+
+let viewItem = NSMenuItem()
+menu.addItem(viewItem)
+let viewMenu = NSMenu(title: "View")
+viewMenu.addItem(withTitle: "Reload", action: #selector(AppDelegate.reloadPage), keyEquivalent: "r")
+viewMenu.addItem(withTitle: "Hide Sidebar",
+                 action: #selector(NSSplitViewController.toggleSidebar(_:)), keyEquivalent: "s")
+viewItem.submenu = viewMenu
+
+app.mainMenu = menu
 app.run()
