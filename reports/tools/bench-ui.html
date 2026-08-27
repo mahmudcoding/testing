@@ -85,14 +85,12 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   color:var(--label-3);margin-bottom:6px}
 .sec p{margin:0;font-size:13.5px;line-height:1.58;max-width:62ch}
 .sec.bad p{color:var(--label)}
-.ed{-webkit-user-select:text;user-select:text;border-radius:5px;
-  margin:-3px -6px;padding:3px 6px;outline:none;
+.sec p.ed{-webkit-user-select:text;user-select:text;border-radius:5px;
+  margin:-3px -7px;padding:3px 6px;outline:none;
   border:1px solid transparent;transition:border-color .12s,background .12s}
-.ed:hover{border-color:var(--sep-line);background:var(--hover-bg)}
-.ed:focus{border-color:var(--accent-fill);background:var(--hover-bg);
+.sec p.ed:hover{border-color:var(--sep-line);background:var(--hover-bg)}
+.sec p.ed:focus{border-color:var(--accent-fill);background:var(--hover-bg);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-fill) 18%,transparent)}
-.edited{margin-left:6px;color:var(--accent);font-weight:600;
-  text-transform:none;letter-spacing:0}
 
 
 .note-box{background:var(--no-bg);border-radius:8px;padding:11px 14px;
@@ -202,8 +200,7 @@ function render(){
       <p>${rich(f.actual)}</p></div>`:''}
     ${f.steps.length?`<div class="sec"><div class="cap">Steps</div>
       <div class="donelist live">${stepRows(f)}</div></div>`:''}
-    ${f.expected?`<div class="sec"><div class="cap">Should be${
-      X[f.id]!==undefined?' <span class="edited">edited</span>':''}</div>
+    ${f.expected?`<div class="sec"><div class="cap">Should be</div>
       <p class="ed" id="exp" contenteditable="plaintext-only"
          spellcheck="false">${esc(expectedOf(f))}</p></div>`:''}
 
