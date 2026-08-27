@@ -290,7 +290,11 @@ function renderSetup(f,prev){
 
 function render(){
   renderLanes();
-  if(!Q.length){document.getElementById('main').innerHTML='<div class="empty">Nothing here.</div>';return;}
+  if(!Q.length){document.getElementById('main').innerHTML=
+    '<div class="empty">Nothing to verify.<br><br>'
+    +'The bench carries only findings with a repro script in '
+    +'<code>scripts/callrig/snip/</code>. Add a <code>data-snippet</code> repro block '
+    +'to a report and it appears here.</div>';return;}
   cur=Math.max(0,Math.min(cur,Q.length-1));
   const f=Q[cur], rec=V[f.id]||{}, res=R[f.id];
   renderSetup(f,cur>0?Q[cur-1]:null);

@@ -94,7 +94,25 @@ def _load_uncached():
                 "notes": notes.get(f["title"][:34], []),
                 "repro": rep,
             }); n += 1
-    return items
+    return _runnable_only(items)
+
+def _runnable_only(items):
+    """Only findings whose repro script is actually on disk.
+
+    A finding with no script is one the reader has to set up by hand, which is
+    the work the bench exists to remove. BENCH_ALL=1 shows everything.
+    """
+    if os.environ.get("BENCH_ALL"):
+        return items
+    keep = []
+    for it in items:
+        rep = it.get("repro") or {}
+        snip = rep.get("snippet")
+        if snip and os.path.exists(os.path.join(REPO, "scripts", "callrig", "snip", snip)):
+            keep.append(it)
+    for i, it in enumerate(keep):
+        it["n"] = i
+    return keep
 
 def run(cmd, timeout=420):
     try:

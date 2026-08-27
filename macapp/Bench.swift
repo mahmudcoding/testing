@@ -43,10 +43,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     func buildWindow() {
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1180, height: 860),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered, defer: false)
         window.title = "Verification Bench"
+        // No .fullSizeContentView: the web view would cover the title bar and
+        // swallow the drag, leaving the window unmovable.
         window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
         window.minSize = NSSize(width: 720, height: 560)
         window.center()
         window.setFrameAutosaveName("BenchWindow")
