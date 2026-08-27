@@ -448,6 +448,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     var reproItem: NSToolbarItem!
     var verdictItem: NSToolbarItem!
     let reproButton = HandButton()
+    let closeButton = HandButton()
     let verdict = HandSegmented(labels: ["Confirmed", "Not a bug", "Skip"],
                                 trackingMode: .selectOne, target: nil, action: nil)
 
@@ -507,6 +508,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     // MARK: toolbar
 
     static let idList = NSToolbarItem.Identifier("list")
+    static let idClose = NSToolbarItem.Identifier("closebr")
     static let idRepro = NSToolbarItem.Identifier("repro")
     static let idVerdict = NSToolbarItem.Identifier("verdict")
 
@@ -516,7 +518,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     func toolbarDefaultItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
         var ids: [NSToolbarItem.Identifier] = [AppDelegate.idList]
-        ids += [.flexibleSpace, AppDelegate.idVerdict]
+        ids += [.flexibleSpace, AppDelegate.idClose, AppDelegate.idVerdict]
         return ids
     }
 
@@ -553,6 +555,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             it.toolTip = "Drive the browser to this defect (R)"
             reproItem = it
             return it
+        case AppDelegate.idClose:
+            closeButton.bezelStyle = .texturedRounded
+            if #available(macOS 11.0, *) {
+                closeButton.image = NSImage(systemSymbolName: "xmark.circle",
+                                            accessibilityDescription: "Close the browser")
+            } else { closeButton.title = "Close" }
+            closeButton.target = self
+            closeButton.action = #selector(hitClose)
+            closeButton.isEnabled = false
+            let it = NSToolbarItem(itemIdentifier: id)
+            it.view = closeButton
+            it.label = "Close"
+            it.toolTip = "Close the browser this run opened"
+            return it
         case AppDelegate.idVerdict:
             verdict.segmentStyle = .texturedRounded
             verdict.selectedSegment = -1
@@ -572,6 +588,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     @objc func toggleList() { root.toggle() }
 
     @objc func saveRecord() { web.evaluateJavaScript("window.__save && __save()") }
+
+    @objc func hitClose() { web.evaluateJavaScript("window.__close && __close()") }
 
     @objc func hitRepro() { web.evaluateJavaScript("window.__repro && __repro()") }
 
@@ -626,6 +644,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         reproButton.title = beat == "running" ? "Running…" : "Reproduce"
         // Judging before looking stays possible, but the control is only live
         // once this finding has actually been run.
+        closeButton.isEnabled = d["canClose"] as? Bool ?? false
         verdict.isEnabled = !rows.isEmpty && beat != "running"
         let v = d["verdict"] as? String ?? ""
         verdict.selectedSegment = ["y": 0, "n": 1, "s": 2][v] ?? -1

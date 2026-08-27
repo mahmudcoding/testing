@@ -65,9 +65,6 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   color:var(--accent);margin-bottom:6px}
 .now{margin:0;font:600 17px/1.35 inherit;letter-spacing:-.008em}
 
-.did{display:flex;align-items:flex-end;gap:16px;margin-top:12px;
-  font-size:11.5px;color:var(--label-2)}
-.did .ck{color:var(--ok);font-weight:700;flex:none}
 .donelist{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .dl-cap{font:600 10.5px/1.3 inherit;letter-spacing:.06em;text-transform:uppercase;
   color:var(--label-3);margin-bottom:2px}
@@ -80,12 +77,6 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .dl-row.mine{color:var(--label);font-weight:600}
 .dl-row.mine .arrow{color:var(--accent);font-weight:700}
 .spinner.sm{width:10px;height:10px;border-width:1.6px;flex:none;margin-top:2px}
-.link{margin-left:auto;background:none;border:0;padding:0;cursor:pointer;
-  color:var(--accent);font-size:11.5px}
-.link:disabled{color:var(--label-3);cursor:default}
-/* reserve the row while the run is going: the hidden attribute is display:none,
-   which collapses it and makes the card grow when the button finally appears */
-.link.held{visibility:hidden}
 .spinner{display:inline-block;width:12px;height:12px;vertical-align:-1px;
   border:2px solid var(--label-3);border-top-color:var(--accent-fill);
   border-radius:50%;animation:sp .7s linear infinite}
@@ -150,6 +141,7 @@ function sync(){
   window.webkit?.messageHandlers?.app?.postMessage({
     rows:Q.map(x=>({id:x.id,title:short(x.title),verdict:(V[x.id]||{}).v||''})),
     cur, beat:beat(f), verdict:f?((V[f.id]||{}).v||''):'',
+    canClose: !!(f && R[f.id] && !RUN[f.id] && !CLOSING),
     lane:f?f.laneName:''
   });
 }
@@ -174,8 +166,6 @@ function action(f){
                    : '<span class="ck">○</span>';
         return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span></div>`;
       }).join('')}</div>` : ''}
-      <div class="did"><span></span>
-        <button class="link${ready ? '' : ' held'}" id="closebr">Close</button></div>
     </div>`;
   }
 
@@ -221,7 +211,6 @@ function render(){
 
   // #play is re-created by every render, so it is re-bound by every render
   const p=document.getElementById('play'); if(p)p.onclick=doRepro;
-  const cb=document.getElementById('closebr'); if(cb)cb.onclick=()=>closeBrowser(cb,f);
   const c=document.getElementById('copylog');
   if(c)c.onclick=()=>{navigator.clipboard.writeText((R[f.id]||{}).log||'');
     c.textContent='Copied'; setTimeout(()=>{c.textContent='Copy details';},1600);};
@@ -262,20 +251,19 @@ function verdict(v){
   store(); if(cur<Q.length-1)cur++; render();
 }
 
-async function closeBrowser(btn,f){
-  btn.disabled=true; btn.textContent='Closing…';
+let CLOSING=false;
+async function closeBrowser(f){
+  if(!f || CLOSING) return;
+  CLOSING=true; sync();
   try{
     const r=await fetch('/api/close',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({lane:f.lane})});
     const j=await r.json();
-    if(j.ok){
-      // the run is over and its browser is gone, so the card goes back to
-      // offering the only thing that makes sense now: running it again
-      delete R[f.id]; delete LIVE[f.id]; render(); return;
-    }
-    btn.textContent='Could not close';
-  }catch(e){ btn.textContent='Could not close'; }
-  setTimeout(()=>{btn.disabled=false; btn.textContent='Close';},2200);
+    // the run is over and its browser is gone, so the card goes back to
+    // offering the only thing that makes sense now: running it again
+    if(j.ok){ delete R[f.id]; delete LIVE[f.id]; }
+  }catch(e){}
+  CLOSING=false; render();
 }
 
 async function saveRecord(){
@@ -297,6 +285,7 @@ window.__select=i=>{cur=i;render();};
 window.__repro=doRepro;
 window.__verdict=verdict;
 window.__save=saveRecord;
+window.__close=()=>closeBrowser(Q[cur]);
 
 addEventListener('keydown',e=>{
   // Cmd+R must stay Reload and Cmd+S must not mark the finding skipped:
