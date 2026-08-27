@@ -119,6 +119,32 @@ def _runnable_only(items):
 SLOW_MS = os.environ.get("BENCH_SLOW_MS", "800")
 TILE_LEFT = os.environ.get("BENCH_TILE_LEFT", "640")
 
+PROGRESS = {}          # finding id -> steps the running snippet has reported
+
+def run_stream(cmd, key, timeout=420, slow=False):
+    """Like run(), but reads stdout as it arrives so @@STEP markers land in
+    PROGRESS while the snippet is still going. Without this the app can only
+    tick the steps off once the whole run has finished, which is the moment
+    they stop being useful."""
+    env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT)
+    if slow: env["QA_SLOW_MS"] = SLOW_MS
+    try:
+        p = subprocess.Popen(cmd, cwd=REPO, text=True, bufsize=1,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
+    except FileNotFoundError as e:
+        return 127, str(e)
+    killer = threading.Timer(timeout, p.kill); killer.start()
+    out = []
+    try:
+        for line in p.stdout:
+            out.append(line)
+            m = re.match(r"@@STEP (\d+)", line.strip())
+            if m: PROGRESS[key] = int(m.group(1))
+        p.wait()
+    finally:
+        killer.cancel()
+    return p.returncode, "".join(out)
+
 def run(cmd, timeout=420, slow=False):
     """slow=True paces the run so a person can watch it. Only the repro snippet
     is watched -- pacing sign-in and window placement just wastes the wait."""
@@ -137,6 +163,7 @@ def reproduce(item):
     """Bring the browsers up, then run the finding's repro snippet if it has one."""
     log, lane = [], item["lane"].lower()
     accts = item["accounts"] or ["alice"]
+    PROGRESS[item["id"]] = 0
 
     log.append(f"$ ./scripts/callrig/ensure.sh {lane} {' '.join(accts)}")
     rc, out = run(["./scripts/callrig/ensure.sh", lane, *accts])
@@ -163,7 +190,8 @@ def reproduce(item):
 
     driver = rep.get("accounts", ",".join(accts)).split(",")[0].strip()
     log.append(f"\n$ ./scripts/callrig/d {lane}:{driver} snip/{name}")
-    rc, out = run(["./scripts/callrig/d", f"{lane}:{driver}", f"snip/{name}"], slow=True)
+    rc, out = run_stream(["./scripts/callrig/d", f"{lane}:{driver}", f"snip/{name}"],
+                         item["id"], slow=True)
     log.append(out.strip() or "(no output)")
 
     res = _snippet_result(out)
@@ -211,6 +239,9 @@ class H(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         if u.path in ("/", "/index.html"):
             return self._send(200, open(UI, encoding="utf-8").read(), "text/html")
+        if u.path == "/api/progress":
+            fid = parse_qs(u.query).get("id", [""])[0]
+            return self._send(200, json.dumps({"steps": PROGRESS.get(fid, 0)}))
         if u.path == "/api/ping":
             return self._send(200, json.dumps({"ok": True, "n": len(load())}))
         if u.path == "/api/findings":

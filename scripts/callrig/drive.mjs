@@ -7,7 +7,8 @@
 // in as an account from another lane, the run aborts instead of quietly driving
 // a parallel session's window.
 //
-// snippet.mjs must `export default async ({page, ctx, browser}) => any`
+// snippet.mjs must `export default async ({page, ctx, browser, progress}) => any`
+// call progress(n) as each of the finding's numbered steps completes
 import { chromium } from 'playwright';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -62,7 +63,11 @@ if (process.env.QA_LANE) {
 
 try {
   const mod = await import(pathToFileURL(file).href);
-  const res = await mod.default({ page, ctx, browser, pages });
+  // progress(n): the snippet says it has finished the finding's step n. Printed
+  // as a marker so anything watching stdout can tick it off while the run is
+  // still going, instead of learning the whole story at the end.
+  const progress = (n) => { console.log('@@STEP ' + Number(n)); };
+  const res = await mod.default({ page, ctx, browser, pages, progress });
   console.log(typeof res === 'string' ? res : JSON.stringify(res, null, 2));
 } catch (e) {
   console.log('DRIVE-ERROR: ' + (e && e.stack || e));

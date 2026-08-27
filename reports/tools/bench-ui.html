@@ -72,6 +72,9 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .dl-cap{font:600 10.5px/1.3 inherit;letter-spacing:.06em;text-transform:uppercase;
   color:var(--label-3);margin-bottom:2px}
 .dl-row{display:flex;gap:7px;align-items:flex-start;line-height:1.45}
+.donelist.live{margin-top:14px;padding-top:12px;border-top:1px solid var(--sep);gap:5px}
+.dl-row.pending{color:var(--label-3)}
+.dl-row.pending .ck{color:var(--label-3);font-weight:400}
 .link{margin-left:auto;background:none;border:0;padding:0;cursor:pointer;
   color:var(--accent);font-size:11.5px}
 .link:disabled{color:var(--label-3);cursor:default}
@@ -104,7 +107,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
 <div class="pane" id="main"><div class="empty">Loading…</div></div>
 
 <script>
-let F=[], lane=null, cur=0, Q=[], R={}, RUN={};
+let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={};
 const TILE_LEFT=640;          // points this window keeps; the rig takes the rest
 const KEY='aloqa-bench-v1'; let V={};
 try{ V=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
@@ -147,11 +150,20 @@ function action(f){
   const b=beat(f), r=R[f.id], rec=V[f.id]||{};
   const who=f.accounts.map(a=>`<b>${esc(a)}</b>`).join(' and ');
 
-  if(b==='running') return `<div class="act live col">
-    <div class="now-cap">Setting up</div>
-    <p class="now"><span class="spinner"></span> Launching ${who}…</p>
-    <p class="now-sub">Up to a minute the first time — the browser has to start and
-      sign in. Leave it alone.</p></div>`;
+  if(b==='running'){
+    const n=LIVE[f.id]||0;
+    return `<div class="act live col">
+      <div class="now-cap">Reproducing</div>
+      <p class="now"><span class="spinner"></span> ${n
+        ? 'Working through the steps…'
+        : 'Launching '+who+'…'}</p>
+      ${n?'':`<p class="now-sub">Up to a minute the first time — the browser has to
+        start and sign in. Leave it alone.</p>`}
+      ${f.steps.length?`<div class="donelist live">${f.steps.map((x,i)=>
+        `<div class="dl-row${i<n?'':' pending'}"><span class="ck">${i<n?'✓':'○'}</span>
+          <span>${rich(x)}</span></div>`).join('')}</div>`:''}
+    </div>`;
+  }
 
   if(b==='failed') return `<div class="act col">
     <div class="now-cap" style="color:var(--no)">Setup failed</div>
@@ -227,11 +239,23 @@ function render(){
   sync();
 }
 
+async function watchProgress(f){
+  while(RUN[f.id]){
+    try{
+      const r=await fetch('/api/progress?id='+encodeURIComponent(f.id));
+      const j=await r.json();
+      if((j.steps||0)!==LIVE[f.id]){ LIVE[f.id]=j.steps||0; if(Q[cur]===f) render(); }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,350));
+  }
+}
+
 async function doRepro(){
   const f=Q[cur]; if(!f||RUN[f.id])return;
-  RUN[f.id]=true; delete R[f.id]; render();
+  RUN[f.id]=true; LIVE[f.id]=0; delete R[f.id]; render();
   // clear the screen for the run: this window left, the rig window right
   window.webkit?.messageHandlers?.app?.postMessage({cmd:'tile', width:TILE_LEFT});
+  watchProgress(f);
   try{
     const r=await fetch('/api/repro',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({id:f.id})});
