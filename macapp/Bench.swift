@@ -249,6 +249,7 @@ final class DetailVC: NSViewController {
     private let detail = NSTextField(wrappingLabelWithString: "")
     private let detailScroll = NSScrollView()
     private var easer: Timer?
+    private var finished = false
 
     init(web: WKWebView) { self.web = web; super.init(nibName: nil, bundle: nil) }
     required init?(coder: NSCoder) { fatalError() }
@@ -310,7 +311,9 @@ final class DetailVC: NSViewController {
     /// a single long request while the reports are parsed, so there is nothing
     /// to count -- driving the bar off attempts left it frozen a quarter in.
     func begin(_ text: String) {
+        finished = false
         overlay.isHidden = false
+        overlay.alphaValue = 1
         phase.stringValue = text
         phase.textColor = .secondaryLabelColor
         bar.isHidden = false
@@ -332,7 +335,9 @@ final class DetailVC: NSViewController {
 
     func failed(_ text: String, log: String) {
         easer?.invalidate(); easer = nil
+        finished = true
         overlay.isHidden = false
+        overlay.alphaValue = 1
         phase.stringValue = text
         phase.textColor = .systemRed
         bar.isHidden = true
@@ -340,14 +345,25 @@ final class DetailVC: NSViewController {
         detailScroll.isHidden = log.isEmpty
     }
 
+    /// Finish visibly. Two earlier attempts failed for the same reason: the bar
+    /// was still being driven while the panel went away, so it read as a load
+    /// that stopped at 85% rather than one that completed. Stop the easer, set
+    /// full, and hold long enough to actually be seen before fading.
     func done() {
+        guard !finished else { return }
+        finished = true
         easer?.invalidate(); easer = nil
-        // let the bar actually arrive before the panel goes: hiding it at 0.8
-        // reads as the load being abandoned rather than finished
         phase.stringValue = "Ready"
-        bar.animator().doubleValue = 1
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { [weak self] in
-            self?.overlay.isHidden = true
+        // the control glides to its value over roughly half a second of its
+        // own accord, so the hold has to outlast the glide, not just the set
+        bar.doubleValue = 1
+        bar.needsDisplay = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) { [weak self] in
+            guard let self else { return }
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.22
+                self.overlay.animator().alphaValue = 0
+            }, completionHandler: { self.overlay.isHidden = true })
         }
     }
 }
@@ -525,6 +541,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
                                  title: $0["title"] as? String ?? "",
                                  verdict: $0["verdict"] as? String ?? "") }
         let cur = d["cur"] as? Int ?? 0
+        detailVC.done()
         let beat = d["beat"] as? String ?? "idle"
         sidebar.set(rows, cur: cur)
         reproButton.isEnabled = !rows.isEmpty && beat != "running"
@@ -585,9 +602,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         }.resume()
     }
 
-    func webView(_ w: WKWebView, didFinish n: WKNavigation!) {
-        detailVC.done()
-    }
+    // didFinish fires when the document loads, which is before the page has
+    // fetched the findings and drawn anything. The first sync from the page is
+    // the moment there is something to look at.
+    func webView(_ w: WKWebView, didFinish n: WKNavigation!) {}
 
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ n: Notification) {
