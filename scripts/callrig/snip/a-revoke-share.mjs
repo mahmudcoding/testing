@@ -44,6 +44,23 @@ export default async ({ page, ctx, browser, progress }) => {
     await closeMenus(page);
   }
 
+  // A meeting is created with screen_share_mode "on_request", so a participant's
+  // control reads "Request to share" and the per-participant device permission
+  // does not lift it -- it reads Allowed while the button stays a request. Set
+  // the meeting's own mode first, or he can never be caught sharing.
+  const shareMode = await page.evaluate(async (mid) => {
+    const r = await fetch(`/api/v1/meeting/${mid}/settings`, {
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ screen_share_mode: 'allowed_all' }),
+    });
+    const back = await fetch(`/api/v1/meeting/${mid}/settings`, { credentials: 'include' })
+      .then(x => x.json()).catch(() => ({}));
+    return { status: r.status, mode: back.screen_share_mode };
+  }, (page.url().match(/\/call\/([^/?]+)/) || [])[1]);
+  await bob.page.reload({ waitUntil: 'domcontentloaded' });
+  await bob.page.waitForTimeout(3500);
+
   // he must be allowed to share before he can be caught sharing
   const perm = await setDevicePermission(page, NAME.bob, 'Screen sharing', 'Allow');
   await closeMenus(page);
@@ -80,6 +97,7 @@ export default async ({ page, ctx, browser, progress }) => {
   out.asserted = {
     meeting: call.id,
     sharePermission: perm,
+    shareMode,
     participantIsSharing: await sharing(),
     shareButton: await bob.page.evaluate(() => {
       const b = [...document.querySelectorAll('button')]

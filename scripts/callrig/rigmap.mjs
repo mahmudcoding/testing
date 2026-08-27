@@ -24,9 +24,18 @@ const laneIndex = (lane) => {
 };
 
 export function rigPort(lane, account) {
-  const { i } = laneIndex(lane);
+  const { i, L } = laneIndex(lane);
   const off = ACCOUNTS[String(account || '').toLowerCase()];
   if (off === undefined) throw new Error(`unknown account ${account} (have ${Object.keys(ACCOUNTS).join(', ')})`);
+  // Snippets name their own lane when they reach for a second browser, and they
+  // connect straight over CDP — so drive.mjs's lane guard never sees it. Running
+  // a snippet under a different lane would then quietly drive another session's
+  // window. Refuse instead; the mismatch is always a mistake, never intent.
+  const want = (process.env.QA_LANE || '').toUpperCase();
+  if (want && want !== L) {
+    throw new Error(`lane guard — asked for lane ${L}'s ${account} while QA_LANE is ${want}. `
+                  + `A snippet is bound to its own lane; run it with ./d ${L.toLowerCase()}:<account>.`);
+  }
   return 9220 + i * 10 + off;
 }
 
