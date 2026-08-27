@@ -189,12 +189,21 @@ def reproduce(item):
             or item["accounts"] or ["alice"]
     PROGRESS[item["id"]] = 0
 
-    log.append(f"$ ./scripts/callrig/ensure.sh {lane} {' '.join(accts)}")
-    rc, out = run(["./scripts/callrig/ensure.sh", lane, *accts])
-    log.append(out.strip() or "(no output)")
+    # Bringing a browser up fails transiently — a fresh Chrome that has not shown
+    # a CDP page target yet, or a port a dying one still holds — and ensure.sh is
+    # written to repair only what is missing, so a second go is cheap and usually
+    # works. One retry, because the person pressing this wants a browser, not a
+    # diagnosis; if it fails twice the fault is real and the log carries both.
+    for attempt in (1, 2):
+        log.append(f"$ ./scripts/callrig/ensure.sh {lane} {' '.join(accts)}"
+                   + (f"   (retry {attempt - 1})" if attempt > 1 else ""))
+        rc, out = run(["./scripts/callrig/ensure.sh", lane, *accts])
+        log.append(out.strip() or "(no output)")
+        if rc == 0:
+            break
     if rc != 0:
         return {"ok": False, "stage": "browsers", "log": "\n".join(log),
-                "left": "The rig did not come up. Fix that, then press Reproduce again."}
+                "left": "The rig did not come up, twice. Fix that, then press Reproduce again."}
 
     # put the rig window where it is not under the app before anything runs
     driver0 = (item.get("repro") or {}).get("accounts", ",".join(accts)).split(",")[0].strip()
