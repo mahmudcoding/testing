@@ -111,6 +111,24 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
 - **Write the report in Russian**, keeping app labels, feature names, API paths, HTTP codes, CSS/DOM terms in English. Call out locale-specific bugs explicitly.
 - **Label every finding `[backend]` or `[frontend]`** immediately after the severity in the heading — `### BUG-N [High] [backend] title` — based on where the defect lives (an API 500 is backend; a clipped label or unreachable control is frontend).
 - The published report is bugs-only and written for developers who know nothing about the test setup — no account names, test call names, meeting/workspace/channel IDs, rig ports or fake-device labels. (The session log keeps full provenance, including verified-working notes.)
+- **Every finding ships a repro snippet, and the report names it.** The finding is verified by a human who
+  must see the defect happen in a browser; the snippet is what removes the setup from that, not the judging.
+  You already write one to find the defect — keep it, name it `<lane>-<short-name>.mjs`, and add the block:
+
+  ```
+  <div class="block repro" data-lane="E" data-accounts="alice,bob"
+       data-snippet="e-calendar-stale.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d e:alice snip/e-calendar-stale.mjs</code></p>
+  </div>
+  ```
+
+  `scripts/callrig/snip/_repro-template.mjs` is the contract: get to the state, **prove you reached it**,
+  then leave the human one action short of the defect and name that action. Returning
+  `{ready, asserted, leftToDo}` is what the bench displays. A snippet that lands someone on the wrong
+  screen is worse than no snippet — that is how a verification passes while measuring nothing.
+  `python3 scripts/bench.py` runs them: it launches the accounts, executes the snippet, and shows what is
+  left to do. Findings without a block still open positioned, and the bench says so.
 - **Every finding follows one shape**, so a report entry becomes an ALK ticket without rewriting it:
 
   ```

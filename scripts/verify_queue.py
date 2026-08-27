@@ -36,13 +36,17 @@ def parse(path):
         if not m: continue
         title = strip(m.group(1))
         untagged = re.sub(r'^(\[[^\]]+\])+\s*', '', title)
+        # Reports differ: some summary tables keep the [TAG][MODULE] prefix and
+        # some drop it, so try both forms before giving up.
         sev, drift = "?", None
         for rt, rs in rows:
-            k = min(45, len(rt), len(untagged))
-            if k > 20 and rt[:k].lower() == untagged[:k].lower():
-                sev = rs
-                if rt.strip() != untagged.strip(): drift = rt
-                break
+            for cand in (untagged, title):
+                k = min(45, len(rt), len(cand))
+                if k > 20 and rt[:k].lower() == cand[:k].lower():
+                    sev = rs
+                    if rt.strip() != cand.strip(): drift = rt
+                    break
+            if sev != "?": break
         f = {"title": title, "untagged": untagged, "severity": sev,
              "table_drift": drift, "steps": []}
         tm = re.match(r'\[([A-Z-]+)\]\[([A-Z0-9 -]+)\]', title)
