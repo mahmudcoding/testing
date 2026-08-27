@@ -72,11 +72,17 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   padding:5px 8px;margin:0 -8px;border-radius:6px}
 .donelist.live{gap:2px}
 .dl-row.pending{color:var(--label-3)}
-.dl-row.pending .ck{color:var(--label-3);font-weight:400}
 .dl-row.doing{color:var(--label)}
-.dl-row.mine{color:var(--label);font-weight:600}
-.dl-row.mine .arrow{color:var(--accent);font-weight:700}
-.spinner.sm{width:10px;height:10px;border-width:1.6px;flex:none;margin-top:2px}
+/* one fixed box for every marker: the glyphs are different widths, so letting
+   them size themselves shifted the step text sideways when the state changed */
+.mk{flex:none;width:14px;display:inline-flex;align-items:center;justify-content:center;
+  align-self:flex-start;height:calc(13px * 1.45);color:var(--label-3)}
+.dl-row.done .mk{color:var(--ok);font-weight:700}
+.dl-row.mine .mk{color:var(--accent);font-weight:700}
+.dl-row.mine{color:var(--label);font-weight:600;animation:handoff .3s ease-out}
+/* fade only: a translate here was itself the sideways nudge on the row */
+@keyframes handoff{from{opacity:.45}to{opacity:1}}
+.spinner.sm{width:10px;height:10px;border-width:1.6px;flex:none}
 .spinner{display:inline-block;width:12px;height:12px;vertical-align:-1px;
   border:2px solid var(--label-3);border-top-color:var(--accent-fill);
   border-radius:50%;animation:sp .7s linear infinite}
@@ -106,7 +112,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
 <div class="pane" id="main"><div class="empty">Loading…</div></div>
 
 <script>
-let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={};
+let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={}, HANDOFF={};
 const TILE_LEFT=640;          // points this window keeps; the rig takes the rest
 const KEY='aloqa-bench-v1'; let V={};
 try{ V=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
@@ -156,14 +162,12 @@ function action(f){
   if(b==='running' || b==='ready'){
     const ready = b==='ready';
     const n = ready ? Math.min(r.stepsDone||0, f.steps.length) : (LIVE[f.id]||0);
-    const mineIdx = ready && n < f.steps.length ? n : -1;
+    const mineIdx = ready && HANDOFF[f.id] && n < f.steps.length ? n : -1;
     return `<div class="act live col">
       ${f.steps.length ? `<div class="donelist live">${f.steps.map((x,i)=>{
         const st = i<n ? 'done' : (i===mineIdx ? 'mine' : (!ready && i===n ? 'doing' : 'pending'));
-        const mark = st==='done' ? '<span class="ck">✓</span>'
-                   : st==='doing' ? '<span class="spinner sm"></span>'
-                   : st==='mine' ? '<span class="ck arrow">▸</span>'
-                   : '<span class="ck">○</span>';
+        const mark = st==='doing' ? '<span class="mk"><span class="spinner sm"></span></span>'
+                   : `<span class="mk">${st==='done' ? '✓' : st==='mine' ? '▸' : '○'}</span>`;
         return `<div class="dl-row ${st}">${mark}<span>${rich(x)}</span></div>`;
       }).join('')}</div>` : ''}
     </div>`;
@@ -231,7 +235,7 @@ async function watchProgress(f){
 
 async function doRepro(){
   const f=Q[cur]; if(!f||RUN[f.id])return;
-  RUN[f.id]=true; LIVE[f.id]=0; delete R[f.id]; render();
+  RUN[f.id]=true; LIVE[f.id]=0; delete R[f.id]; delete HANDOFF[f.id]; render();
   // clear the screen for the run: this window left, the rig window right
   window.webkit?.messageHandlers?.app?.postMessage({cmd:'tile', width:TILE_LEFT});
   watchProgress(f);
@@ -242,6 +246,9 @@ async function doRepro(){
   }catch(e){ R[f.id]={ok:false,stage:'failed',log:String(e),
     left:'Could not reach the rig. Is scripts/bench.py still running?'}; }
   delete RUN[f.id]; render();
+  // let the script's final tick be seen on its own before the row becomes the
+  // person's to act on -- both changing in one frame reads as a glitch
+  setTimeout(()=>{ HANDOFF[f.id]=true; if(Q[cur]===f) render(); }, 650);
 }
 
 function verdict(v){
