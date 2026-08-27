@@ -142,6 +142,102 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
     }
 }
 
+/// Root view: the detail pane fills the window and the sidebar slides in over
+/// it. A split view would take its width out of the content, which on a window
+/// tiled to half the screen leaves the finding unreadable — so the list is an
+/// overlay, and it starts closed.
+final class RootVC: NSViewController {
+    private let detail: NSViewController
+    private let list: NSViewController
+    private let panel = NSVisualEffectView()
+    private let shade = NSView()
+    private var leading: NSLayoutConstraint!
+    private(set) var isOpen = false
+    static let width: CGFloat = 250
+
+    init(detail: NSViewController, list: NSViewController) {
+        self.detail = detail; self.list = list
+        super.init(nibName: nil, bundle: nil)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func loadView() {
+        let root = NSView()
+        addChild(detail); addChild(list)
+
+        let d = detail.view
+        d.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(d)
+
+        // a dimmer so the list reads as being in front, and a click-off target
+        shade.wantsLayer = true
+        shade.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.18).cgColor
+        shade.translatesAutoresizingMaskIntoConstraints = false
+        shade.isHidden = true
+        root.addSubview(shade)
+
+        panel.material = .sidebar
+        panel.blendingMode = .behindWindow
+        panel.state = .active
+        panel.translatesAutoresizingMaskIntoConstraints = false
+        panel.wantsLayer = true
+        panel.layer?.shadowOpacity = 0.28
+        panel.layer?.shadowRadius = 14
+        panel.layer?.shadowOffset = .zero
+        root.addSubview(panel)
+
+        let l = list.view
+        l.translatesAutoresizingMaskIntoConstraints = false
+        panel.addSubview(l)
+
+        leading = panel.leadingAnchor.constraint(equalTo: root.leadingAnchor,
+                                                 constant: -RootVC.width)
+        NSLayoutConstraint.activate([
+            d.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            d.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            d.topAnchor.constraint(equalTo: root.topAnchor),
+            d.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+
+            shade.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            shade.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            shade.topAnchor.constraint(equalTo: root.topAnchor),
+            shade.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+
+            leading,
+            panel.widthAnchor.constraint(equalToConstant: RootVC.width),
+            panel.topAnchor.constraint(equalTo: root.topAnchor),
+            panel.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+
+            l.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
+            l.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
+            l.topAnchor.constraint(equalTo: panel.topAnchor),
+            l.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
+        ])
+        view = root
+
+        let click = NSClickGestureRecognizer(target: self, action: #selector(shadeClicked))
+        shade.addGestureRecognizer(click)
+    }
+
+    @objc private func shadeClicked() { setOpen(false) }
+    @objc func toggle() { setOpen(!isOpen) }
+
+    func setOpen(_ open: Bool) {
+        guard open != isOpen else { return }
+        isOpen = open
+        if open { shade.isHidden = false }
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.2
+            ctx.allowsImplicitAnimation = true
+            leading.animator().constant = open ? 0 : -RootVC.width
+            shade.animator().alphaValue = open ? 1 : 0
+            view.layoutSubtreeIfNeeded()
+        }, completionHandler: { [weak self] in
+            if !open { self?.shade.isHidden = true }
+        })
+    }
+}
+
 /// Detail pane: the web view, with a native launch panel over it until the
 /// server is up. A page pretending to be a launch screen would flash white and
 /// show the wrong font before the real one loads.
@@ -261,9 +357,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
                          WKNavigationDelegate, WKScriptMessageHandler {
     var window: NSWindow!
     var web: WKWebView!
-    var split: NSSplitViewController!
+    var root: RootVC!
     var detailVC: DetailVC!
-    var sideItem: NSSplitViewItem!
     var sidebar = SidebarVC()
     var server: Process?
     var port = 0
@@ -291,18 +386,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         web = WKWebView(frame: .zero, configuration: cfg)
         web.navigationDelegate = self
 
-        sideItem = NSSplitViewItem(sidebarWithViewController: sidebar)
-        sideItem.minimumThickness = 150
-        sideItem.maximumThickness = 320
-        if #available(macOS 11.0, *) { sideItem.allowsFullHeightLayout = true }
-        sideItem.canCollapse = true
         detailVC = DetailVC(web: web)
-        let mainItem = NSSplitViewItem(viewController: detailVC)
-        mainItem.minimumThickness = 330
-
-        split = NSSplitViewController()
-        split.addSplitViewItem(sideItem)
-        split.addSplitViewItem(mainItem)
+        root = RootVC(detail: detailVC, list: sidebar)
 
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1020, height: 700),
@@ -310,7 +395,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             backing: .buffered, defer: false)
         window.title = "Reproducer"          // Dock and Window menu only
         window.titleVisibility = .hidden     // not painted into the toolbar
-        window.contentViewController = split
+        window.contentViewController = root
         // assigning contentViewController resizes the window to the view
         // controller's own size, so contentRect above does not survive it
         window.minSize = NSSize(width: 520, height: 460)
@@ -329,20 +414,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             window.setContentSize(NSSize(width: 1020, height: 700))
             window.center()
         }
-        // the split remembers its own width and whether it is collapsed, so
-        // hiding the sidebar stays hidden across launches
-        split.splitView.autosaveName = "ReproducerSplit"
-        if !restored { split.splitView.setPosition(218, ofDividerAt: 0) }
         NSApp.activate(ignoringOtherApps: true)
 
         sidebar.onSelect = { [weak self] i in
             self?.web.evaluateJavaScript("window.__select && __select(\(i))")
+            self?.root.setOpen(false)      // an overlay gets out of the way once used
         }
         detailVC.begin("Reading the reports…")
     }
 
     // MARK: toolbar
 
+    static let idList = NSToolbarItem.Identifier("list")
     static let idRepro = NSToolbarItem.Identifier("repro")
     static let idVerdict = NSToolbarItem.Identifier("verdict")
 
@@ -351,8 +434,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     }
 
     func toolbarDefaultItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
-        var ids: [NSToolbarItem.Identifier] = [.toggleSidebar]
-        if #available(macOS 11.0, *) { ids.append(.sidebarTrackingSeparator) }
+        var ids: [NSToolbarItem.Identifier] = [AppDelegate.idList]
         ids += [.flexibleSpace, AppDelegate.idVerdict]
         return ids
     }
@@ -360,6 +442,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     func toolbar(_ t: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                  willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
         switch id {
+        case AppDelegate.idList:
+            let b = NSButton()
+            b.bezelStyle = .texturedRounded
+            b.title = ""
+            if #available(macOS 11.0, *) {
+                b.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Findings")
+            } else { b.title = "List" }
+            b.target = self
+            b.action = #selector(toggleList)
+            let it = NSToolbarItem(itemIdentifier: id)
+            it.view = b
+            it.label = "Findings"
+            it.toolTip = "Show the list of findings"
+            return it
         case AppDelegate.idRepro:
             reproButton.bezelStyle = .texturedRounded
             reproButton.title = "Reproduce"
@@ -391,6 +487,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             return nil
         }
     }
+
+    @objc func toggleList() { root.toggle() }
 
     @objc func hitRepro() { web.evaluateJavaScript("window.__repro && __repro()") }
 
@@ -533,8 +631,8 @@ let viewItem = NSMenuItem()
 menu.addItem(viewItem)
 let viewMenu = NSMenu(title: "View")
 viewMenu.addItem(withTitle: "Reload", action: #selector(AppDelegate.reloadPage), keyEquivalent: "r")
-viewMenu.addItem(withTitle: "Hide Sidebar",
-                 action: #selector(NSSplitViewController.toggleSidebar(_:)), keyEquivalent: "s")
+viewMenu.addItem(withTitle: "Findings",
+                 action: #selector(AppDelegate.toggleList), keyEquivalent: "l")
 viewItem.submenu = viewMenu
 
 app.mainMenu = menu
