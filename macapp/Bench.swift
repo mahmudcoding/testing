@@ -34,7 +34,16 @@ func freePort() -> Int {
 struct Row {
     var id: String
     var title: String
+    var area: String
     var verdict: String     // "", "y", "n", "s"
+}
+
+/// What a sidebar line is. Findings arrive grouped by module, and a header is
+/// inserted wherever the module changes — so the table's own indices no longer
+/// match the finding indices, and every lookup has to go through `display`.
+enum Line {
+    case header(String)
+    case finding(Int)       // index into rows
 }
 
 /// AppKit leaves the arrow over buttons; the web card now shows a hand, and a
@@ -97,7 +106,7 @@ final class RowCell: NSTableCellView {
 final class HandTable: NSTableView {
     override func resetCursorRects() {
         super.resetCursorRects()
-        for i in 0 ..< numberOfRows {
+        for i in 0 ..< numberOfRows where delegate?.tableView?(self, shouldSelectRow: i) ?? true {
             addCursorRect(rect(ofRow: i), cursor: .pointingHand)
         }
     }
@@ -106,9 +115,23 @@ final class HandTable: NSTableView {
 // ── sidebar ──────────────────────────────────────────────────────────────────
 final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
     var rows: [Row] = []
+    var display: [Line] = []
     var onSelect: ((Int) -> Void)?
     let table = HandTable()
     private var suppress = false
+
+    private func rebuild() {
+        display = []
+        var last = ""
+        for (i, r) in rows.enumerated() {
+            if r.area != last { display.append(.header(r.area)); last = r.area }
+            display.append(.finding(i))
+        }
+    }
+
+    private func line(forFinding i: Int) -> Int? {
+        display.firstIndex { if case .finding(let j) = $0 { return j == i }; return false }
+    }
 
     override func loadView() {
         let scroll = NSScrollView()
@@ -133,29 +156,65 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
 
     func set(_ rs: [Row], cur: Int) {
         rows = rs
+        rebuild()
         table.reloadData()
         table.window?.invalidateCursorRects(for: table)
-        guard cur >= 0, cur < rs.count else { return }
+        guard cur >= 0, cur < rs.count, let at = line(forFinding: cur) else { return }
         suppress = true
-        table.selectRowIndexes(IndexSet(integer: cur), byExtendingSelection: false)
-        table.scrollRowToVisible(cur)
+        table.selectRowIndexes(IndexSet(integer: at), byExtendingSelection: false)
+        table.scrollRowToVisible(at)
         suppress = false
     }
 
-    func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+    func numberOfRows(in tableView: NSTableView) -> Int { display.count }
+
+    func tableView(_ t: NSTableView, isGroupRow row: Int) -> Bool {
+        if case .header = display[row] { return true }
+        return false
+    }
+
+    // a header is a label, not a destination
+    func tableView(_ t: NSTableView, shouldSelectRow row: Int) -> Bool {
+        !tableView(t, isGroupRow: row)
+    }
+
+    func tableView(_ t: NSTableView, heightOfRow row: Int) -> CGFloat {
+        tableView(t, isGroupRow: row) ? 24 : 38
+    }
 
     func tableView(_ t: NSTableView, viewFor col: NSTableColumn?, row: Int) -> NSView? {
-        let id = NSUserInterfaceItemIdentifier("cell")
-        let cell = (t.makeView(withIdentifier: id, owner: self) as? RowCell) ?? {
-            let c = RowCell(frame: .zero); c.identifier = id; return c
-        }()
-        cell.fill(rows[row])
-        return cell
+        switch display[row] {
+        case .header(let title):
+            let id = NSUserInterfaceItemIdentifier("head")
+            let v = (t.makeView(withIdentifier: id, owner: self) as? NSTableCellView) ?? {
+                let c = NSTableCellView(); c.identifier = id
+                let l = NSTextField(labelWithString: "")
+                l.translatesAutoresizingMaskIntoConstraints = false
+                l.font = .systemFont(ofSize: 11, weight: .semibold)
+                l.textColor = .secondaryLabelColor
+                c.addSubview(l); c.textField = l
+                NSLayoutConstraint.activate([
+                    l.leadingAnchor.constraint(equalTo: c.leadingAnchor),
+                    l.bottomAnchor.constraint(equalTo: c.bottomAnchor, constant: -3),
+                ])
+                return c
+            }()
+            v.textField?.stringValue = title
+            return v
+        case .finding(let i):
+            let id = NSUserInterfaceItemIdentifier("cell")
+            let cell = (t.makeView(withIdentifier: id, owner: self) as? RowCell) ?? {
+                let c = RowCell(frame: .zero); c.identifier = id; return c
+            }()
+            cell.fill(rows[i])
+            return cell
+        }
     }
 
     func tableViewSelectionDidChange(_ n: Notification) {
-        guard !suppress, table.selectedRow >= 0 else { return }
-        onSelect?(table.selectedRow)
+        guard !suppress, table.selectedRow >= 0,
+              case .finding(let i) = display[table.selectedRow] else { return }
+        onSelect?(i)
     }
 }
 
@@ -644,6 +703,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         let raw = d["rows"] as? [[String: Any]] ?? []
         let rows = raw.map { Row(id: $0["id"] as? String ?? "",
                                  title: $0["title"] as? String ?? "",
+                                 area: $0["area"] as? String ?? "—",
                                  verdict: $0["verdict"] as? String ?? "") }
         let cur = d["cur"] as? Int ?? 0
         detailVC.done()

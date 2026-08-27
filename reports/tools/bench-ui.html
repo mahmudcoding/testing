@@ -127,13 +127,16 @@ const sentence=t=>(t||'').replace(/[A-Za-z][A-Za-z-]*/g,
   w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
 const key=f=>f.accounts.join('+')+'|'+f.surface;
 
-/* Every finding, all lanes. The list used to be filtered to one lane and the
-   picker lived in the web sidebar; that sidebar is native now, so the filter
-   left 82 findings unreachable. Lane still groups the order — findings sharing
-   a lane share browsers — and the crumb names it. */
+/* Every finding, all lanes, grouped by module — that is how a person thinks
+   about them, and the sidebar draws a header per module. Lane is the second
+   key, so findings that share browsers still sit together inside a module and
+   a run does not bounce between lanes more than the grouping forces. */
 const allFindings=()=>{
   const g={};
-  F.forEach(f=>(g[f.lane+'|'+key(f)]=g[f.lane+'|'+key(f)]||[]).push(f));
+  F.forEach(f=>{
+    const k=(f.area||'—')+'|'+f.lane+'|'+key(f);
+    (g[k]=g[k]||[]).push(f);
+  });
   return Object.keys(g).sort().map(k=>g[k]).flat();
 };
 
@@ -152,7 +155,8 @@ function beat(f){
 function sync(){
   const f=Q[cur];
   window.webkit?.messageHandlers?.app?.postMessage({
-    rows:Q.map(x=>({id:x.id,title:short(x.title),verdict:(V[x.id]||{}).v||''})),
+    rows:Q.map(x=>({id:x.id,title:short(x.title),area:sentence(x.area||'—'),
+                    verdict:(V[x.id]||{}).v||''})),
     cur, beat:beat(f), verdict:f?((V[f.id]||{}).v||''):'',
     canClose: !!(f && R[f.id] && !RUN[f.id] && !CLOSING),
     lane:f?f.laneName:''
