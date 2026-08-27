@@ -295,30 +295,41 @@ export async function closeMenus(page) {
   await page.waitForTimeout(500);
 }
 
-/** Put a window on strip `i` of `n` across the screen, so two rig windows can be
- *  watched at once. A window occluded by another rig window reports
- *  visibilityState "hidden" and the app then suppresses live UI — so for a
- *  cross-window finding, tiling is part of the measurement, not decoration. */
+/** Park a window in the strip beside whatever is driving it, reserving
+ *  QA_TILE_LEFT points on the left for the Reproducer window.
+ *
+ *  Every rig window gets the SAME rectangle, so the screen holds two things: the
+ *  app and the browser in front. The `i`/`n` arguments are kept so callers do not
+ *  have to change, but the screen is no longer split between them — two 960px
+ *  strips on a 1920 screen left no room for the app and put each browser exactly
+ *  on the width where the call header starts disappearing.
+ *
+ *  The cost is real and worth knowing: a rig window behind another reports
+ *  visibilityState "hidden", and the app suppresses some live UI while it is —
+ *  so on a cross-window finding, bring the window you are watching to the front
+ *  before judging whether an update arrived. */
 export async function tile({ page, ctx, browser }, i, n) {
   try {
     const s = await page.evaluate(() => ({
       w: screen.availWidth, h: screen.availHeight,
       left: screen.availLeft || 0, top: screen.availTop || 0,
     }));
-    const width = Math.max(620, Math.floor(s.w / n));
+    const reserve = Number(process.env.QA_TILE_LEFT || 520);
+    const width = Math.max(960, s.w - reserve);
     const ps = await ctx.newCDPSession(page);
     const { targetInfo } = await ps.send('Target.getTargetInfo');
     const bs = await browser.newBrowserCDPSession();
     const { windowId } = await bs.send('Browser.getWindowForTarget', { targetId: targetInfo.targetId });
     await bs.send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } });
     await bs.send('Browser.setWindowBounds',
-      { windowId, bounds: { left: s.left + i * width, top: s.top, width, height: s.h } });
+      { windowId, bounds: { left: s.left + (s.w - width), top: s.top, width, height: s.h } });
     await page.bringToFront();
     return true;
   } catch { return false; }
 }
 
-/** Put a window back to full screen. Snippets tile, and a window left narrow by
+/** Put a window back to the full working area beside the app. Snippets tile, and
+ *  a window left narrow by
  *  the previous run makes the NEXT run's setup misread: the call header and
  *  toolbar are gone at a third of the screen, so "is he in a side room" and "is
  *  the reaction button there" both answer no for a window that simply got small.
