@@ -146,10 +146,14 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
         table.dataSource = self
         table.delegate = self
         table.rowSizeStyle = .custom
-        table.rowHeight = 38
-        table.backgroundColor = .clear
+        table.rowHeight = 44
+        table.backgroundColor = .windowBackgroundColor
         table.selectionHighlightStyle = .regular
-        if #available(macOS 11.0, *) { table.style = .sourceList }
+        // .inset, not .sourceList: both give the rounded inset selection, but a
+        // source list is painted with the vibrant sidebar material, which samples
+        // what is behind the *window* — so the desktop wallpaper tinted the whole
+        // list, and a vivid one made it unreadable.
+        if #available(macOS 11.0, *) { table.style = .inset }
         scroll.documentView = table
         view = scroll
     }
@@ -179,7 +183,7 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
     }
 
     func tableView(_ t: NSTableView, heightOfRow row: Int) -> CGFloat {
-        tableView(t, isGroupRow: row) ? 24 : 38
+        tableView(t, isGroupRow: row) ? 28 : 44
     }
 
     func tableView(_ t: NSTableView, viewFor col: NSTableColumn?, row: Int) -> NSView? {
@@ -286,8 +290,9 @@ final class BarView: NSView {
 final class RootVC: NSViewController {
     private let detail: NSViewController
     private let list: NSViewController
-    private let panel = NSVisualEffectView()
+    private let panel = NSView()
     private let shade = NSView()
+    private let edge  = NSView()
     private var leading: NSLayoutConstraint!
     private(set) var isOpen = false
     static let width: CGFloat = 250
@@ -299,6 +304,9 @@ final class RootVC: NSViewController {
     required init?(coder: NSCoder) { fatalError() }
 
     override func loadView() {
+        // Leave these views layer-backed. Giving any of them a draw(_:) instead
+        // stops the web view being composited at all — the sidebar renders, the
+        // page still runs and syncs, and the detail pane is simply blank.
         let root = NSView()
         addChild(detail); addChild(list)
 
@@ -308,20 +316,26 @@ final class RootVC: NSViewController {
 
         // a dimmer so the list reads as being in front, and a click-off target
         shade.wantsLayer = true
-        shade.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.18).cgColor
         shade.translatesAutoresizingMaskIntoConstraints = false
         shade.isHidden = true
         root.addSubview(shade)
 
-        panel.material = .sidebar
-        panel.blendingMode = .behindWindow
-        panel.state = .active
+        // Solid, not NSVisualEffectView: vibrancy samples what is behind the
+        // *window*, and this panel sits over the app's own content, where there
+        // is nothing worth showing through anyway; it carries a shadow instead.
         panel.translatesAutoresizingMaskIntoConstraints = false
         panel.wantsLayer = true
         panel.layer?.shadowOpacity = 0.28
         panel.layer?.shadowRadius = 14
         panel.layer?.shadowOffset = .zero
         root.addSubview(panel)
+
+        // a plain layer, not NSBox(.separator): that carries an intrinsic height
+        // of 1, and pinning it top-and-bottom drove the panel — and with it the
+        // window — down to a single pixel
+        edge.wantsLayer = true
+        edge.translatesAutoresizingMaskIntoConstraints = false
+        panel.addSubview(edge)
 
         let l = list.view
         l.translatesAutoresizingMaskIntoConstraints = false
@@ -349,11 +363,29 @@ final class RootVC: NSViewController {
             l.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
             l.topAnchor.constraint(equalTo: panel.topAnchor),
             l.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
+            edge.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
+            edge.topAnchor.constraint(equalTo: panel.topAnchor),
+            edge.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
+            edge.widthAnchor.constraint(equalToConstant: 1),
         ])
         view = root
 
         let click = NSClickGestureRecognizer(target: self, action: #selector(shadeClicked))
         shade.addGestureRecognizer(click)
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        paint()
+    }
+
+    /// Layer colours do not follow light/dark on their own.
+    private func paint() {
+        view.effectiveAppearance.performAsCurrentDrawingAppearance {
+            panel.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+            edge.layer?.backgroundColor = NSColor.separatorColor.cgColor
+            shade.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.28).cgColor
+        }
     }
 
     @objc private func shadeClicked() { setOpen(false) }
@@ -542,6 +574,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             backing: .buffered, defer: false)
         window.title = "Reproducer"          // Dock and Window menu only
         window.titleVisibility = .hidden     // not painted into the toolbar
+        // Without this the window has no opaque ground: the detail pane is a web
+        // view that paints its own, but the sidebar overlay sits over bare
+        // window, and the desktop wallpaper came straight through the list.
+        window.backgroundColor = .windowBackgroundColor
+        window.isOpaque = true
         window.contentViewController = root
         // assigning contentViewController resizes the window to the view
         // controller's own size, so contentRect above does not survive it
@@ -678,8 +715,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     func tileLeft(_ w: CGFloat) {
         guard let scr = window.screen ?? NSScreen.main else { return }
         let v = scr.visibleFrame
+        // setFrame bypasses minSize, and this frame is autosaved. A degenerate
+        // visibleFrame — which happens around screen changes and at launch —
+        // therefore saved a 640x1 window that came back invisible on next start.
+        guard v.width >= window.minSize.width, v.height >= window.minSize.height else { return }
         let width = min(max(w, window.minSize.width), v.width)
-        window.setFrame(NSRect(x: v.minX, y: v.minY, width: width, height: v.height),
+        let height = max(window.minSize.height, v.height)
+        window.setFrame(NSRect(x: v.minX, y: v.minY, width: width, height: height),
                         display: true, animate: true)
     }
 
