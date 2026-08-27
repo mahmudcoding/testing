@@ -53,7 +53,7 @@ def verify(lane):
         return []
     accts = sorted({a for _, a in rows})
     env = dict(os.environ, QA_LANE=lane)
-    print(f"lane {lane}: {len(rows)} snippets, accounts {' '.join(accts)}")
+    print(f"lane {lane}: {len(rows)} snippets, accounts {' '.join(accts)}", flush=True)
     for a in accts:                       # launch is a no-op if it is already up
         sh(["./scripts/callrig/launch.sh", lane, a], env=env)
     sh(["./scripts/callrig/ensure.sh", lane] + accts, env=env)
@@ -71,7 +71,7 @@ def verify(lane):
         marks = max(vals) if vals else 0
         results.append((snip, acct, ready, st.group(1) if st else "?", marks))
         flag = "   " if ready == "true" else "!! "
-        print(f"  {flag}{snip:<30} {acct:<9} ready={ready:<7} steps={st.group(1) if st else '?':<3} marks={marks}")
+        print(f"  {flag}{snip:<30} {acct:<9} ready={ready:<7} steps={st.group(1) if st else '?':<3} marks={marks}", flush=True)
     return results
 
 
