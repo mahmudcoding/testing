@@ -181,7 +181,6 @@ function action(f){
 
   if(b==='judged') return `<div class="act">
     <button class="push" id="play">Reproduce again</button>
-    <button class="push" id="closebr">Close browser</button>
     <p class="hint"><b>${({y:'Confirmed as a bug',n:'Not a bug',s:'Skipped'})[rec.v]}</b>${
       rec.note?' — '+esc(rec.note):''}<br>Change the verdict in the toolbar at any time.</p>
     </div>`;
@@ -264,14 +263,19 @@ function verdict(v){
 }
 
 async function closeBrowser(btn,f){
-  btn.disabled=true; const was=btn.textContent; btn.textContent='Closing…';
+  btn.disabled=true; btn.textContent='Closing…';
   try{
     const r=await fetch('/api/close',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({lane:f.lane})});
     const j=await r.json();
-    btn.textContent = j.ok ? 'Closed' : 'Could not close';
+    if(j.ok){
+      // the run is over and its browser is gone, so the card goes back to
+      // offering the only thing that makes sense now: running it again
+      delete R[f.id]; delete LIVE[f.id]; render(); return;
+    }
+    btn.textContent='Could not close';
   }catch(e){ btn.textContent='Could not close'; }
-  setTimeout(()=>{btn.disabled=false; btn.textContent=was;},2200);
+  setTimeout(()=>{btn.disabled=false; btn.textContent='Close browser';},2200);
 }
 
 async function saveRecord(){
