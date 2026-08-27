@@ -33,8 +33,11 @@ export default async ({ page }) => {
     const hit = await page.evaluate((w) => {
       const a = [...document.querySelectorAll('aside')]
         .find(x => /theme|density|font/i.test(x.innerText));
-      const b = [...a.querySelectorAll('button')]
-        .find(x => ((x.getAttribute('aria-label') || x.textContent || '').trim() === w));
+      // the font-size buttons read "XL" on screen and "Extra large" to a11y —
+      // match either, or the click silently misses and the state is never built
+      const b = [...a.querySelectorAll('button')].find(x =>
+        (x.getAttribute('aria-label') || '').trim() === w ||
+        (x.textContent || '').trim() === w);
       if (!b) return false;
       b.scrollIntoView({ block: 'center' });
       const r = b.getBoundingClientRect();
