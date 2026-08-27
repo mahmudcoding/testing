@@ -219,6 +219,15 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
 - **A rig window narrower than about 960 px drops the call header and toolbar
   entirely.** "Is he in a side room" and "is the button there" then both answer
   no for a window that is merely small.
+- **An open side panel covers the call toolbar, so the button under it is
+  present but not clickable — and the helper that would click it returns
+  quietly.** `hasParticipantsBtn: true` with `aria-pressed="false"` and no
+  panel is the signature. It bites hardest on a host that made a side room:
+  `createRoom` / `leaveRoom` leave the Side Rooms panel open, and the row menu
+  read afterwards comes back empty for a reason that has nothing to do with
+  what is being measured. Enumerate the *visible* named buttons before
+  believing an empty menu — two entries (`Close Side Rooms panel`, `Close
+  room`) says the panel is what you are looking at, not the call.
 
 ## Settings
 

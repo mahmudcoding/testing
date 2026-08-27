@@ -58,6 +58,11 @@ export default async ({ page, ctx, browser, progress }) => {
   await tile(bob, 1, 2);
   await tile(host, 0, 2);
   await closePeople(bob.page);
+  // The host made the room, so his Side Rooms panel is still open — and it covers
+  // the call toolbar, so the Participants button is present but not clickable and
+  // openPeople returns having done nothing. The row menu is then empty for a
+  // reason that has nothing to do with the finding.
+  await closeSideRooms(page);
   await openPeople(page);
   await closeMenus(page);
 
@@ -72,6 +77,7 @@ export default async ({ page, ctx, browser, progress }) => {
     hostInsideRoom: await inSideRoom(page),
     participantScreenIsClear: await bob.page.evaluate(() =>
       !/asked you|return to the main room/i.test(document.body.innerText || '')),
+    rowMenuOpened: menu.opened,
     menuOnParticipant: menu.items,
     askReturnPresent: menu.items.includes('Ask to return to main room'),
     // the neighbouring "Ask …" action in the same menu is the control: both the
