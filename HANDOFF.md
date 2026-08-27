@@ -8,6 +8,24 @@ One line per item: date · from · to · what · where the measurement lives.
 
 ## Fixture state — read before testing on these lanes
 
+**All lanes · 2026-08-27 · state the reverification pass left behind.** The rc-6 pass ran
+88 repro snippets across every lane, and handover snippets deliberately leave the app in the
+state being judged. Nothing here breaks a fixture — `seed/seed.sh --lanes <letter>` repairs
+structure — but a later session should expect it rather than measure it as a defect:
+
+- Lane D · one **pending direct invite** to `qa.d.outsider` (the state one finding needs), and
+  the **company logo** replaced with a test image. There is no way to remove it in the product
+  — `DELETE /companies/<co>/avatar` answers 405 — and `seed.sh` does not touch `avatar_url`,
+  so only a direct DB write clears it.
+- Lane E · alice's status is `Vacation` and her Department/Job title are set; several
+  `e-arch-*` archived channels, `e-preview-*.png`, `e-shared-*.txt` and a number of `E …`
+  meetings exist. All disposable.
+- Lane C · `#qa-private` left unmuted.
+- Any lane · an account may be left in a **non-English interface** and a meeting may be left
+  **active**. Both are cleared by `snip/_reset.mjs`, which the bench runs before every
+  reproduce; run it yourself if you drive snippets by hand.
+
+
 **Lane E · a second workspace exists.** `QA E Second` (`W4OWJSPNXQJYZ5R`), owned by lane
 E's alice, containing `second-ws-channel`. Created deliberately on 2026-08-26 to unblock
 the multi-workspace path — every fixture account is otherwise in exactly one workspace,
