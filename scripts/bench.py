@@ -186,6 +186,12 @@ def reproduce(item):
     # anything itself -- and every other snippet matches English strings. Without
     # this, judging one non-English finding breaks every finding judged after it.
     run(["./scripts/callrig/d", f"{lane}:{driver0}", "snip/_lang-en.mjs"], timeout=90)
+    # A call finding hands over with its meeting still live, because that is the
+    # state being judged. Reproducing a second one without closing the browser
+    # then starts inside a call that already has a co-host promoted -- and a host
+    # cannot moderate a co-host, so the menu the next snippet needs comes back
+    # empty and it refuses. No-op when the window is not in a call.
+    run(["./scripts/callrig/d", f"{lane}:{driver0}", "snip/_end-call.mjs"], timeout=90)
 
     rep = item.get("repro")
     if not rep or not rep.get("snippet"):
