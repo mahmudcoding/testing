@@ -223,6 +223,7 @@ function render(){
     <div class="crumb">
       <span class="tag ${f.sev==='?'?'':f.sev}">${f.sev==='?'?'Unrated':f.sev}</span>
       <span class="tag">${esc(sentence(f.area))}</span>
+      <span>${esc(f.laneName)}</span>
       <span class="n">${cur+1} of ${Q.length}</span>
     </div>
     <h1>${rich(short(f.title))}</h1>

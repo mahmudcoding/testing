@@ -152,6 +152,7 @@ final class DetailVC: NSViewController {
     private let bar = NSProgressIndicator()
     private let detail = NSTextField(wrappingLabelWithString: "")
     private let detailScroll = NSScrollView()
+    private var easer: Timer?
 
     init(web: WKWebView) { self.web = web; super.init(nibName: nil, bundle: nil) }
     required init?(coder: NSCoder) { fatalError() }
@@ -209,14 +210,32 @@ final class DetailVC: NSViewController {
         overlay.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
     }
 
-    func progress(_ text: String, _ value: Double) {
+    /// Advance the bar on a clock, not on retries. The readiness poll blocks in
+    /// a single long request while the reports are parsed, so there is nothing
+    /// to count -- driving the bar off attempts left it frozen a quarter in.
+    func begin(_ text: String) {
         overlay.isHidden = false
         phase.stringValue = text
+        phase.textColor = .secondaryLabelColor
         bar.isHidden = false
-        bar.animator().doubleValue = value
+        bar.doubleValue = 0.04
+        detailScroll.isHidden = true
+        easer?.invalidate()
+        var ticks = 0
+        let t = Timer(timeInterval: 0.08, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            ticks += 1
+            // asymptotic: always moving, never arrives before the app does
+            self.bar.doubleValue += (0.93 - self.bar.doubleValue) * 0.02
+            if ticks == 120 { self.phase.stringValue = "Still reading the reports…" }
+            if ticks == 400 { self.phase.stringValue = "Taking longer than usual…" }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        easer = t
     }
 
     func failed(_ text: String, log: String) {
+        easer?.invalidate(); easer = nil
         overlay.isHidden = false
         phase.stringValue = text
         phase.textColor = .systemRed
@@ -225,7 +244,11 @@ final class DetailVC: NSViewController {
         detailScroll.isHidden = log.isEmpty
     }
 
-    func done() { overlay.isHidden = true }
+    func done() {
+        easer?.invalidate(); easer = nil
+        bar.doubleValue = 1
+        overlay.isHidden = true
+    }
 }
 
 // ── app ──────────────────────────────────────────────────────────────────────
@@ -235,6 +258,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     var web: WKWebView!
     var split: NSSplitViewController!
     var detailVC: DetailVC!
+    var sideItem: NSSplitViewItem!
     var sidebar = SidebarVC()
     var server: Process?
     var port = 0
@@ -262,7 +286,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         web = WKWebView(frame: .zero, configuration: cfg)
         web.navigationDelegate = self
 
-        let sideItem = NSSplitViewItem(sidebarWithViewController: sidebar)
+        sideItem = NSSplitViewItem(sidebarWithViewController: sidebar)
         sideItem.minimumThickness = 170
         sideItem.maximumThickness = 320
         if #available(macOS 11.0, *) { sideItem.allowsFullHeightLayout = true }
@@ -279,12 +303,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             contentRect: NSRect(x: 0, y: 0, width: 1020, height: 700),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
-        window.title = "Reproducer"
+        window.title = "Reproducer"          // Dock and Window menu only
+        window.titleVisibility = .hidden     // not painted into the toolbar
         window.contentViewController = split
         // assigning contentViewController resizes the window to the view
         // controller's own size, so contentRect above does not survive it
-        window.setContentSize(NSSize(width: 1020, height: 700))
-        window.minSize = NSSize(width: 720, height: 480)
+        window.minSize = NSSize(width: 760, height: 500)
 
         let tb = NSToolbar(identifier: "main")
         tb.delegate = self
@@ -294,15 +318,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         if #available(macOS 11.0, *) { window.toolbarStyle = .unified }
 
         window.setFrameAutosaveName("ReproducerMain")
-        if !window.setFrameUsingName("ReproducerMain") { window.center() }
+        let restored = window.setFrameUsingName("ReproducerMain")
         window.makeKeyAndOrderFront(nil)
-        split.splitView.setPosition(218, ofDividerAt: 0)
+        if !restored {
+            window.setContentSize(NSSize(width: 1020, height: 700))
+            window.center()
+        }
+        // the split remembers its own width and whether it is collapsed, so
+        // hiding the sidebar stays hidden across launches
+        split.splitView.autosaveName = "ReproducerSplit"
+        if !restored { split.splitView.setPosition(218, ofDividerAt: 0) }
         NSApp.activate(ignoringOtherApps: true)
 
         sidebar.onSelect = { [weak self] i in
             self?.web.evaluateJavaScript("window.__select && __select(\(i))")
         }
-        detailVC.progress("Starting the local server…", 0.12)
+        detailVC.begin("Reading the reports…")
     }
 
     // MARK: toolbar
@@ -385,7 +416,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         verdict.isEnabled = !rows.isEmpty && beat != "running"
         let v = d["verdict"] as? String ?? ""
         verdict.selectedSegment = ["y": 0, "n": 1, "s": 2][v] ?? -1
-        if let t = d["lane"] as? String { window.subtitle = t }
     }
 
     // MARK: server
@@ -419,9 +449,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
                             log: log.isEmpty ? "No output from scripts/bench.py." : log)
             return
         }
-        // the bar tracks the poll, easing toward 0.9 so it never looks stalled
-        detailVC.progress(attempt == 0 ? "Reading the reports…" : "Still reading the reports…",
-                          0.15 + 0.75 * (1 - pow(0.93, Double(attempt + 1))))
         // /api/ping is cheap and, on first call, blocks until the reports are
         // parsed — so a reply means genuinely ready, not merely listening.
         var rq = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/api/ping")!)
@@ -441,8 +468,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     }
 
     func webView(_ w: WKWebView, didFinish n: WKNavigation!) {
-        detailVC.progress("Ready", 1.0)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { self.detailVC.done() }
+        detailVC.done()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
