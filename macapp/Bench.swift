@@ -361,7 +361,7 @@ final class DetailVC: NSViewController {
             stack.widthAnchor.constraint(lessThanOrEqualTo: overlay.widthAnchor, constant: -80),
             bar.widthAnchor.constraint(equalToConstant: 220),
             bar.heightAnchor.constraint(equalToConstant: 6),
-            detailScroll.widthAnchor.constraint(equalToConstant: 420),
+            detailScroll.widthAnchor.constraint(equalToConstant: 340),
             detailScroll.heightAnchor.constraint(lessThanOrEqualToConstant: 150),
         ])
         view = root
@@ -523,8 +523,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         switch id {
         case AppDelegate.idList:
             let b = HandButton()
-            b.bezelStyle = .texturedRounded
+            b.bezelStyle = .rounded
+            b.controlSize = .large
             b.title = ""
+            b.translatesAutoresizingMaskIntoConstraints = false
+            b.widthAnchor.constraint(equalToConstant: 34).isActive = true
             if #available(macOS 11.0, *) {
                 b.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Findings")
             } else { b.title = "List" }
@@ -536,11 +539,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             it.toolTip = "Show the list of findings"
             return it
         case AppDelegate.idRepro:
-            reproButton.bezelStyle = .texturedRounded
+            reproButton.bezelStyle = .rounded
+            reproButton.controlSize = .large
             reproButton.title = ""
             reproButton.imagePosition = .imageOnly
             reproButton.target = self
             reproButton.isEnabled = false
+            reproButton.translatesAutoresizingMaskIntoConstraints = false
+            reproButton.widthAnchor.constraint(equalToConstant: 34).isActive = true
             let it = NSToolbarItem(itemIdentifier: id)
             it.view = reproButton
             it.label = "Reproduce"
@@ -550,11 +556,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             let yes = (id == AppDelegate.idYes)
             let b = yes ? yesButton : noButton
             b.bezelStyle = .rounded
+            b.controlSize = .large
             b.setButtonType(.pushOnPushOff)
             b.title = yes ? "Confirmed" : "Not a bug"
             b.target = self
             b.action = yes ? #selector(hitYes) : #selector(hitNo)
             b.isEnabled = false
+            // .rounded sizes itself to the string, which leaves the text sitting
+            // on the capsule's curve; a little room on each side, not a lot
+            b.translatesAutoresizingMaskIntoConstraints = false
+            b.widthAnchor.constraint(
+                equalToConstant: b.intrinsicContentSize.width + 8).isActive = true
             let it = NSToolbarItem(itemIdentifier: id)
             it.view = b
             it.label = b.title
