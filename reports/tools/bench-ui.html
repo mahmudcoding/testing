@@ -75,6 +75,8 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 .donelist.live{margin-top:14px;padding-top:12px;border-top:1px solid var(--sep);gap:5px}
 .dl-row.pending{color:var(--label-3)}
 .dl-row.pending .ck{color:var(--label-3);font-weight:400}
+.dl-row.doing{color:var(--label)}
+.spinner.sm{width:10px;height:10px;border-width:1.6px;flex:none;margin-top:2px}
 .link{margin-left:auto;background:none;border:0;padding:0;cursor:pointer;
   color:var(--accent);font-size:11.5px}
 .link:disabled{color:var(--label-3);cursor:default}
@@ -159,9 +161,13 @@ function action(f){
         : 'Launching '+who+'…'}</p>
       ${n?'':`<p class="now-sub">Up to a minute the first time — the browser has to
         start and sign in. Leave it alone.</p>`}
-      ${f.steps.length?`<div class="donelist live">${f.steps.map((x,i)=>
-        `<div class="dl-row${i<n?'':' pending'}"><span class="ck">${i<n?'✓':'○'}</span>
-          <span>${rich(x)}</span></div>`).join('')}</div>`:''}
+      ${f.steps.length?`<div class="donelist live">${f.steps.map((x,i)=>{
+        const state = i<n ? 'done' : i===n ? 'doing' : 'pending';
+        const mark = state==='done' ? '<span class="ck">✓</span>'
+                   : state==='doing' ? '<span class="spinner sm"></span>'
+                   : '<span class="ck">○</span>';
+        return `<div class="dl-row ${state}">${mark}<span>${rich(x)}</span></div>`;
+      }).join('')}</div>`:''}
     </div>`;
   }
 
