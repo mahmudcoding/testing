@@ -16,8 +16,8 @@ Contents:
 - `reports/` — HTML source of any published report. Write it here, publish with the Artifact tool, and record the resulting URL next to the file so a later session can pass it back as `url` and update in place; publishing without `url` creates a separate artifact. The tool can delete an artifact's *assets* but not the artifact itself — removing one is manual, via the claude.ai artifacts gallery. Reports share one stylesheet: start a new one by copying the previous report's file through `</style>`, then write your own `<body>` content under it.
 - `seed/` — fixture seeder for staging (`seed.sh`, `seed_qa_fixtures.py`); see "QA fixtures".
 - `scripts/hooks/` — project hooks. `sector_context.py` runs on every prompt and expands a named sector into its scope from `SECTORS.md`; silent when no sector is named, and fails open.
-- `scripts/` — helper scripts. `jira_cache.py` mirrors the whole ALK project locally so ticket lookups cost no Jira calls (see Reporting); `jira.py` files and comments; `jira_api.py` is the REST transport both use; `callrig/` drives real WebRTC calls (see "Call testing rig"); `bench.py` serves Reproducer and drives a finding's snippet; `check_repro.py` and `verify_snippets.py` check the repro blocks statically and by running them (see Reporting).
-- `macapp/` — Reproducer, the Mac app a person judges findings in. `build.sh` builds it into `~/Applications`; the chrome is AppKit and only the detail pane is the page in `reports/tools/bench-ui.html`.
+- `scripts/` — helper scripts. `jira_cache.py` mirrors the whole ALK project locally so ticket lookups cost no Jira calls (see Reporting); `jira.py` files and comments; `jira_api.py` is the REST transport both use; `callrig/` drives real WebRTC calls (see "Call testing rig"); `bench.py` serves Review and drives a finding's snippet; `check_repro.py` and `verify_snippets.py` check the repro blocks statically and by running them (see Reporting).
+- `macapp/` — Review, the Mac app a person judges findings in. `build.sh` builds it into `~/Applications`; the chrome is AppKit and only the detail pane is the page in `reports/tools/bench-ui.html`.
 
 ## Upstream: the product repos
 
@@ -135,7 +135,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
   wrong screen is worse than no snippet**, because that is how a verification passes while measuring
   nothing. Refusing is the contract working, not a failure.
 
-  **Reproducer** (`~/Applications/Reproducer.app`, built by `macapp/build.sh`) is what a person uses:
+  **Review** (`~/Applications/Review.app`, built by `macapp/build.sh`) is what a person uses:
   it presses the snippet, tiles itself against the browser, ticks the steps live, and records
   confirmed / not-a-bug into `verifications/verification-<date>.md` via File → Save Record. It carries **only findings
   whose snippet exists on disk** — no block means the finding is not in the app at all (`BENCH_ALL=1`

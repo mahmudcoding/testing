@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproducer — read a finding, press Reproduce, judge what you see.
+"""Review — read a finding, press Reproduce, judge what you see.
 
     python3 scripts/bench.py            # then open http://127.0.0.1:8777
 
@@ -390,7 +390,7 @@ if __name__ == "__main__":
     # the port would not exist yet and anything waiting on us would conclude we
     # had died. /api/ping blocks until the parse finishes, which is the signal.
     threading.Thread(target=load, daemon=True).start()
-    print(f"\n  Reproducer")
+    print(f"\n  Review")
     print(f"  http://127.0.0.1:{PORT}\n")
     print("  Reproduce launches real browsers on your machine. Ctrl-C to stop.\n")
     if not os.environ.get("BENCH_NO_BROWSER"):      # the .app hosts its own window

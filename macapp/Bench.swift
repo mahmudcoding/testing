@@ -1,4 +1,4 @@
-// Reproducer — a Mac app around the local bench server.
+// Review — a Mac app around the local bench server.
 //
 // The chrome is real AppKit, not CSS pretending: an NSSplitViewController with a
 // vibrant source-list sidebar under a unified NSToolbar. Only the detail pane is
@@ -595,7 +595,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             contentRect: NSRect(x: 0, y: 0, width: 1020, height: 700),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
-        window.title = "Reproducer"          // Dock and Window menu only
+        window.title = "Review"          // Dock and Window menu only
         window.titleVisibility = .hidden     // not painted into the toolbar
         // Without this the window has no opaque ground: the detail pane is a web
         // view that paints its own, but the sidebar overlay sits over bare
@@ -614,8 +614,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         window.toolbar = tb
         if #available(macOS 11.0, *) { window.toolbarStyle = .unified }
 
-        window.setFrameAutosaveName("ReproducerMain")
-        let restored = window.setFrameUsingName("ReproducerMain")
+        window.setFrameAutosaveName("ReviewMain")
+        let restored = window.setFrameUsingName("ReviewMain")
         window.makeKeyAndOrderFront(nil)
         if !restored {
             window.setContentSize(NSSize(width: 1180, height: 760))
@@ -877,12 +877,12 @@ let menu = NSMenu()
 let appItem = NSMenuItem()
 menu.addItem(appItem)
 let appMenu = NSMenu()
-appMenu.addItem(withTitle: "About Reproducer",
+appMenu.addItem(withTitle: "About Review",
                 action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
 appMenu.addItem(.separator())
-appMenu.addItem(withTitle: "Hide Reproducer", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+appMenu.addItem(withTitle: "Hide Review", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
 appMenu.addItem(.separator())
-appMenu.addItem(withTitle: "Quit Reproducer",
+appMenu.addItem(withTitle: "Quit Review",
                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 appItem.submenu = appMenu
 

@@ -1,4 +1,4 @@
-<title>Reproducer</title>
+<title>Review</title>
 <style>
 /* Detail pane only. The sidebar, toolbar and verdict control are real AppKit —
    see macapp/Bench.swift. This document styles content, not chrome. */
@@ -207,7 +207,7 @@ function stepRows(f){
 function render(){
   const el=document.getElementById('main');
   if(!Q.length){el.innerHTML='<div class="empty">Nothing to verify.<br><br>'
-    +'Reproducer carries only findings with a repro script in '
+    +'Review carries only findings with a repro script in '
     +'<code>scripts/callrig/snip/</code>. Add a <code>data-snippet</code> repro block '
     +'to a report and it shows up here.</div>';sync();return;}
   cur=Math.max(0,Math.min(cur,Q.length-1));
