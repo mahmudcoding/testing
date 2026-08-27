@@ -160,6 +160,7 @@ if __name__ == "__main__":
     print(f"\n  Verification bench — {n} findings")
     print(f"  http://127.0.0.1:{PORT}\n")
     print("  Reproduce launches real browsers on your machine. Ctrl-C to stop.\n")
-    threading.Timer(0.8, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
+    if not os.environ.get("BENCH_NO_BROWSER"):      # the .app hosts its own window
+        threading.Timer(0.8, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
     try: HTTPServer(("127.0.0.1", PORT), H).serve_forever()
     except KeyboardInterrupt: print("\n  stopped\n")
