@@ -60,6 +60,11 @@ def verify(lane):
 
     results = []
     for snip, acct in rows:
+        # Mirror what the bench does before every run. Without this the harness
+        # measures something the app never does: each call finding hands over
+        # with its meeting live, and the next one cannot start a second call.
+        for pre in ("_lang-en.mjs", "_end-call.mjs"):
+            sh(["./scripts/callrig/d", f"{lane.lower()}:{acct}", f"snip/{pre}"], env=env)
         p = sh(["./scripts/callrig/d", f"{lane.lower()}:{acct}", f"snip/{snip}"], env=env)
         out = p.stdout + p.stderr
         m = re.search(r'"ready"\s*:\s*(true|false)', out)
