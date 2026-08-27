@@ -4,19 +4,17 @@
    see macapp/Bench.swift. This document styles content, not chrome. */
 :root{
   color-scheme:light dark;
-  --content:#ffffff; --group:#ffffff; --raised:#f2f2f5;
-  --sep:#0000001a; --sep-solid:#dcdcdf;
+  --content:#ffffff; --raised:#f2f2f5;
   --label:#000000; --label-2:#3c3c4399; --label-3:#3c3c434d;
   --accent:#0066cc; --accent-fill:#0a84ff;
-  --ok:#1d7f4e; --no:#c0392f; --no-bg:#fceceb; --accent-wash:#f0f7ff;
+  --ok:#1d7f4e; --no:#c0392f; --no-bg:#fceceb;
   --btn:linear-gradient(#ffffff,#f7f7f8); --btn-line:#c8c8cc;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --content:#1e1e1e; --group:#262628; --raised:#2e2e31;
-  --sep:#ffffff14; --sep-solid:#3a3a3d;
+  --content:#1e1e1e; --raised:#2e2e31;
   --label:#ffffff; --label-2:#ebebf599; --label-3:#ebebf54d;
   --accent:#4da3ff; --accent-fill:#0a84ff;
-  --ok:#4cd18c; --no:#ff6961; --no-bg:#33191b; --accent-wash:#16202c;
+  --ok:#4cd18c; --no:#ff6961; --no-bg:#33191b;
   --btn:linear-gradient(#4a4a4e,#414145); --btn-line:#5a5a5f;
 }}
 
@@ -48,9 +46,9 @@ button{font:inherit;color:inherit;margin:0}
 h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:balance}
 
 /* one box on the page, and it is the one holding a control */
-.act{background:var(--group);border:1px solid var(--sep-solid);border-radius:8px;
-  padding:16px 18px;margin-bottom:26px;display:flex;gap:16px;align-items:flex-start}
-.act.live{border-color:var(--accent-fill);background:var(--accent-wash)}
+/* no container: the highlighted row is the only thing that should draw the eye,
+   and every other section on this page is plain prose under a label */
+.act{margin-bottom:26px;display:flex;gap:16px;align-items:flex-start}
 .act.col{display:block}
 .go{flex:none;background:var(--accent-fill);border:1px solid transparent;
   border-radius:6px;color:#fff;font:500 13px/1 inherit;padding:7px 16px;cursor:pointer;
