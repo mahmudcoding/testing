@@ -53,6 +53,10 @@ final class HandButton: NSButton {
     override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 }
 
+final class HandSegmented: NSSegmentedControl {
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+}
+
 // ── source-list cell ─────────────────────────────────────────────────────────
 final class RowCell: NSTableCellView {
     let dot = NSView()
@@ -638,6 +642,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     // MARK: toolbar
 
     static let idList = NSToolbarItem.Identifier("list")
+    static let idNav = NSToolbarItem.Identifier("nav")
     static let idRepro = NSToolbarItem.Identifier("repro")
     static let idYes = NSToolbarItem.Identifier("yes")
     static let idNo  = NSToolbarItem.Identifier("no")
@@ -647,9 +652,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     }
 
     func toolbarDefaultItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
-        var ids: [NSToolbarItem.Identifier] = [AppDelegate.idList]
+        var ids: [NSToolbarItem.Identifier] = [AppDelegate.idList, AppDelegate.idNav]
+        // spaced apart, not adjacent: two icon buttons side by side read as one
+        // grouped control, and these are opposite answers to the same question
         ids += [.flexibleSpace, AppDelegate.idRepro, .space,
-                AppDelegate.idYes, AppDelegate.idNo]
+                AppDelegate.idYes, .space, AppDelegate.idNo]
         return ids
     }
 
@@ -673,6 +680,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             it.label = "Findings"
             it.toolTip = "Show the list of findings"
             return it
+        case AppDelegate.idNav:
+            // A segmented control, not two buttons: back/forward is what macOS
+            // uses this control for, and at a 480pt window two more 34pt buttons
+            // pushed "Not a bug" into the toolbar's overflow menu.
+            let seg = HandSegmented()
+            seg.segmentCount = 2
+            seg.segmentStyle = .rounded
+            seg.trackingMode = .momentary
+            if #available(macOS 11.0, *) {
+                seg.setImage(NSImage(systemSymbolName: "chevron.left",
+                                     accessibilityDescription: "Previous finding"), forSegment: 0)
+                seg.setImage(NSImage(systemSymbolName: "chevron.right",
+                                     accessibilityDescription: "Next finding"), forSegment: 1)
+            } else {
+                seg.setLabel("<", forSegment: 0); seg.setLabel(">", forSegment: 1)
+            }
+            seg.setWidth(26, forSegment: 0)
+            seg.setWidth(26, forSegment: 1)
+            seg.target = self
+            seg.action = #selector(hitNav(_:))
+            let it = NSToolbarItem(itemIdentifier: id)
+            it.view = seg
+            it.label = "Findings"
+            it.toolTip = "Previous / next finding"
+            return it
         case AppDelegate.idRepro:
             reproButton.bezelStyle = .rounded
             reproButton.controlSize = .large
@@ -693,18 +725,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             b.bezelStyle = .rounded
             b.controlSize = .large
             b.setButtonType(.pushOnPushOff)
-            b.title = yes ? "Confirmed" : "Not a bug"
+            b.title = ""
+            b.imagePosition = .imageOnly
+            if #available(macOS 11.0, *) {
+                b.image = NSImage(systemSymbolName: yes ? "checkmark" : "xmark",
+                                  accessibilityDescription: yes ? "Confirmed" : "Not a bug")
+            } else { b.title = yes ? "Yes" : "No" }
             b.target = self
             b.action = yes ? #selector(hitYes) : #selector(hitNo)
             b.isEnabled = false
-            // .rounded sizes itself to the string, which leaves the text sitting
-            // on the capsule's curve; a little room on each side, not a lot
+            // the same 34pt as every other icon button, so the row reads as a row
             b.translatesAutoresizingMaskIntoConstraints = false
-            b.widthAnchor.constraint(
-                equalToConstant: b.intrinsicContentSize.width + 8).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 34).isActive = true
             let it = NSToolbarItem(itemIdentifier: id)
             it.view = b
-            it.label = b.title
+            it.label = yes ? "Confirmed" : "Not a bug"
             it.toolTip = yes ? "This is a real bug (Y)" : "This is not a bug (N)"
             return it
         default:
@@ -719,6 +754,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     @objc func hitClose() { web.evaluateJavaScript("window.__close && __close()") }
 
     @objc func hitRepro() { web.evaluateJavaScript("window.__repro && __repro()") }
+    @objc func hitNav(_ seg: NSSegmentedControl) {
+        web.evaluateJavaScript("window.__step && __step(\(seg.selectedSegment == 0 ? -1 : 1))")
+    }
 
     /// Clicking the verdict already recorded clears it. A segmented control has
     /// no other way back from a mis-click, and the only alternative — picking

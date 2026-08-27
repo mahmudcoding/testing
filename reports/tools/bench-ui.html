@@ -348,6 +348,11 @@ async function saveRecord(){
 
 // called from AppKit
 window.__select=i=>{cur=i;render();};
+// Step through the queue without opening the list. Clamped rather than wrapping:
+// arriving back at the first finding after the last one reads as a reset.
+window.__step=d=>{const n=Math.max(0,Math.min(Q.length-1,cur+d));
+  if(n!==cur){cur=n;render();}};
+window.__at=()=>({cur,len:Q.length});
 window.__inset=px=>document.documentElement.style.setProperty('--inset',px+'px');
 window.__repro=doRepro;
 window.__verdict=verdict;
