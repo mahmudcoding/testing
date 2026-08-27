@@ -74,7 +74,10 @@ final class RowCell: NSTableCellView {
         addSubview(dot); addSubview(label)
         NSLayoutConstraint.activate([
             dot.leadingAnchor.constraint(equalTo: leadingAnchor),
-            dot.topAnchor.constraint(equalTo: topAnchor, constant: 7),
+            // to the first line of the label, not the top of the row: the label is
+            // centred, so a row of one line and a row of two put their first line
+            // in different places and a fixed offset is above the text in both
+            dot.centerYAnchor.constraint(equalTo: label.firstBaselineAnchor, constant: -4),
             dot.widthAnchor.constraint(equalToConstant: 8),
             dot.heightAnchor.constraint(equalToConstant: 8),
             label.leadingAnchor.constraint(equalTo: dot.trailingAnchor, constant: 8),
@@ -294,6 +297,7 @@ final class RootVC: NSViewController {
     private let shade = NSView()
     private let edge  = NSView()
     private var leading: NSLayoutConstraint!
+    private var panelW: NSLayoutConstraint!
     private(set) var isOpen = false
     /// The list is an overlay, so it covers the content underneath it. Whoever
     /// owns that content gets told to step aside by this much.
@@ -346,6 +350,7 @@ final class RootVC: NSViewController {
 
         leading = panel.leadingAnchor.constraint(equalTo: root.leadingAnchor,
                                                  constant: -RootVC.width)
+        panelW = panel.widthAnchor.constraint(equalToConstant: RootVC.width)
         NSLayoutConstraint.activate([
             d.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             d.trailingAnchor.constraint(equalTo: root.trailingAnchor),
@@ -358,7 +363,7 @@ final class RootVC: NSViewController {
             shade.bottomAnchor.constraint(equalTo: root.bottomAnchor),
 
             leading,
-            panel.widthAnchor.constraint(equalToConstant: RootVC.width),
+            panelW,
             panel.topAnchor.constraint(equalTo: root.topAnchor),
             panel.bottomAnchor.constraint(equalTo: root.bottomAnchor),
 
@@ -379,7 +384,22 @@ final class RootVC: NSViewController {
 
     override func viewDidLayout() {
         super.viewDidLayout()
+        fitPanel()
         paint()
+    }
+
+    /// The list covers the whole window when the window is too narrow to hold
+    /// both. Tiled beside a browser the window is ~480pt, and a 250pt list
+    /// sharing that leaves the finding 230pt to wrap into — which reads as the
+    /// sidebar having resized the content rather than covered it. Selecting a
+    /// row closes the list, so covering costs nothing.
+    private func fitPanel() {
+        let full = view.bounds.width
+        guard full > 1 else { return }
+        let w = full < RootVC.width * 2.5 ? full : RootVC.width
+        guard abs(panelW.constant - w) > 0.5 else { return }
+        panelW.constant = w
+        if !isOpen { leading.constant = -w }
     }
 
     /// Layer colours do not follow light/dark on their own.
@@ -402,7 +422,7 @@ final class RootVC: NSViewController {
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.2
             ctx.allowsImplicitAnimation = true
-            leading.animator().constant = open ? 0 : -RootVC.width
+            leading.animator().constant = open ? 0 : -panelW.constant
             shade.animator().alphaValue = open ? 1 : 0
             view.layoutSubtreeIfNeeded()
         }, completionHandler: { [weak self] in
