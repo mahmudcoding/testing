@@ -2,8 +2,10 @@
 # Seed / repair the permanent QA fixtures on Aloqa staging.
 # Idempotent — run it as often as you like.
 #
-#   seed/seed.sh            seed then verify
-#   seed/seed.sh --verify   verify only, write nothing
+#   seed/seed.sh                     seed then verify (lane A)
+#   seed/seed.sh --verify            verify only, write nothing
+#   seed/seed.sh --lanes B,C         seed extra isolated lanes for parallel sessions
+#   seed/seed.sh --verify --lanes A,B,C   verify several lanes at once
 set -euo pipefail
 cd "$(dirname "$0")"
 

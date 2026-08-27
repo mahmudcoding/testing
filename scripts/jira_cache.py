@@ -89,8 +89,13 @@ def load():
 
 
 def save(c):
+    # Atomic: parallel sessions may sync at the same moment, and a half-written
+    # mirror is worse than a stale one — a torn file makes every later read fail.
     os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-    json.dump(c, open(CACHE, "w", encoding="utf-8"), ensure_ascii=False)
+    tmp = "%s.tmp.%d" % (CACHE, os.getpid())
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(c, fh, ensure_ascii=False)
+    os.replace(tmp, CACHE)
 
 
 def cmd_sync(a):

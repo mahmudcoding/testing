@@ -1,0 +1,31 @@
+import {VISFN, WS, BASE} from './e-p2-helpers.mjs';
+export default async ({page}) => {
+  const out={}; const api=[];
+  page.on('response', async r => { const u=r.url(); const m=r.request().method();
+    if(u.includes('/api/v1/')&&m!=='GET'){ let b=''; try{b=(await r.text()).slice(0,240);}catch(e){}
+      api.push(r.status()+' '+m+' '+u.split('/api/v1/')[1].slice(0,54)+' | req='+(r.request().postData()||'').slice(0,200)+' | res='+b.replace(/\s+/g,' ')); }});
+  await page.goto(BASE+'/w/'+WS+'/settings/notifications', {waitUntil:'domcontentloaded'});
+  await page.waitForTimeout(6500);
+  out.pane = await page.evaluate(`(() => { const t=((document.querySelector('main')||document.body).innerText||'').replace(/\\s+/g,' ');
+     const i=t.indexOf('Settings ›'); return t.slice(i, i+700); })()`);
+  const st = `(() => { ${VISFN} const m=document.querySelector('main');
+     return [...m.querySelectorAll('[role=switch]')].filter(vis).map(n=>n.getAttribute('aria-checked')).join(','); })()`;
+  out.before = await page.evaluate(st);
+  api.length=0;
+  await page.evaluate(`(() => { ${VISFN} const m=document.querySelector('main');
+     [...m.querySelectorAll('[role=switch]')].filter(vis)[0].click(); })()`);
+  await page.waitForTimeout(1500);
+  out.afterToggle = await page.evaluate(st);
+  out.reqOnToggle = api.slice(0,3);
+  api.length=0;
+  out.saveClick = await page.evaluate(`(() => { ${VISFN} const m=document.querySelector('main');
+     const b=[...m.querySelectorAll('button')].filter(vis).find(x=>(x.textContent||'').trim()==='Save preferences');
+     if(!b) return 'no save button'; if(b.disabled) return 'save disabled'; b.click(); return 'saved'; })()`);
+  await page.waitForTimeout(5000);
+  out.reqOnSave = api.slice(0,4);
+  out.afterSave = await page.evaluate(st);
+  out.barGone = await page.evaluate(`(() => ((document.querySelector('main')||document.body).innerText||'').includes('unsaved change'))()`);
+  await page.reload({waitUntil:'domcontentloaded'}); await page.waitForTimeout(6500);
+  out.afterReload = await page.evaluate(st);
+  return out;
+};

@@ -1,0 +1,21 @@
+export default async ({page}) => {
+  const MSG = process.env.QA_MSG || 'hello';
+  const V=`el => { let n=el, op=1; while(n && n!==document.documentElement){ const c=getComputedStyle(n); if(c.display==='none'||c.visibility==='hidden') return false; op*=parseFloat(c.opacity||'1'); n=n.parentElement; } const r=el.getBoundingClientRect(); return op>0.05 && r.width>0 && r.height>0; }`;
+  const opened = await page.evaluate((v)=>{ const vis=eval(v);
+    const p=document.querySelector('[data-testid="in-call-chat-panel"]');
+    if(p && vis(p)) return 'already';
+    const b=[...document.querySelectorAll('button')].filter(vis).find(x=>(x.getAttribute('data-testid')||'')==='call-controls-chat-toggle');
+    if(b){ b.click(); return 'clicked'; } return 'notoggle'; }, V);
+  await page.waitForTimeout(3000);
+  const ta = await page.$('textarea[placeholder="Message everyone"]');
+  if(!ta) return {opened, noComposer:true};
+  await ta.fill('');
+  await ta.fill(MSG);
+  await page.waitForTimeout(400);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(3500);
+  const panel = await page.evaluate((v)=>{ const vis=eval(v);
+    const p=document.querySelector('[data-testid="in-call-chat-panel"]');
+    return p?{txt:(p.innerText||'').replace(/\n+/g,' | ').slice(0,400)}:null; }, V);
+  return {opened, sent:MSG, panel};
+};

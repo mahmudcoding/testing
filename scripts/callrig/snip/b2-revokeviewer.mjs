@@ -1,0 +1,27 @@
+export default async ({page}) => {
+  const WHO=process.env.QA_WHO||'QA Bob';
+  const V=`el => { let n=el, op=1; while(n && n!==document.documentElement){ const c=getComputedStyle(n); if(c.display==='none'||c.visibility==='hidden') return false; op*=parseFloat(c.opacity||'1'); n=n.parentElement; } const r=el.getBoundingClientRect(); return op>0.05 && r.width>0 && r.height>0; }`;
+  await page.evaluate((v)=>{ const vis=eval(v);
+    const b=[...document.querySelectorAll('button')].filter(vis).find(x=>/^Manage recording access/i.test((x.innerText||'').replace(/\s+/g,' ').trim()));
+    if(b) b.click(); }, V);
+  await page.waitForTimeout(4000);
+  const picked = await page.evaluate(({v,who})=>{ const vis=eval(v);
+    const dlg=[...document.querySelectorAll('[role=dialog]')].filter(vis).pop();
+    if(!dlg) return {noDialog:true};
+    const cbs=[...dlg.querySelectorAll('input[type=checkbox]')];
+    const t=cbs.find(c=>{ let r=c; for(let k=0;k<5&&r.parentElement;k++){ r=r.parentElement; if((r.innerText||'').trim().length>2) break; } return (r.innerText||'').trim().startsWith(who); });
+    if(!t) return {notFound:true};
+    const was=t.checked;
+    if(t.checked) t.click();
+    return {was, now:t.checked};
+  }, {v:V, who:WHO});
+  await page.waitForTimeout(900);
+  const saved = await page.evaluate((v)=>{ const vis=eval(v);
+    const dlg=[...document.querySelectorAll('[role=dialog]')].filter(vis).pop();
+    const b=[...dlg.querySelectorAll('button')].filter(vis).find(x=>/^save$/i.test((x.innerText||'').trim()));
+    if(b && !b.disabled){ b.click(); return true; } return {dis:b?b.disabled:'notfound'}; }, V);
+  await page.waitForTimeout(5000);
+  const toasts = await page.evaluate((v)=>{ const vis=eval(v);
+    return [...new Set([...document.querySelectorAll('[data-sonner-toast],[role=status],[role=alert]')].filter(vis).map(e=>(e.innerText||'').replace(/\s+/g,' ').trim().slice(0,80)).filter(Boolean))]; }, V);
+  return {picked, saved, toasts};
+};

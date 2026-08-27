@@ -1,0 +1,20 @@
+const VIS = `el => { const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false;
+  let n = el, o = 1; while (n && n !== document.documentElement) { const s = getComputedStyle(n);
+    if (s.display === 'none' || s.visibility === 'hidden') return false; o *= parseFloat(s.opacity); n = n.parentElement; } return o > 0.05; }`;
+export default async ({ page }) => {
+  const W='W4QDF1XTURESO01';
+  await page.goto(`https://airion-cargo.store/w/${W}/settings/profile`, { waitUntil:'networkidle' });
+  await page.waitForTimeout(2600);
+  const probe = async n => { await page.evaluate(`(() => { const vis=(${VIS}); const main=document.querySelector('main')||document.body;
+      const i=[...main.querySelectorAll('input')].filter(vis)[0];
+      const setter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+      setter.call(i, 'N'.repeat(${n})); i.dispatchEvent(new Event('input',{bubbles:true}));
+      i.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await page.waitForTimeout(420);
+    return page.evaluate(`(() => { const vis=(${VIS});
+      const s=[...document.querySelectorAll('button')].filter(vis).filter(b=>/^Save/.test((b.innerText||'').trim()))[0];
+      return s?(s.disabled===true||s.getAttribute('aria-disabled')==='true'):null; })()`); };
+  const r={};
+  for (const n of [41,42,43,44,45,46,47]) r[n]=await probe(n);
+  return r;
+};

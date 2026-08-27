@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# d2up <account> <snippet> — sector-D helper: make sure lane D's browser for
+# <account> is up and signed in, then run <snippet> on it. Retries once if the
+# browser died between the check and the run.
+set -u
+cd "$(dirname "$0")/.." || exit 1
+ACC="$1"; shift
+SNIP="$1"; shift || true
+export QA_LANE=D
+PORT=$(node callrig/rigmap.mjs table D 2>/dev/null | awk -v a="$ACC" '$1==a{print $3}')
+up() { nc -z 127.0.0.1 "$PORT" 2>/dev/null; }
+if ! up; then callrig/launch.sh D "$ACC" >/dev/null 2>&1; sleep 6; fi
+QA_EMAIL="qa.d.$ACC@aloqa.test" callrig/d "D:$ACC" snip/login.mjs >/dev/null 2>&1
+OUT=$(callrig/d "D:$ACC" "$SNIP" 2>&1)
+if printf '%s' "$OUT" | grep -q 'ECONNREFUSED\|Target page, context or browser has been closed'; then
+  callrig/launch.sh D "$ACC" >/dev/null 2>&1; sleep 6
+  QA_EMAIL="qa.d.$ACC@aloqa.test" callrig/d "D:$ACC" snip/login.mjs >/dev/null 2>&1
+  OUT=$(callrig/d "D:$ACC" "$SNIP" 2>&1)
+fi
+printf '%s\n' "$OUT"

@@ -1,0 +1,40 @@
+export default async ({page}) => {
+  const V=`(e => {const r=e.getBoundingClientRect(); if(!(r.width>0&&r.height>0))return false; let n=e,o=1; while(n){const cs=getComputedStyle(n); o*=parseFloat(cs.opacity||'1'); if(cs.display==='none'||cs.visibility==='hidden')return false; n=n.parentElement;} return o>0.05;})`;
+  const inDlg = await page.evaluate(v=>{const vv=eval(v);
+    const d=[...document.querySelectorAll('[role=dialog]')].filter(vv)[0];
+    if(!d) return {noDlg:true};
+    const imgs=[...d.querySelectorAll('img')].map(i=>{const r=i.getBoundingClientRect(); const cs=getComputedStyle(i);
+      return {nat:i.naturalWidth+'x'+i.naturalHeight, box:Math.round(r.width)+'x'+Math.round(r.height),
+        visible:vv(i), fit:cs.objectFit, src:(i.src||'').slice(-40)};});
+    const r=d.getBoundingClientRect();
+    return {dialogBox:Math.round(r.width)+'x'+Math.round(r.height), imgs, viewport:innerWidth+'x'+innerHeight};}, V);
+  // close, then upload the wide image
+  const close = page.locator('[role=dialog] button[aria-label="Close"]').first();
+  if(await close.count()) await close.click();
+  await page.waitForTimeout(1200);
+  const fi = page.locator('input[type=file]').first();
+  await fi.setInputFiles([process.env.SP+'/qa-c-wide.png']);
+  await page.waitForTimeout(2500);
+  const comp = page.locator('div[contenteditable="true"][aria-label="Compose message"]').first();
+  await comp.click(); await page.keyboard.press('Control+A'); await page.keyboard.press('Delete');
+  await comp.type('QA-C-WIDE'); await page.keyboard.press('Enter');
+  await page.waitForTimeout(6000);
+  const m = page.locator('[data-message-id]').last();
+  await m.scrollIntoViewIfNeeded();
+  const inline = await page.evaluate(v=>{const vv=eval(v);
+    const mm=[...document.querySelectorAll('[data-message-id]')].pop();
+    const i=[...mm.querySelectorAll('img')].filter(vv)[0];
+    if(!i) return {noImg:true};
+    const r=i.getBoundingClientRect();
+    return {nat:i.naturalWidth+'x'+i.naturalHeight, box:Math.round(r.width)+'x'+Math.round(r.height), fit:getComputedStyle(i).objectFit};}, V);
+  await m.locator('img').first().click();
+  await page.waitForTimeout(2500);
+  const wideDlg = await page.evaluate(v=>{const vv=eval(v);
+    const d=[...document.querySelectorAll('[role=dialog]')].filter(vv)[0];
+    if(!d) return {noDlg:true};
+    const imgs=[...d.querySelectorAll('img')].map(i=>{const r=i.getBoundingClientRect();
+      return {nat:i.naturalWidth+'x'+i.naturalHeight, box:Math.round(r.width)+'x'+Math.round(r.height), visible:vv(i), fit:getComputedStyle(i).objectFit};});
+    const r=d.getBoundingClientRect();
+    return {dialogBox:Math.round(r.width)+'x'+Math.round(r.height), imgs, viewport:innerWidth+'x'+innerHeight};}, V);
+  return {smallImageLightbox: inDlg, wideInline: inline, wideLightbox: wideDlg};
+};

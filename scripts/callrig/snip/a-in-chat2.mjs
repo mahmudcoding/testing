@@ -1,0 +1,20 @@
+export default async ({page}) => {
+  const TXT = process.env.QA_TEXT || 'incall-check-2';
+  const sel = '[data-testid="call-side-panel-slot"] [contenteditable="true"]';
+  const ed = await page.$(sel);
+  if (!ed) return {err:'no editor'};
+  await ed.click(); await page.waitForTimeout(300);
+  await page.keyboard.press('Meta+A'); await page.keyboard.press('Backspace');
+  await page.keyboard.type(TXT,{delay:25});
+  await page.waitForTimeout(600);
+  const typed = await page.evaluate((s)=>{const e=document.querySelector(s); return e?(e.innerText||'').trim():null;}, sel);
+  const sendState = await page.evaluate(()=>{const p=document.querySelector('[data-testid="call-side-panel-slot"]');
+    const b=[...p.querySelectorAll('button')].find(x=>/^Send$/i.test(x.getAttribute('aria-label')||(x.textContent||'').trim()));
+    return b?{disabled:b.disabled, aria:b.getAttribute('aria-disabled')}:null;});
+  await page.evaluate(()=>{const p=document.querySelector('[data-testid="call-side-panel-slot"]');
+    const b=[...p.querySelectorAll('button')].find(x=>/^Send$/i.test(x.getAttribute('aria-label')||(x.textContent||'').trim())); if(b)b.click();});
+  await page.waitForTimeout(3500);
+  const after = await page.evaluate(()=>{const p=document.querySelector('[data-testid="call-side-panel-slot"]');
+    return p?(p.innerText||'').replace(/\n+/g,' | ').slice(0,320):null;});
+  return {typed, sendState, after};
+};

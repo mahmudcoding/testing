@@ -1,0 +1,21 @@
+export default async ({page}) => {
+  const ws='W4QCF1XTURESO01', id='C4QCGENERAL0001';
+  const V=`(e => {const r=e.getBoundingClientRect(); if(!(r.width>0&&r.height>0))return false; let n=e,o=1; while(n){const cs=getComputedStyle(n); o*=parseFloat(cs.opacity||'1'); if(cs.display==='none'||cs.visibility==='hidden')return false; n=n.parentElement;} return o>0.05;})`;
+  const btn = () => page.evaluate(()=>{const b=document.querySelector('button[aria-label="Mute notifications"],button[aria-label="Unmute notifications"]');
+    return b?{l:b.getAttribute('aria-label'),p:b.getAttribute('aria-pressed')}:null;});
+  await page.goto(`https://airion-cargo.store/w/${ws}/c/${id}`, {waitUntil:'load'});
+  await page.waitForTimeout(4000);
+  const reqs=[]; page.on('response', r=>{if(/\/api\/v1\//.test(r.url()) && r.request().method()!=='GET') reqs.push(r.request().method()+' '+r.url().replace(/^https?:\/\/[^/]+/,'')+' → '+r.status());});
+  await page.locator('button[aria-label="Mute notifications"]').first().click();
+  await page.waitForTimeout(1200);
+  await page.locator('[role=menuitem]', {hasText:'Until turned off'}).first().click();
+  await page.waitForTimeout(2500);
+  const afterPick = await btn();
+  const toasts = await page.evaluate(v=>{const vv=eval(v);
+    return [...document.querySelectorAll('[role=status],[role=alert],[data-sonner-toast]')].filter(vv).map(t=>t.innerText.replace(/\s+/g,' ').trim().slice(0,90)).filter(Boolean);}, V);
+  await page.goto('about:blank'); await page.waitForTimeout(400);
+  await page.goto(`https://airion-cargo.store/w/${ws}/c/${id}`, {waitUntil:'load'});
+  await page.waitForTimeout(4200);
+  const afterReload = await btn();
+  return {afterPick, toasts, afterReload, apiWrites: reqs};
+};

@@ -1,0 +1,20 @@
+export default async ({page}) => {
+  const ws='W4QCF1XTURESO01', id=process.env.MID;
+  const V=`(e => {const r=e.getBoundingClientRect(); if(!(r.width>0&&r.height>0))return false; let n=e,o=1; while(n){const cs=getComputedStyle(n); o*=parseFloat(cs.opacity||'1'); if(cs.display==='none'||cs.visibility==='hidden')return false; n=n.parentElement;} return o>0.05;})`;
+  await page.goto(`https://airion-cargo.store/w/${ws}/c/C4QCPRIVATE0001`,{waitUntil:'load'});
+  await page.waitForTimeout(3500);
+  const m = page.locator(`[data-message-id="${id}"]`);
+  if(!await m.count()) return {err:'message not found'};
+  await m.scrollIntoViewIfNeeded(); await m.hover(); await page.waitForTimeout(700);
+  await m.locator('button[aria-label="More actions"]').first().click();
+  await page.waitForTimeout(1200);
+  const r = await page.evaluate(v=>{const vv=eval(v);
+    const items=[...document.querySelectorAll('button')].filter(vv).map(x=>(x.innerText||'').trim()).filter(Boolean);
+    const b=[...document.querySelectorAll('button')].filter(vv).find(x=>/^Unpin( message)?$/i.test((x.innerText||'').trim()));
+    if(!b) return {items:items.slice(0,12), clicked:false};
+    b.click(); return {items:items.slice(0,12), clicked:true};}, V);
+  await page.waitForTimeout(2500);
+  const banner = await page.evaluate(v=>{const vv=eval(v);
+    return [...document.querySelectorAll('*')].filter(e=>e.children.length===0&&/Pinned message|View all/i.test(e.textContent)&&vv(e)).map(e=>e.textContent.trim().slice(0,40));}, V);
+  return {menu:r, pinBannerAfter: banner};
+};
