@@ -221,6 +221,24 @@ def _snippet_result(out):
         i = out.find('{', i + 1)
     return best
 
+# Verdicts and should-be rewrites live here, not in the page's localStorage.
+# The server takes a free port on every launch, and localStorage is keyed by
+# origin -- port included -- so browser-side state was wiped by every restart.
+STATE = os.path.join(os.path.expanduser("~"), ".cache", "aloqa-qa",
+                     "reproducer-state.json")
+
+def read_state():
+    try:
+        with open(STATE, encoding="utf-8") as fh: return fh.read()
+    except (OSError, ValueError):
+        return "{}"
+
+def write_state(body):
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    tmp = STATE + ".tmp"                       # never truncate the record in place
+    with open(tmp, "w", encoding="utf-8") as fh: fh.write(body)
+    os.replace(tmp, STATE)
+
 UI = os.path.join(REPO, "reports", "tools", "bench-ui.html")
 
 class H(BaseHTTPRequestHandler):
@@ -239,6 +257,8 @@ class H(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         if u.path in ("/", "/index.html"):
             return self._send(200, open(UI, encoding="utf-8").read(), "text/html")
+        if u.path == "/api/state":
+            return self._send(200, read_state())
         if u.path == "/api/progress":
             fid = parse_qs(u.query).get("id", [""])[0]
             return self._send(200, json.dumps({"steps": PROGRESS.get(fid, 0)}))
@@ -257,6 +277,9 @@ class H(BaseHTTPRequestHandler):
             it = items.get(payload.get("id"))
             if not it: return self._send(404, json.dumps({"ok": False, "left": "unknown finding"}))
             return self._send(200, json.dumps(reproduce(it), ensure_ascii=False))
+        if u.path == "/api/state":
+            write_state(json.dumps(payload, ensure_ascii=False))
+            return self._send(200, json.dumps({"ok": True}))
         if u.path == "/api/close":
             lane = str(payload.get("lane", ""))
             if not re.fullmatch(r"[A-Za-z]", lane):        # never shell a free string

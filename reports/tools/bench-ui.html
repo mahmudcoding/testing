@@ -9,6 +9,7 @@
   --accent:#0066cc; --accent-fill:#0a84ff;
   --ok:#1d7f4e; --no:#c0392f; --no-bg:#fceceb;
   --btn:linear-gradient(#ffffff,#f7f7f8); --btn-line:#c8c8cc;
+  --sep-line:#d5d5da; --hover-bg:#00000008;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --content:#1e1e1e; --raised:#2e2e31;
@@ -16,6 +17,7 @@
   --accent:#4da3ff; --accent-fill:#0a84ff;
   --ok:#4cd18c; --no:#ff6961; --no-bg:#33191b;
   --btn:linear-gradient(#4a4a4e,#414145); --btn-line:#5a5a5f;
+  --sep-line:#3f3f43; --hover-bg:#ffffff0a;
 }}
 
 *{box-sizing:border-box}
@@ -83,6 +85,14 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
   color:var(--label-3);margin-bottom:6px}
 .sec p{margin:0;font-size:13.5px;line-height:1.58;max-width:62ch}
 .sec.bad p{color:var(--label)}
+.ed{-webkit-user-select:text;user-select:text;border-radius:5px;
+  margin:-3px -6px;padding:3px 6px;outline:none;
+  border:1px solid transparent;transition:border-color .12s,background .12s}
+.ed:hover{border-color:var(--sep-line);background:var(--hover-bg)}
+.ed:focus{border-color:var(--accent-fill);background:var(--hover-bg);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-fill) 18%,transparent)}
+.edited{margin-left:6px;color:var(--accent);font-weight:600;
+  text-transform:none;letter-spacing:0}
 
 
 .note-box{background:var(--no-bg);border-radius:8px;padding:11px 14px;
@@ -98,9 +108,19 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
 <script>
 let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={}, HANDOFF={};
 const TILE_LEFT=640;          // points this window keeps; the rig takes the rest
-const KEY='aloqa-bench-v1'; let V={};
-try{ V=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
-const store=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(V)); }catch(e){} };
+// V: verdicts. X: should-be rewrites. Both live on the server, not in
+// localStorage: the bench takes a free port on every launch and localStorage is
+// keyed by origin, port included, so browser-side state died with every restart.
+let V={}, X={}, saveTimer=null;
+const push=()=>{
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({verdicts:V,expected:X})}).catch(()=>{});
+  },250);
+};
+const store=push, storeX=push;
+const expectedOf=f=>(X[f.id]!==undefined ? X[f.id] : (f.expected||''));
 const esc=s=>(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 const rich=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 const short=t=>t.replace(/^(\[[^\]]+\])+\s*/,'');
@@ -182,8 +202,10 @@ function render(){
       <p>${rich(f.actual)}</p></div>`:''}
     ${f.steps.length?`<div class="sec"><div class="cap">Steps</div>
       <div class="donelist live">${stepRows(f)}</div></div>`:''}
-    ${f.expected?`<div class="sec"><div class="cap">Should be</div>
-      <p>${rich(f.expected)}</p></div>`:''}
+    ${f.expected?`<div class="sec"><div class="cap">Should be${
+      X[f.id]!==undefined?' <span class="edited">edited</span>':''}</div>
+      <p class="ed" id="exp" contenteditable="plaintext-only"
+         spellcheck="false">${esc(expectedOf(f))}</p></div>`:''}
 
 `;
 
@@ -191,6 +213,20 @@ function render(){
   const c=document.getElementById('copylog');
   if(c)c.onclick=()=>{navigator.clipboard.writeText((R[f.id]||{}).log||'');
     c.textContent='Copied'; setTimeout(()=>{c.textContent='Copy details';},1600);};
+  const ex=document.getElementById('exp');
+  if(ex){
+    ex.oninput=()=>{
+      const t=ex.innerText.replace(/\s+$/,'');
+      if(t===(f.expected||'')) delete X[f.id]; else X[f.id]=t;
+      storeX();
+    };
+    // an emptied field means "I did not mean to rewrite this", not "the
+    // expected behaviour is nothing"
+    ex.onblur=()=>{
+      if(!ex.innerText.trim()){ delete X[f.id]; storeX(); }
+      render();          // put the "edited" marker up, or take it down
+    };
+  }
   document.documentElement.scrollTop=0;
   sync();
 }
@@ -264,6 +300,7 @@ async function saveRecord(){
     out.push(`## Lane ${x} — ${rs[0].laneName}`,'');
     rs.forEach(f=>{const r=V[f.id];
       out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG'})[r.v]}** · [${f.sev}] ${f.title}`);
+      if(X[f.id]!==undefined) out.push(`  - Should be (rewritten): ${X[f.id]}`);
       if(r.note)out.push(`  - ${r.note}`);}); out.push('');});
   const res=await fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({md:out.join('\n')})});
@@ -289,7 +326,11 @@ addEventListener('keydown',e=>{
   else if('yn'.includes(k)){verdict(k);e.preventDefault();}
 });
 
-fetch('/api/findings').then(r=>r.json()).then(d=>{
+Promise.all([
+  fetch('/api/findings').then(r=>r.json()),
+  fetch('/api/state').then(r=>r.json()).catch(()=>({})),
+]).then(([d,st])=>{
+  V=st.verdicts||{}; X=st.expected||{};
   F=d; lane=F.length?F[0].lane:null; Q=inLane(); render();
 }).catch(e=>{document.getElementById('main').innerHTML=
   '<div class="empty">Could not load findings — is scripts/bench.py running?</div>';});
