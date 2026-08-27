@@ -246,8 +246,13 @@ final class DetailVC: NSViewController {
 
     func done() {
         easer?.invalidate(); easer = nil
-        bar.doubleValue = 1
-        overlay.isHidden = true
+        // let the bar actually arrive before the panel goes: hiding it at 0.8
+        // reads as the load being abandoned rather than finished
+        phase.stringValue = "Ready"
+        bar.animator().doubleValue = 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { [weak self] in
+            self?.overlay.isHidden = true
+        }
     }
 }
 
@@ -287,13 +292,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         web.navigationDelegate = self
 
         sideItem = NSSplitViewItem(sidebarWithViewController: sidebar)
-        sideItem.minimumThickness = 170
+        sideItem.minimumThickness = 150
         sideItem.maximumThickness = 320
         if #available(macOS 11.0, *) { sideItem.allowsFullHeightLayout = true }
         sideItem.canCollapse = true
         detailVC = DetailVC(web: web)
         let mainItem = NSSplitViewItem(viewController: detailVC)
-        mainItem.minimumThickness = 420
+        mainItem.minimumThickness = 330
 
         split = NSSplitViewController()
         split.addSplitViewItem(sideItem)
@@ -308,7 +313,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         window.contentViewController = split
         // assigning contentViewController resizes the window to the view
         // controller's own size, so contentRect above does not survive it
-        window.minSize = NSSize(width: 760, height: 500)
+        window.minSize = NSSize(width: 520, height: 460)
 
         let tb = NSToolbar(identifier: "main")
         tb.delegate = self
@@ -400,8 +405,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     // MARK: bridge
 
+    /// Park this window on the left of the screen. The rig browser takes the
+    /// right in the same pass, so neither covers the other while a run is
+    /// watched -- see scripts/callrig/snip/_tile.mjs.
+    func tileLeft(_ w: CGFloat) {
+        guard let scr = window.screen ?? NSScreen.main else { return }
+        let v = scr.visibleFrame
+        let width = min(max(w, window.minSize.width), v.width)
+        window.setFrame(NSRect(x: v.minX, y: v.minY, width: width, height: v.height),
+                        display: true, animate: true)
+    }
+
     func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
         guard let d = m.body as? [String: Any] else { return }
+        if let cmd = d["cmd"] as? String, cmd == "tile" {
+            tileLeft(CGFloat(d["width"] as? Double ?? 640))
+            return
+        }
         let raw = d["rows"] as? [[String: Any]] ?? []
         let rows = raw.map { Row(id: $0["id"] as? String ?? "",
                                  title: $0["title"] as? String ?? "",

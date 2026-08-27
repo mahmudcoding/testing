@@ -22,7 +22,10 @@ if (!/^\d+$/.test(String(target))) {
 }
 
 const file = path.resolve(process.argv[3]);
-const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+// QA_SLOW_MS paces every Playwright operation so a person can watch the run
+// happen. Unset means 0, so nothing changes for an ordinary command-line run.
+const slowMo = Number(process.env.QA_SLOW_MS || 0) || 0;
+const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { slowMo });
 const ctx = browser.contexts()[0];
 const { HOOK } = await import(pathToFileURL(path.resolve('snip/lib.mjs')).href);
 await ctx.addInitScript(HOOK);

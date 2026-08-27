@@ -114,9 +114,19 @@ def _runnable_only(items):
         it["n"] = i
     return keep
 
-def run(cmd, timeout=420):
+# A run started from the app is watched by a person, so pace it. Command-line
+# runs are unaffected: drive.mjs treats an unset QA_SLOW_MS as no delay.
+SLOW_MS = os.environ.get("BENCH_SLOW_MS", "800")
+TILE_LEFT = os.environ.get("BENCH_TILE_LEFT", "640")
+
+def run(cmd, timeout=420, slow=False):
+    """slow=True paces the run so a person can watch it. Only the repro snippet
+    is watched -- pacing sign-in and window placement just wastes the wait."""
     try:
-        p = subprocess.run(cmd, cwd=REPO, text=True, capture_output=True, timeout=timeout)
+        env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT)
+        if slow: env["QA_SLOW_MS"] = SLOW_MS
+        p = subprocess.run(cmd, cwd=REPO, text=True, capture_output=True,
+                           timeout=timeout, env=env)
         return p.returncode, (p.stdout or "") + (p.stderr or "")
     except subprocess.TimeoutExpired:
         return 124, f"timed out after {timeout}s"
@@ -135,6 +145,10 @@ def reproduce(item):
         return {"ok": False, "stage": "browsers", "log": "\n".join(log),
                 "left": "The rig did not come up. Fix that, then press Reproduce again."}
 
+    # put the rig window where it is not under the app before anything runs
+    driver0 = (item.get("repro") or {}).get("accounts", ",".join(accts)).split(",")[0].strip()
+    run(["./scripts/callrig/d", f"{lane}:{driver0 or accts[0]}", "snip/_tile.mjs"], timeout=60)
+
     rep = item.get("repro")
     if not rep or not rep.get("snippet"):
         return {"ok": True, "stage": "positioned", "log": "\n".join(log),
@@ -149,7 +163,7 @@ def reproduce(item):
 
     driver = rep.get("accounts", ",".join(accts)).split(",")[0].strip()
     log.append(f"\n$ ./scripts/callrig/d {lane}:{driver} snip/{name}")
-    rc, out = run(["./scripts/callrig/d", f"{lane}:{driver}", f"snip/{name}"])
+    rc, out = run(["./scripts/callrig/d", f"{lane}:{driver}", f"snip/{name}"], slow=True)
     log.append(out.strip() or "(no output)")
 
     res = _snippet_result(out)
