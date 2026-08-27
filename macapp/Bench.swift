@@ -560,6 +560,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     @objc func toggleList() { root.toggle() }
 
+    @objc func saveRecord() { web.evaluateJavaScript("window.__save && __save()") }
+
     @objc func hitRepro() { web.evaluateJavaScript("window.__repro && __repro()") }
 
     @objc func hitVerdict() {
@@ -586,9 +588,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
         guard let d = m.body as? [String: Any] else { return }
-        if let cmd = d["cmd"] as? String, cmd == "tile" {
-            tileLeft(CGFloat(d["width"] as? Double ?? 640))
-            return
+        if let cmd = d["cmd"] as? String {
+            switch cmd {
+            case "tile":
+                tileLeft(CGFloat(d["width"] as? Double ?? 640))
+                return
+            case "saved":
+                let a = NSAlert()
+                a.messageText = "Record saved"
+                a.informativeText = d["path"] as? String ?? ""
+                a.addButton(withTitle: "OK")
+                a.beginSheetModal(for: window, completionHandler: nil)
+                return
+            default: return
+            }
         }
         let raw = d["rows"] as? [[String: Any]] ?? []
         let rows = raw.map { Row(id: $0["id"] as? String ?? "",
@@ -686,6 +699,13 @@ appMenu.addItem(.separator())
 appMenu.addItem(withTitle: "Quit Reproducer",
                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 appItem.submenu = appMenu
+
+let fileItem = NSMenuItem()
+menu.addItem(fileItem)
+let fileMenu = NSMenu(title: "File")
+fileMenu.addItem(withTitle: "Save Record…",
+                 action: #selector(AppDelegate.saveRecord), keyEquivalent: "s")
+fileItem.submenu = fileMenu
 
 let editItem = NSMenuItem()
 menu.addItem(editItem)
