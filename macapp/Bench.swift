@@ -44,10 +44,6 @@ final class HandButton: NSButton {
     override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 }
 
-final class HandSegmented: NSSegmentedControl {
-    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
-}
-
 // ── source-list cell ─────────────────────────────────────────────────────────
 final class RowCell: NSTableCellView {
     let dot = NSView()
@@ -448,10 +444,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     var current = ""            // verdict recorded for the finding on screen
     var verdictItem: NSToolbarItem!
     let reproButton = HandButton()
-    // .selectAny, not .selectOne: AppKit sends no action when a click does not
-    // change the selection, so with selectOne there is no way to clear a verdict
-    let verdict = HandSegmented(labels: ["Confirmed", "Not a bug"],
-                                trackingMode: .selectAny, target: nil, action: nil)
+    let yesButton = HandButton()
+    let noButton  = HandButton()
 
     func applicationDidFinishLaunching(_ n: Notification) {
         port = freePort()
@@ -510,7 +504,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     static let idList = NSToolbarItem.Identifier("list")
     static let idRepro = NSToolbarItem.Identifier("repro")
-    static let idVerdict = NSToolbarItem.Identifier("verdict")
+    static let idYes = NSToolbarItem.Identifier("yes")
+    static let idNo  = NSToolbarItem.Identifier("no")
 
     func toolbarAllowedItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
         toolbarDefaultItemIdentifiers(t)
@@ -518,7 +513,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     func toolbarDefaultItemIdentifiers(_ t: NSToolbar) -> [NSToolbarItem.Identifier] {
         var ids: [NSToolbarItem.Identifier] = [AppDelegate.idList]
-        ids += [.flexibleSpace, AppDelegate.idRepro, AppDelegate.idVerdict]
+        ids += [.flexibleSpace, AppDelegate.idRepro, .space,
+                AppDelegate.idYes, AppDelegate.idNo]
         return ids
     }
 
@@ -550,17 +546,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             it.label = "Reproduce"
             reproItem = it
             return it
-        case AppDelegate.idVerdict:
-            // .texturedRounded ignores selectedSegmentBezelColor
-            verdict.segmentStyle = .rounded
-            verdict.selectedSegment = -1
-            verdict.target = self
-            verdict.action = #selector(hitVerdict)
-            verdict.isEnabled = false
+        case AppDelegate.idYes, AppDelegate.idNo:
+            let yes = (id == AppDelegate.idYes)
+            let b = yes ? yesButton : noButton
+            b.bezelStyle = .rounded
+            b.setButtonType(.pushOnPushOff)
+            b.title = yes ? "Confirmed" : "Not a bug"
+            b.target = self
+            b.action = yes ? #selector(hitYes) : #selector(hitNo)
+            b.isEnabled = false
             let it = NSToolbarItem(itemIdentifier: id)
-            it.view = verdict
-            it.label = "Verdict"
-            verdictItem = it
+            it.view = b
+            it.label = b.title
+            it.toolTip = yes ? "This is a real bug (Y)" : "This is not a bug (N)"
             return it
         default:
             return nil
@@ -579,14 +577,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     /// no other way back from a mis-click, and the only alternative — picking
     /// the opposite verdict — puts a wrong judgement on record to undo a wrong
     /// judgement.
-    @objc func hitVerdict() {
-        let v = ["y", "n"]
-        let on = (0 ..< verdict.segmentCount).filter { verdict.isSelected(forSegment: $0) }
-        // selectAny permits both; the one that is not the recorded verdict is
-        // the segment just clicked. None on means the verdict was cleared.
-        let picked = on.count == 1 ? v[on[0]]
-                   : on.map { v[$0] }.first { $0 != current } ?? ""
-        web.evaluateJavaScript("window.__verdict && __verdict('\(picked)')")
+    // pressing the verdict already recorded clears it, so a mis-click does not
+    // have to be undone by putting the opposite wrong verdict on record
+    @objc func hitYes() { setVerdict(current == "y" ? "" : "y") }
+    @objc func hitNo()  { setVerdict(current == "n" ? "" : "n") }
+
+    private func setVerdict(_ v: String) {
+        web.evaluateJavaScript("window.__verdict && __verdict('\(v)')")
     }
 
     @objc func reloadPage() { web.reload() }
@@ -643,16 +640,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         reproButton.action = canClose ? #selector(hitClose) : #selector(hitRepro)
         reproButton.toolTip = canClose ? "Close the browser this run opened"
                                        : "Drive the browser to this defect (R)"
-        verdict.isEnabled = !rows.isEmpty && beat != "running"
+        let live = !rows.isEmpty && beat != "running"
+        yesButton.isEnabled = live
+        noButton.isEnabled = live
         let v = d["verdict"] as? String ?? ""
         current = v
-        for (i, key) in ["y", "n"].enumerated() {
-            verdict.setSelected(v == key, forSegment: i)
-        }
         // green for a confirmed bug, red for a rejected one: the verdict is the
         // output of the whole session, so it should be readable at a glance
-        verdict.selectedSegmentBezelColor =
-            v == "y" ? .systemGreen : (v == "n" ? .systemRed : nil)
+        yesButton.state = v == "y" ? .on : .off
+        noButton.state  = v == "n" ? .on : .off
+        yesButton.bezelColor = v == "y" ? .systemGreen : nil
+        noButton.bezelColor  = v == "n" ? .systemRed : nil
     }
 
     // MARK: server
