@@ -169,6 +169,11 @@
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SEARCH] <code>Open full search</code> сужает поиск до текущего канала и показывает ноль результатов</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-fullsearch-repro.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-fullsearch-repro.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Глобальный поиск находит сообщение и показывает, в каком канале оно лежит. Кнопка
@@ -242,6 +247,11 @@ GET /api/v1/search?q=&lt;слово&gt;&amp;company_id=&lt;companyId&gt;&amp;wor
   <article>
     <div class="chips"><span class="chip sev">High</span><span class="chip area">backend</span></div>
     <h2>[BE][CALENDAR] Приглашённый не может ответить на приглашение ни одним из двух путей: по ссылке кнопки неактивны, из сетки ответ не сохраняется</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice,bob" data-snippet="e-rsvp-link.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-rsvp-link.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -350,6 +360,11 @@ GET /api/v1/calendar/meetings/&lt;meetingId&gt;                            -> 20
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][DIRECTORIES] В списке People не показывается ни присутствие, ни статус — хотя оба приходят в ответе</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice,bob" data-snippet="e-people-presence.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-people-presence.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -465,6 +480,11 @@ GET /api/v1/workspaces/&lt;workspaceId&gt;/members -> 200, строка того
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALENDAR] Редактирование повторяющейся встречи меняет только одно вхождение и не сообщает об этом</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-series-edit.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-series-edit.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Карточка вхождения повторяющейся встречи помечена <code>Repeats</code>, то есть
@@ -550,6 +570,11 @@ Edit -&gt; переименовать -&gt; Save
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SEARCH] <code>:@ &lt;Имя Фамилия&gt;</code> подставляет другого участника, а chip обещает фильтр, которого нет</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-at-filter.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-at-filter.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -644,6 +669,11 @@ Edit -&gt; переименовать -&gt; Save
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALENDAR] Выбор напоминания в форме встречи ни на что не влияет</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-reminder-repro.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-reminder-repro.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>В форме встречи есть выбор напоминания:
@@ -722,6 +752,11 @@ POST /api/v1/calendar/meetings
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SHELL] Два из трёх горячих сочетаний, которые предлагает сам <code>Help</code>, не работают внутри канала</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-hotkeys.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-hotkeys.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Диалог <code>Help &amp; shortcuts</code> обещает три сочетания:
@@ -780,6 +815,11 @@ POST /api/v1/calendar/meetings
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALENDAR] Недействительная ссылка-приглашение открывает страницу, из которой некуда пойти</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-deadjoin.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-deadjoin.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -857,6 +897,11 @@ document.documentElement.scrollHeight === clientHeight  (1080 === 1080)  // ни
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][DIRECTORIES] Все участники попадают в группу <code>OTHER</code>, а поиск по отделу и должности не находит никого</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-directory-dept.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-directory-dept.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -949,6 +994,11 @@ GET /api/v1/workspaces/{ws}/members?limit=50
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALENDAR] <code>Day</code> открывается не на сегодняшнем дне, если местная дата и дата по UTC разошлись</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice,bob" data-snippet="e-day-utc.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-day-utc.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1058,6 +1108,11 @@ GET /api/v1/workspaces/{ws}/members?limit=50
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SEARCH] Поиск показывает активный фильтр канала, которого не применял</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-in-filter.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-in-filter.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1248,6 +1303,11 @@ GET /api/v1/workspaces/{ws}/members?limit=50
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SEARCH] Поиск молча пропускает всё, что лежит в архивном канале</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-archived-search.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-archived-search.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Сообщение, которое пользователь может открыть и прочитать, поиск не находит. Сервер
@@ -1436,6 +1496,11 @@ GET /api/v1/workspaces/{ws}/members?limit=50
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SEARCH] Любое обращение к контролам диалога поиска выключает в нём клавиатурную навигацию</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-search-keys.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-search-keys.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Внизу диалога поиска написано <code>↑↓ navigate</code> и <code>↵ open</code>. Пока
@@ -1535,6 +1600,11 @@ GET /api/v1/workspaces/{ws}/members?limit=50
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SEARCH] Картинка, открытая из результата поиска, не показывается — «Preview is not available for this file type»</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-search-image.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-search-image.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Пользователь ищет картинку, находит её и открывает из выдачи. Вместо изображения карточка
@@ -1609,6 +1679,11 @@ GET /api/v1/workspaces/{ws}/members?limit=50
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALENDAR][FILES] После разрыва связи Calendar и Files не догоняют пропущенное, в отличие от чата</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice,bob" data-snippet="e-catchup.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-catchup.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1710,6 +1785,11 @@ GET /api/v1/calendar/meetings?workspace_id=&lt;workspaceId&gt;&amp;from=…&amp;
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SHELL] Состояние сайдбара и настройки списка в Files не сохраняются, хотя механизм сохранения есть</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-persist.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-persist.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Свёрнутый сайдбар, свёрнутые секции <code>Channels</code> и
@@ -1792,6 +1872,11 @@ GET /api/v1/calendar/meetings?workspace_id=&lt;workspaceId&gt;&amp;from=…&amp;
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][CALENDAR] После смены даты начала сводка и поле окончания остаются на прежней дате</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-startdate.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-startdate.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1977,6 +2062,11 @@ document.documentElement.scrollHeight === clientHeight  (1062 === 1062)  -&gt; �
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SHELL] После закрытия поиска фокус уходит в начало страницы, а не на кнопку, которая его открыла</h2>
 
+    <div class="block repro" data-lane="E" data-accounts="alice" data-snippet="e-focus-return.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-focus-return.mjs</code></p>
+    </div>
+
     <div class="block">
       <h3>Проблема</h3>
       <p>Пользователь, работающий с клавиатуры, открывает <code>Global search</code>, закрывает его
@@ -2038,6 +2128,11 @@ Global search        кнопка Close  BODY                      "Skip to cont
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][FILES] Получателю написано, что файл никому не отправлен — хотя он видит его именно потому, что файл отправлен в канал</h2>
+
+    <div class="block repro" data-lane="E" data-accounts="alice,bob" data-snippet="e-shared-with.mjs">
+      <h3>Воспроизведение</h3>
+      <p><code>./d e:alice snip/e-shared-with.mjs</code></p>
+    </div>
 
     <div class="block">
       <h3>Проблема</h3>
