@@ -93,11 +93,21 @@ final class RowCell: NSTableCellView {
     }
 }
 
+/// A source list is clickable, so it should say so on hover like the buttons do.
+final class HandTable: NSTableView {
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        for i in 0 ..< numberOfRows {
+            addCursorRect(rect(ofRow: i), cursor: .pointingHand)
+        }
+    }
+}
+
 // ── sidebar ──────────────────────────────────────────────────────────────────
 final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
     var rows: [Row] = []
     var onSelect: ((Int) -> Void)?
-    let table = NSTableView()
+    let table = HandTable()
     private var suppress = false
 
     override func loadView() {
@@ -124,6 +134,7 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
     func set(_ rs: [Row], cur: Int) {
         rows = rs
         table.reloadData()
+        table.window?.invalidateCursorRects(for: table)
         guard cur >= 0, cur < rs.count else { return }
         suppress = true
         table.selectRowIndexes(IndexSet(integer: cur), byExtendingSelection: false)
