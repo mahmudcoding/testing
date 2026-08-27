@@ -1,0 +1,2404 @@
+<title>Чат: удаление и упоминания</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#f6f8f7; --surface:#ffffff; --ink:#16201f; --muted:#5c6a68;
+    --accent:#1f5f5b; --rule:#dbe3e1; --chip:#eef3f2;
+    --sev:#9a6412; --sev-bg:#fbf2e2; --sev-rule:#e8d2a8;
+    --area:#2b5578; --area-bg:#e9f0f6;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+      --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+      --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+      --area:#8fb6d8; --area-bg:#16232e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+    --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+    --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+    --area:#8fb6d8; --area-bg:#16232e;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.65; margin:0;
+    padding:clamp(28px,5vw,64px) clamp(18px,5vw,40px);
+  }
+  .wrap{max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:36px}
+  header{display:flex; flex-direction:column; gap:10px; border-bottom:2px solid var(--rule); padding-bottom:22px}
+  .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  h1{font-family:Spectral,Georgia,serif; font-weight:600; font-size:clamp(28px,4.4vw,40px);
+     line-height:1.18; margin:0; text-wrap:balance; letter-spacing:-.01em}
+  .lede{color:var(--muted); max-width:62ch; margin:0}
+  .summary{border-collapse:collapse; width:100%; font-size:14.5px}
+  .summary th{text-align:left; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+              color:var(--muted); font-weight:600; padding:0 12px 8px 0; border-bottom:1px solid var(--rule)}
+  .summary td{padding:11px 12px 11px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  .summary tr:last-child td{border-bottom:none}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{font-size:11.5px; font-weight:600; letter-spacing:.04em; padding:2.5px 8px; border-radius:3px;
+        white-space:nowrap; font-family:"IBM Plex Mono",monospace}
+  .sev{background:var(--sev-bg); color:var(--sev); border:1px solid var(--sev-rule)}
+  .area{background:var(--area-bg); color:var(--area); border:1px solid transparent}
+  article{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+          padding:clamp(20px,3.2vw,30px); display:flex; flex-direction:column; gap:16px}
+  article h2{font-family:Spectral,Georgia,serif; font-weight:600; font-size:21px; line-height:1.32;
+             margin:0; text-wrap:balance}
+  article p{margin:0; max-width:64ch}
+  h3{font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--muted);
+     font-weight:600; margin:0}
+  .block{display:flex; flex-direction:column; gap:8px}
+  pre{margin:0; background:var(--chip); border:1px solid var(--rule); border-radius:4px;
+      padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace;
+      font-size:13px; line-height:1.62; font-variant-numeric:tabular-nums}
+  ol,ul{margin:0; padding-left:20px; max-width:64ch}
+  li{margin-bottom:5px}
+  li::marker{color:var(--accent)}
+  kbd{font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--chip);
+      border:1px solid var(--rule); border-radius:3px; padding:1px 5px}
+  code{font-family:"IBM Plex Mono",monospace; font-size:13.5px; background:var(--chip);
+       border-radius:3px; padding:1px 4px}
+  .expect{border-left:3px solid var(--accent); padding:2px 0 2px 16px; display:flex;
+          flex-direction:column; gap:7px}
+  footer{color:var(--muted); font-size:13.5px; border-top:1px solid var(--rule); padding-top:18px}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">QA · Chat · 26 августа 2026</div>
+    <h1>Чат: удаление, упоминания и приглушение</h1>
+    <p class="lede">Тридцать находок по чату. Три самые серьёзные — все об одном: интерфейс
+      показывает действие выполненным или доступным, а его нет. Неудавшееся удаление
+      показано автору как выполненное, а сообщение остаётся у всех остальных; кнопка
+      <code>Remove</code> в списке участников не делает ничего, и убрать человека из
+      канала владелец не может ниоткуда; <code>Unmute</code> не снимает приглушение
+      ни из шапки, ни из меню канала, так что приглушённое «до отключения» остаётся
+      навсегда. Остальные
+      повторяют тот же сюжет — интерфейс показывает не то, что произошло: набранное руками
+      <code>@имя</code> выглядит упоминанием, но им не является; про <code>@all</code> и
+      <code>@here</code> приходит «You were mentioned», а на странице <code>Mentions</code>
+      их нет; приглушённый канал на втором устройстве показан обычным и всё равно молчит;
+      закреплённое давнее сообщение недостижимо — кнопка перехода к нему молча ничего
+      не делает; переключатель <code>Send as file</code> не влияет ни на что.</p>
+  </header>
+
+  <table class="summary">
+    <thead><tr><th style="width:52%">Находка</th><th>Важность</th><th>Область</th></tr></thead>
+    <tbody>      <tr><td>Неудавшееся удаление показано как выполненное, а сообщение остаётся у всех остальных</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Кнопка Remove в списке участников канала не делает ничего</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Кнопка Unmute notifications не снимает приглушение</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Переход к давнему сообщению молча не доходит до цели — и по кнопке «Jump to pinned message», и по ссылке</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>В треде форматирование молча меняет жест отправки, а видимая подсказка говорит обратное</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Про @all и @here приходит «You were mentioned», но на странице Mentions их нет</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>После удаления сообщения с тредом ответы становятся недостижимы, а панель обещает их и предлагает бесконечный Retry</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>Убрать сообщение из Saved Messages можно только действием, которое обещает удалить его навсегда</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Архивный канал не заморожен: отправка отбивается, а правка сообщений, реакции, закрепление и переименование проходят</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>В архивном канале пункт Edit предлагается и не делает ничего</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>После правки сообщения текст, начинавшийся с «-», «#» или «&gt;», превращается в разметку</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Цитата ответа в треде показывает служебное экранирование markdown</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Переключатель Send as file не влияет ни на запрос, ни на результат</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Переименование канала не проверяет имя, хотя форма создания приводит его к слагу</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Удалённый ответ остаётся в открытой панели треда вместе с прежним счётчиком</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Ответивший в треде не узнаёт о следующих ответах: ни уведомления, ни отметки, ни способа подписаться</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>Заметка в Saved Messages — единственное своё сообщение без Edit и Reply</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>В Channel details не видно предела длины Name и Topic, а ошибка не говорит, что не так</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Dismiss preview убирает карточку ссылки только до следующего показа канала</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Команда /me, выбранная из меню, не применяется — в канал уходит текст «/me …»</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Набранная целиком команда-эмотикон по Enter стирает всё, что набрано после неё</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Напечатанное @имя выглядит как упоминание, но упоминанием не отправляется</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Состояние приглушения не отдаётся сервером: на другом устройстве канал показан обычным, хотя уведомления не приходят</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>Панель Channel details, открытая с клавиатуры, остаётся практически недостижимой</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>При любой ошибке загрузки у вложения написано «сервер отклонил файл»</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Неудачная отправка стирает набранное сообщение, а тост советует повторить</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Композер предлагает выбрать файлы, которые затем отвергает как неподдерживаемые</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Copy text копирует технический username вместо имени человека</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Озвучка нового сообщения читает служебное экранирование markdown</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Список ролей канала печатает внутренний id роли отдельной строкой</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+</tbody>
+  </table>
+
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Неудавшееся удаление показано как выполненное, а сообщение остаётся у всех остальных</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Если запрос на удаление не проходит, автор всё равно видит на месте сообщения
+        надпись «This message was deleted», а текст пропадает с его экрана. Ни ошибки,
+        ни повторной попытки при этом нет. Сообщение при этом никуда не делось: у всех
+        остальных участников канала оно на месте и читается целиком. Человек, удаливший
+        то, о чём пожалел, уверен, что сообщения больше нет. Соседние операции при такой же
+        неудаче честно говорят «Network error. Check your connection.» — реакция, правка
+        и <code>Pin</code>, а <code>Save</code> даёт отдельное «Could not update Saved
+        Messages. Try again.».</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В своём канале отправить сообщение.</li>
+        <li>Сделать так, чтобы запрос <code>DELETE …/messaging/channels/&lt;ch&gt;/messages</code>
+          завершился ошибкой, пока браузер продолжает считать себя онлайн.</li>
+        <li>Открыть у сообщения <code>More actions</code> → <code>Delete</code> и подтвердить.</li>
+        <li>Посмотреть на своё сообщение, а затем открыть тот же канал под другим аккаунтом.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Автор видит удаление, остальные — обычное сообщение.</p>
+      <pre>у автора, 14 проб за 8,4 с после подтверждения:
+  на месте сообщения        "This message was deleted", текст пропал
+  видимых тостов и [role=alert]:  ни одного
+  запросов DELETE отправлено: 1 (оборван), повторов нет
+
+сервер сразу после этого:
+  GET /api/v1/messaging/channels/&lt;ch&gt;/messages?limit=20
+  {"channel_seq":708,"body":"&lt;текст сообщения&gt;", …}      тело на месте
+
+другой участник того же канала, чистая загрузка:
+  сообщение в ленте: "&lt;имя человека&gt;, 00:16 &lt;текст сообщения&gt;"
+  в ответе API то же самое, тело целое
+
+снять блокировку и ждать 60 с, ничего не нажимая — сообщение остаётся целым;
+после перезагрузки страницы автора удаление уходит на сервер за 4 с и тело пустеет
+
+КОНТРОЛЬ — тот же оборванный запрос, соседние операции над своим сообщением:
+  реакция  тост "Network error. Check your connection.", чип не появился,
+           на сервере реакций 0      — ложного состояния не остаётся
+  Pin      тот же тост, на сервере pinned false
+  то есть остальные действия и сообщают об ошибке, и откатывают показанное</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Узкая граница: запрос ушёл ровно один раз и был оборван, повторов за 60 секунд
+        нет, а сервер всё это время отдаёт тело сообщения — значит на сервере не
+        происходит ничего. Отметка об удалении живёт на стороне клиента: она переживает
+        полную перезагрузку страницы и именно при следующей загрузке доходит до сервера.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Пока удаление не подтверждено сервером, сообщение не показывается удалённым.
+        Неудача объясняется так же, как у правки, реакции, <code>Pin</code> и
+        <code>Save</code>, и действие можно повторить.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>При упавшем запросе удаления автор видит объяснение, а сообщение остаётся
+          читаемым — и у него, и у других участников.</li>
+        <li>Успешное удаление по-прежнему сразу показывает «This message was deleted»
+          у всех участников.</li>
+        <li>Отложенное удаление не уходит на сервер молча при следующей загрузке страницы.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT][CHANNEL DETAILS] Кнопка Remove в списке участников канала не делает ничего</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Владелец канала открывает <code>Channel details</code> → <code>Members</code>
+        и нажимает <code>Remove</code> у участника. Не происходит ничего: ни подтверждения,
+        ни сообщения об ошибке, ни изменения списка — участник остаётся в канале. Убрать его
+        больше неоткуда: карточка человека предлагает только <code>Message</code>,
+        <code>Call</code>, <code>Block</code> и <code>Share</code>, а контекстное меню
+        канала в сайдбаре — <code>Preview</code>, <code>Pin</code>, <code>Mute</code>,
+        <code>Archive</code> и <code>Delete channel</code>. То есть убрать участника
+        владелец не может ни одним путём, хотя кнопка для этого нарисована и выглядит
+        рабочей.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти владельцем канала и открыть этот канал.</li>
+        <li>Открыть <code>Channel details</code>, перейти на вкладку <code>Members</code>.</li>
+        <li>Нажать <code>Remove</code> у любого участника.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Ничего не происходит: ни запроса, ни диалога, ни тоста; список участников не меняется.</p>
+      <pre>клик пришёлся на:           button[aria-label="Remove &lt;имя&gt;"]
+запросов /api/v1 за 6 с:    0
+диалогов после клика:       0
+видимых тостов:             0
+участников на сервере:      3 &#8594; 3
+
+кнопка в DOM:
+  &lt;button type="button" aria-label="Remove &lt;имя&gt;" data-user-id="U&#8230;"&gt;
+  disabled: false        pointer-events: auto
+  36 &#215; 36 px           произведение opacity по цепочке предков = 1
+  document.elementFromPoint в центре &#8594; сама кнопка
+
+тот же запрос, отправленный вручную из этой же сессии:
+  POST /channels/members/remove {channel_id, user_id}   &#8594; 200
+  участников: 3 &#8594; 2</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Узкая ответственная граница: запрос, который кнопка должна отправлять, из этой же
+        сессии проходит и выполняется — <code>200</code>, участник удалён, — а по нажатию
+        кнопки не уходит ни одного запроса. Значит по дороге ничего не теряется и сервер
+        ничего не отклоняет: запрос не отправляется вовсе. Права тоже ни при чём — роль
+        владельца канала несёт wildcard на все права канала. Парное действие работает:
+        добавление участника из того же интерфейса (<code>Add users</code> → выбрать
+        человека → <code>Add selected</code>) шлёт <code>POST /channels/members/add</code>
+        и состав меняется. Панель при этом исправна:
+        в ней же построчная кнопка <code>Unpin</code> на вкладке <code>Pinned</code>
+        отправляет запрос и обновляет ярлык вкладки, а <code>Assign role</code> на
+        вкладке <code>Roles</code> — свой. Не работает один обработчик, а не панель.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Нажатие <code>Remove</code> спрашивает подтверждение и убирает участника из канала —
+        так же, как это делают остальные разрушительные действия.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Владелец убирает участника: появляется подтверждение, затем участник исчезает
+          из списка и теряет доступ к каналу.</li>
+        <li>Отказ от подтверждения оставляет участника на месте.</li>
+        <li>Пользователь без права удалять других кнопку <code>Remove</code> не видит.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Кнопка Unmute notifications не снимает приглушение</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Приглушить канал или личную переписку можно, снять приглушение — нет. Все четыре пути
+        к снятию мертвы: кнопка <code>Unmute notifications</code> в шапке и пункт
+        <code>Unmute</code> в контекстном меню — и в канале, и в личной переписке —
+        нажимаются, но не отправляют ни одного запроса и ничего не меняют. Приглушение на срок само истечёт, а выбранное
+        как <code>Until turned off</code> остаётся навсегда: вернуть уведомления через
+        интерфейс нельзя вовсе.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал или личную переписку, нажать <code>Mute notifications</code>
+          и выбрать любой срок.</li>
+        <li>Нажать появившуюся кнопку <code>Unmute notifications</code>; затем попробовать
+          второй путь — пункт <code>Unmute</code> в контекстном меню канала в сайдбаре.</li>
+        <li>Посмотреть на подпись кнопки и на то, вернулись ли уведомления.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Ничего не происходит, канал остаётся приглушённым.</p>
+      <pre>приглушение   Mute notifications &#8594; "For 1 hour"
+              POST /notifications/channels/&lt;ch&gt;/mute      1 запрос
+              кнопка "Unmute notifications", aria-pressed=true
+
+снятие        клик по "Unmute notifications"
+              (клик подтверждён слушателем в фазе перехвата)
+              запросов /api/v1 за 5 с:   0
+              кнопка:                    "Unmute notifications", pressed=true
+              меню не открывается:       [role="menu"] &#8594; 0
+
+не зависит от срока приглушения:
+  "For 1 hour"        Unmute &#8594; 0 запросов, без изменений
+  "Until turned off"  Unmute &#8594; 0 запросов, без изменений
+перебор ввода: клик, второй, третий, Enter с фокуса — везде 0 запросов
+
+все четыре пути к снятию мертвы — ни один не отправил запроса:
+  канал,     кнопка в шапке               запросов после клика 0
+  канал,     пункт "Unmute" в сайдбаре    запросов после клика 0
+  переписка, кнопка в шапке               запросов после клика 0
+  переписка, пункт "Unmute" в сайдбаре    запросов после клика 0
+везде пункт и подпись читаются как "Unmute" — состояние отражено верно,
+localStorage не меняется, приглушение остаётся
+
+последствие для человека (приглушено "Until turned off"):
+  собеседник отправляет сообщение  &#8594; 200
+  у приглушившего уведомления о нём НЕТ (список уведомлений не изменился)
+  клик по Unmute                   &#8594; состояние прежнее, приглушение осталось
+
+тот же запрос вручную:
+  DELETE /notifications/channels/&lt;id&gt;/mute &#8594; 200, приглушение снято</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Узкая ответственная граница: ручка снятия работает — тот же <code>DELETE</code>
+        из этой же сессии отвечает <code>200</code> и снимает приглушение, — а по нажатию
+        кнопки не уходит ни одного запроса — ни из шапки, ни из меню сайдбара. Значит он
+        не отправляется вовсе. Приглушение при этом работает из <b>обоих</b> тех же мест:
+        и кнопка в шапке, и пункт <code>Mute</code> в меню сайдбара открывают меню сроков
+        и шлют свой <code>POST</code>. То есть ломается не экран и не меню, а именно
+        обработчик снятия. Остальные пункты того же меню сайдбара
+        (<code>Preview</code>, <code>Pin</code>, <code>Archive</code>,
+        <code>Delete channel</code>) тоже работают.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p><code>Unmute notifications</code> снимает приглушение и возвращает уведомления,
+        а кнопка снова читается как <code>Mute notifications</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Приглушить на срок и снять: уведомления приходят снова, кнопка читается
+          <code>Mute notifications</code>.</li>
+        <li>То же для <code>Until turned off</code>.</li>
+        <li>Приглушение по-прежнему ставится и переживает перезагрузку страницы.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Переход к давнему сообщению молча не доходит до цели — и по кнопке «Jump to pinned message», и по ссылке</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В длинном канале или личной переписке давнее сообщение недостижимо: кнопка
+        <code>Jump to pinned message</code> в баннере подгружает ещё одну страницу истории
+        и останавливается, до цели не доходя. На экране при этом ничего не меняется и
+        ничего не сообщается. Так же ведёт себя ссылка на сообщение, которую даёт
+        <code>Share</code>, и ссылка на ответ в длинном треде — там ответ даже загружен,
+        но экран к нему не подкручен. В продукте для такого случая есть готовый баннер
+        «Message older than loaded history», но он не появляется.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В канале с длинной историей (проверено на 398 сообщениях) закрепить одно из
+          самых первых сообщений.</li>
+        <li>Открыть канал с чистой загрузки и нажать <code>Jump to pinned message</code>
+          в баннере закреплённого сообщения.</li>
+        <li>Контроль в том же канале: открепить его, закрепить самое последнее сообщение
+          и нажать ту же кнопку.</li>
+        <li>Второй путь: скопировать ссылку на первое сообщение через <code>Share</code>
+          и открыть её с чистой загрузки.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Кнопка работает только тогда, когда закреплённое сообщение и так уже загружено.
+        Сравнение двух закреплений в одном канале, одна и та же кнопка:</p>
+      <pre>закреплено самое новое сообщение (seq 398 из 398)
+  клик Jump to pinned message
+  через 3 с: сообщение в DOM и в области видимости (top=707), загружено 177 → 177
+
+закреплено сообщение seq 3 из 398
+  клик Jump to pinned message
+  45 с: загружено 177 → 266 и остановилось
+  сообщения нет в DOM ни разу, в области видимости ни разу
+  видимых тостов и [role=alert] за всё время: ни одного
+
+та же развёртка по глубине через ссылку …?m=&lt;id&gt;, чистая загрузка на каждый случай:
+  seq 398   present=true   inView=true    загружено 177   4,1 с
+  seq 299   present=true   inView=false   загружено 202   top=-1999
+  seq 200   present=false                 загружено 185   19 с
+  seq 100   present=false                 загружено 189   19 с
+  seq 1     present=false                 загружено 190   51 с
+
+то же сообщение достижимо прокруткой колесом вверх в том же канале:
+  загружено 177 → 228 → 265 → 302 → 337
+  самое старое на экране 171 → 136 → 98 → 58 → 25 → 3 (первое сообщение канала)
+
+то же самое в панели треда — ссылка вида …?m=&lt;ответ&gt;&amp;thread=&lt;родитель&gt;,
+тред из 140 ответов, высота окна 1062:
+  ответ №001   present=true  inView=false  18 с  top=-4494
+  ответ №070   present=true  inView=false  18 с  top=-1991
+  (в треде из 6 ответов та же ссылка доводит до цели и подсвечивает её)
+
+личная переписка на 250 сообщений, ссылка на самое первое, два прогона:
+  25 с  загружено 180 → 184 и остановилось, сообщения нет в DOM ни разу
+  20 с  загружено 180, то же самое; тостов и [role=alert] ни одного</pre>
+      <p>Случай seq 299 отличается от остальных: сообщение отрисовано, но экран
+        к нему не подкручен и остаётся на две тысячи пикселей ниже.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Данные доступны той же сессии: из того же клиента вся история проходится
+        постранично курсором <code>before_seq</code>
+        (<code>GET /api/v1/messaging/channels/&lt;ch&gt;/messages?limit=100&amp;before_seq=&lt;seq&gt;</code>,
+        четыре страницы, все 200). Больше того, до этого же сообщения доходит и сам интерфейс, если
+        прокручивать ленту вверх колесом. Значит, и сервер отдаёт нужную страницу, и
+        клиент умеет её запросить, — не доходит до неё именно логика «подгружать,
+        пока не найдено» у перехода. Компонент баннера при
+        этом существует и подключён к списку сообщений:
+        <code>packages/features/chat/ui-web/MessageList.tsx:175</code> рендерит его по флагу,
+        строка <code>chat.deeplink.olderThanLoadedHistory</code> есть в словаре. Почему
+        флаг остаётся ложным — не устанавливалось.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Кнопка <code>Jump to pinned message</code> и ссылка на сообщение доводят до цели
+        независимо от её глубины — так же, как доходит обычная прокрутка вверх, —
+        подгрузив историю и подкрутив к ней экран.
+        Если это почему-то невозможно, на экране остаётся объяснение — тот самый баннер, —
+        а не молчаливое бездействие.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Закрепить первое сообщение канала с длинной историей и нажать
+          <code>Jump to pinned message</code>: сообщение видно и подсвечено.</li>
+        <li>Ссылка на первое сообщение того же канала: сообщение видно; если история до
+          него не подгружается, появляется баннер «Message older than loaded history».</li>
+        <li>Закреплённое недавнее сообщение и ссылка на него по-прежнему открываются сразу.</li>
+        <li>Ссылка на ответ в треде из сотни с лишним ответов и ссылка на первое сообщение
+          длинной личной переписки ведут туда же, куда в канале: экран стоит на цели.</li>
+        <li>Обычная прокрутка вверх по-прежнему доходит до первого сообщения канала.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT][THREADS] В треде форматирование молча меняет жест отправки, а видимая подсказка говорит обратное</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Под каждым полем ввода есть строка о том, чем отправлять сообщение. Когда
+        открыт тред, полей на экране два — канала и треда, — но подсказка треда
+        отрисована невидимой. Клик по любой кнопке форматирования включает в этом поле
+        markdown-режим, где отправляет Cmd/Ctrl+Enter, а Enter делает перенос строки.
+        Единственная подсказка, которую видит пользователь, относится к каналу и
+        продолжает утверждать, что отправляет Enter. Он нажимает Enter, ответ не уходит,
+        и на экране нет ничего, что бы это объяснило.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал, навести на сообщение и нажать <code>Reply</code> — справа
+          откроется панель треда.</li>
+        <li>В поле треда набрать текст и нажать <code>Bold</code>.</li>
+        <li>Дописать любой символ и нажать Enter.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Ответ не отправляется, в поле добавляется пустая строка. Обе подсказки стоят
+        на одной строке экрана, но видима только та, что относится к каналу.</p>
+      <pre>окно 1920x1062, обе подсказки на y=1029
+
+поле канала   x=406   подсказка x=392
+  "Enter to send · Shift+Enter for new line"          видима
+поле треда    x=1505  подсказка x=1491
+  "Enter to send · Shift+Enter for new line"          НЕ видима
+  (class "… invisible", aria-hidden="true")
+кнопки Markdown formatting: обе aria-pressed=false
+
+после клика по любой кнопке форматирования В ПОЛЕ ТРЕДА:
+  подсказка треда  "Cmd/Ctrl+Enter to send · Enter for new line"  по-прежнему НЕ видима
+  подсказка канала "Enter to send · Shift+Enter for new line"     видима, не изменилась
+  кнопки Markdown formatting: канал aria-pressed=false, тред aria-pressed=true
+
+Enter       → ответ не отправлен, маркера "Replies (N)" нет,
+              высота поля треда 24 → 48
+Cmd+Enter   → ответ отправлен, появился "Replies (1)"</pre>
+      <p>Видимость проверялась по всей цепочке предков, а не по одному узлу.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p><code>packages/features/chat/ui-web/Composer.tsx:254-267</code>: строка подсказки
+        получает класс <code>invisible</code> и <code>aria-hidden</code> ровно тогда,
+        когда задан <code>parentMessageId</code>, то есть в поле треда. Текст при этом
+        продолжает переключаться по режиму — он верный, но скрыт.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Поле треда показывает свою подсказку так же, как поле канала, и она меняется
+        вместе с режимом. Пользователь, нажавший Enter, либо отправляет ответ, либо
+        видит на экране, чем его отправить.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Открыть тред: под его полем видна подсказка про Enter.</li>
+        <li>Нажать в треде <code>Bold</code>: подсказка треда меняется на Cmd/Ctrl+Enter,
+          подсказка канала остаётся прежней.</li>
+        <li>В канале без открытого треда подсказка ведёт себя как раньше.</li>
+        <li>То же самое в треде личной переписки: там расхождение точно такое же.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
+    <h2>[BE][CHAT] Про @all и @here приходит «You were mentioned», но на странице Mentions их нет</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Получателю приходит уведомление «You were mentioned» — и про
+        <code>@all</code>, и про <code>@here</code>. Но страница <code>Mentions</code>,
+        которая подписана «Where you were mentioned», этих сообщений не содержит:
+        там только адресные упоминания. Человек, который разбирает пропущенное по этой
+        странице, не увидит ни одного обращения ко всему каналу, хотя приложение только
+        что сказало ему, что его упомянули.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В канале набрать <code>@all</code>, выбрать подсказку, дописать текст,
+          отправить.</li>
+        <li>То же самое с <code>@here</code>.</li>
+        <li>Отправить обычное упоминание <code>@имя</code> — это контроль.</li>
+        <li>Со второго аккаунта, состоящего в этом канале, открыть панель уведомлений
+          и страницу <code>Mentions</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Клиент передаёт признак обращения ко всем, но в сохранённом сообщении никакой
+        информации об упоминании нет, и до получателя оно не доходит.</p>
+      <pre>в подсказке по «@» продукт предлагает ровно две широковещательные формы,
+и сам описывает их как уведомляющие:
+  "@all  Notify everyone"
+  "@here Notify active members"
+третьей такой формы в списке нет — находка покрывает обе
+
+у получателя приходят уведомления — все три, включая контроль:
+GET /api/v1/notifications
+{"type":2,"title":"You were mentioned","body":"@here …",
+ "payload":"{\"channel_id\":\"&lt;ch&gt;\",\"message_id\":\"&lt;msg&gt;\", …}"}
+{"type":2,"title":"You were mentioned","body":"@all …",  payload — той же формы}
+{"type":2,"title":"You were mentioned","body":"@&lt;username&gt; …"}   контроль
+
+сервер при этом помечает упоминанием только контрольное сообщение:
+GET /api/v1/messaging/channels/&lt;ch&gt;/messages
+{"body":"@here  …"}                          поля mention_ids нет
+{"body":"@all  …"}                           поля mention_ids нет
+{"body":"@&lt;username&gt;  …","mention_ids":["&lt;user&gt;"]}
+
+страница получателя /chat/mentions → "All (5)"
+  пять записей, все — адресные упоминания, включая контрольное (1 минуту назад)
+  ни одной про @all или @here</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Уведомление про <code>@all</code> приходит, то есть признак
+        <code>mention_all</code> сервер обрабатывает. Но в самом сообщении он не выставляет
+        <code>mention_ids</code> — в одном и том же ответе контрольное сообщение это поле
+        имеет, а оба широковещательных нет. Страница <code>Mentions</code> опирается
+        именно на него, отсюда расхождение между двумя поверхностями.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Две поверхности говорят одно и то же: если пришло «You were mentioned»,
+        сообщение есть и на странице <code>Mentions</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Отправить <code>@all</code>: у другого участника канала запись появляется
+          на странице <code>Mentions</code> рядом с обычными упоминаниями, и число
+          в счётчике вкладки растёт.</li>
+        <li><code>@here</code> ведёт себя так же для участников, находящихся в сети.</li>
+        <li>Адресное упоминание по-прежнему и уведомляет, и попадает в <code>Mentions</code>;
+          сообщение без упоминаний не делает ни того, ни другого.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
+    <h2>[BE][CHAT][THREADS] После удаления сообщения с тредом ответы становятся недостижимы, а панель обещает их и предлагает бесконечный Retry</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Если удалить сообщение, у которого есть тред, ответы в нём перестают открываться.
+        Панель треда показывает «Replies (N)», затем «Could not load replies.» и кнопку
+        <code>Retry</code>, которая каждый раз повторяет тот же отказ. Само сообщение
+        продолжает сообщать, что ответов N, так что человек видит счётчик, жмёт повтор
+        и не получает ни ответов, ни объяснения, что их больше не будет.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Отправить сообщение, открыть у него тред и написать несколько ответов.</li>
+        <li>Удалить исходное сообщение: <code>More actions</code> → <code>Delete</code> →
+          <code>Delete</code>.</li>
+        <li>Открыть тред этого сообщения — по ссылке <code>?thread=&lt;id&gt;</code>
+          или кликом по маркеру ответов.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>до удаления
+GET /api/v1/messaging/messages/&lt;parent&gt;/thread   200, replies: 3
+
+после удаления, чистая загрузка страницы треда
+GET /api/v1/messaging/messages/&lt;parent&gt;/thread
+404 {"key":"MESSAGING_PARENT_MESSAGE_NOT_FOUND",
+     "message":"parent message not found: сообщение не найдено"}
+
+GET /api/v1/messaging/channels/&lt;ch&gt;/messages
+у того же сообщения body "" и reply_count 3
+самих ответов в списке сообщений канала нет — то есть они не «переехали» в ленту,
+а перестали быть доступны любым путём, который есть у клиента
+
+на экране
+  "Replies (3)"
+  "Could not load replies."  + кнопка Retry
+  текста ответов на странице нет
+
+клик Retry
+GET …/thread?limit=1   404,  ещё раз   404
+сообщение об ошибке и кнопка остаются на месте</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Один и тот же API одновременно отдаёт <code>reply_count: 3</code> у родителя
+        и 404 на его тред. Противоречие на стороне сервера; клиент рисует «Replies (3)»
+        из этого счётчика и предлагает повтор запроса, который по своей природе успешно
+        повториться не может.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>После удаления родителя тред либо открывается и показывает ответы под пометкой
+        об удалённом исходном сообщении, либо счётчик ответов обнуляется и тред не
+        предлагается открыть. В любом случае экран не показывает повтор запроса,
+        который не может пройти.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Удалить сообщение с ответами и открыть его тред: ответы видны, либо
+          счётчик ответов равен нулю и тред не открывается.</li>
+        <li>Кнопки повтора для неустранимого отказа на экране нет.</li>
+        <li>Удаление сообщения без ответов и обычные треды работают как раньше.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT][SAVED MESSAGES] Убрать сообщение из Saved Messages можно только действием, которое обещает удалить его навсегда</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>На странице <code>Saved Messages</code> у сохранённой записи нет действия
+        <code>Unsave</code> — ни среди кнопок строки, ни в меню. Единственный способ убрать
+        её из списка — пункт <code>Delete</code>, подтверждение которого обещает необратимо
+        удалить само сообщение. На деле удаляется только личная копия, оригинал в канале
+        цел. Тот же <code>Delete</code> предлагается и на чужих сообщениях, где в канале
+        его нет вовсе, так что человек либо боится нажать, либо думает, что удалил чужое.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В канале сохранить чужое сообщение через <code>Save</code>.</li>
+        <li>Открыть <code>Saved Messages</code> и навести на эту запись.</li>
+        <li><code>More actions</code> → <code>Delete</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>в канале, чужое сообщение, меню:
+  Add reaction | Reply | Forward | Copy text | Unsave | Share      Delete нет
+
+на странице Saved, то же сообщение — все интерактивные элементы строки:
+  Open профиль | View original | #канал | Open source message |
+  Add reaction | Forward | Copy text | More actions
+меню More actions:
+  Add reaction | Forward | Copy text | Pin message | Delete | Share  Unsave нет
+наведение на каждый пункт меню подменю с Unsave не открывает;
+слова "unsave" на странице нет вовсе
+
+Delete → "Delete permanently? | This will permanently delete this message.
+          It cannot be recovered. | Cancel | Delete"
+подтверждение →
+  DELETE /api/v1/messaging/channels/&lt;saved-channel&gt;/messages
+    {"message_ids":["&lt;id записи в Saved&gt;"]}   200
+
+оригинал в канале, проверено у обоих участников с чистой загрузки:
+  тело на месте, deleted_at не проставлен, сообщение видно в ленте</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Запрос адресован каналу Saved Messages и несёт id записи в нём, а не id исходного
+        сообщения, — то есть удаляется именно личная копия и адресация верна. Расходятся
+        с ней только текст подтверждения и отсутствие пункта <code>Unsave</code>.
+        Saved Messages устроена как обычный канал и поэтому получает общий набор действий
+        сообщения.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>На странице <code>Saved Messages</code> есть <code>Unsave</code>, убирающий запись
+        из списка без разговоров об удалении. Если действие остаётся одним, его текст
+        описывает то, что произойдёт: запись уходит из сохранённых, сообщение в канале
+        остаётся.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Сохранить сообщение и убрать его со страницы <code>Saved Messages</code>:
+          действие названо так же, как в канале.</li>
+        <li>После этого сообщение по-прежнему видно в своём канале обоим участникам.</li>
+        <li>Удаление собственного сообщения из канала по-прежнему предупреждает
+          о необратимости и действительно удаляет его.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
+    <h2>[BE][CHAT] Архивный канал не заморожен: отправка отбивается, а правка сообщений, реакции, закрепление и переименование проходят</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Архивация выглядит как заморозка: поля ввода в канале нет, отправка отбивается
+        сервером. Но заморожена только отправка. Правка уже написанного проходит
+        и сохраняется, как и реакции, закрепление и даже переименование самого канала.
+        То есть архивный канал, который команда считает закрытым, продолжает меняться —
+        и меняться может в том числе смысл сказанного в нём.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Заархивировать свой канал с историей через <code>Channel details</code> →
+          <code>Archive channel</code>.</li>
+        <li>Открыть его, навести на любое сообщение и поставить реакцию.</li>
+        <li>Там же <code>More actions</code> → <code>Pin message</code>.</li>
+        <li>Перезагрузить страницу.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>отправка сообщения в тот же канал (в интерфейсе поля ввода нет):
+POST /api/v1/messaging/messages {"channel_id":"&lt;ch&gt;","body":"…"}
+403 {"key":"MESSAGING_CHANNEL_ARCHIVED","message":"channel is archived"}
+
+все действия записи по одному архивному каналу, два прогона подряд, совпали:
+  отправка сообщения        403  MESSAGING_CHANNEL_ARCHIVED
+  ответ в тред              403  MESSAGING_CHANNEL_ARCHIVED
+  правка сообщения (PATCH)  200
+  реакция                   200
+  закрепление               200
+  снятие закрепления        200
+  переименование канала     200
+
+перечитывание после этого: тело сообщения "QA-ARCHW edited" — правка сохранилась
+
+после полной перезагрузки архивного канала:
+GET /api/v1/messaging/channels/&lt;ch&gt;/messages
+  reactions: [{"emoji":"🚀","count":1,"user_ids":["&lt;user&gt;"]}]
+  pinned: true
+на экране: у сообщения "🚀 1", баннер закреплённых "View all (1)"
+поля ввода по-прежнему нет</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Сервер отбивает запись сообщения в этот канал ключом про архив и в тот же момент
+        принимает реакцию и закрепление с 200 — значит проверка архива стоит на одном пути
+        записи и отсутствует на других.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Архивный канал не меняется ни одним способом: правка, реакции, закрепление
+        и переименование отбиваются тем же ключом, что и отправка, а интерфейс не
+        предлагает этих действий.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>В архивном канале отредактировать своё сообщение: запрос отбит, текст не меняется.</li>
+        <li>Там же поставить реакцию: запрос отбит, реакция не появляется.</li>
+        <li>Закрепление в архивном канале отбито так же.</li>
+        <li>В обычном канале реакции и закрепление работают как раньше.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] В архивном канале пункт Edit предлагается и не делает ничего</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В архивном канале меню сообщения содержит <code>Edit</code>. Пункт активен, клик
+        по нему проходит и меню закрывается — но режим правки не открывается, ошибки нет,
+        запросов нет. Человек нажимает ещё раз, потому что на экране ничто не говорит,
+        что действие невозможно и почему.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть архивный канал, в котором есть свои сообщения.</li>
+        <li>Навести на сообщение → <code>More actions</code> → <code>Edit</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Ниже — тот же шаг в архивном канале и в обычном, для сравнения.</p>
+      <pre>архивный канал
+  состояние пункта: disabled=false, pointer-events=auto, opacity=1, hit-test пройден
+  после клика, 10 проб по 400 мс:
+    видимых меню 2 → 0            клик дошёл
+    "Editing message" на экране:  нет
+    поле ввода:                   нет
+    тостов:                       нет
+    запросов к /api/v1:           нет
+
+обычный канал, то же сообщение и тот же путь
+  состояние пункта: такое же
+  после клика:
+    видимых меню 2 → 0
+    "Editing message":            есть
+    поле ввода:                   есть</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>После клика нет ни одного запроса, а тот же пункт в неархивном канале открывает
+        режим правки — значит пункт обрабатывается клиентом, и в архивном канале его
+        обработчик не делает ничего.</p>
+      <p>Это не единственный такой пункт в том же меню: <code>Reply</code> в архивном
+        канале открывает панель треда и показывает в ней поле ввода — хотя в самой ленте
+        поле скрыто, — а отправка отбивается сервером
+        (<code>POST /api/v1/messaging/messages/&lt;id&gt;/reply</code> → 403, «This channel
+        is archived and cannot be changed»). Чинить стоит набор действий целиком,
+        а не один пункт.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>В архивном канале <code>Edit</code> либо отсутствует в меню, либо неактивен
+        с пояснением, что канал архивный.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>В архивном канале меню своего сообщения не предлагает <code>Edit</code>.</li>
+        <li>Если пункт остаётся, он неактивен и объясняет причину.</li>
+        <li>В обычном канале правка своего сообщения работает как раньше.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] После правки сообщения текст, начинавшийся с «-», «#» или «&gt;», превращается в разметку</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>При отправке клиент экранирует markdown, поэтому строка, начинающаяся с дефиса,
+        решётки или угловой скобки, остаётся обычным текстом. При сохранении правки
+        экранирование не восстанавливается — и то же сообщение становится списком,
+        заголовком или цитатой, а ведущий символ пропадает с экрана. Человек правит одно
+        слово и получает на экране другой текст, причём необратимо: повторная правка
+        сохранит уже разметку.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Отправить сообщение, начинающееся с <code>- </code>, например
+          <code>- пункт списка</code>.</li>
+        <li>Открыть у него <code>Edit</code>, дописать любой символ и нажать
+          <code>Save changes</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>отправка — клиент экранирует
+POST /api/v1/messaging/messages
+{"channel_id":"&lt;ch&gt;","body":"\\- QA-S2-EE1 item", …}
+сохранено: "\\- QA\\-S2\\-EE1 item"
+в ленте:   "- QA-S2-EE1 item"        узлов ul/ol/li: 0
+
+правка — клиент не экранирует
+поле правки: "- QA-S2-EEREQ item"
+PATCH /api/v1/messaging/channels/&lt;ch&gt;/messages/&lt;id&gt;
+{"body":"- QA-S2-EEREQ item Z"}
+сохранено: "- QA-S2-EEREQ item Z"
+в ленте:   "QA-S2-EEREQ item Z"      узлов ul/ol/li: 2   дефис исчез
+
+те же блочные символы:
+"# … heading"  → после правки узлов h1/h2/h3: 1, решётка исчезла
+"&gt; … quoted"   → после правки узлов blockquote: 1, скобка исчезла</pre>
+      <p>Состояние переживает полную перезагрузку страницы.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Один и тот же клиент отправляет тело экранированным в <code>POST</code>
+        и неэкранированным в <code>PATCH</code>, то есть экранирование теряется в клиенте,
+        на пути сохранения правки. Цепочка целиком измерена: режим правки открывается
+        с уже включённым markdown-режимом (<code>Markdown formatting</code>
+        <code>aria-pressed=true</code>, подсказка меняется на Cmd/Ctrl+Enter), а в этом
+        режиме композер и при обычной отправке кладёт тело без экранирования — например
+        <code>Bold</code> из панели даёт <code>{"body":"… **BOLDPART**"}</code>. Иначе
+        говоря, сообщение, написанное в обычном режиме, при правке пересохраняется как
+        markdown. Внутристрочные <code>*</code>, <code>_</code> и <code>`</code> при этом
+        остаются экранированными — расходятся именно символы в начале строки, которые
+        являются блочной разметкой.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Правка сохраняет текст так же, как отправка: то, что было написано буквально,
+        остаётся буквальным. Отредактировав одно слово, человек видит прежнее сообщение
+        с этим словом, а не список или заголовок.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Отправить <code>- пункт</code>, отредактировать, сохранить: текст остаётся
+          с дефисом и не становится списком.</li>
+        <li>То же для строк, начинающихся с <code>#</code> и <code>&gt;</code>.</li>
+        <li>Сообщение с <code>**</code>, <code>_</code> и <code>`</code> внутри строки
+          после правки выглядит как раньше.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT][THREADS] Цитата ответа в треде показывает служебное экранирование markdown</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Внутри треда у каждого ответа есть действие <code>Reply here</code> — оно
+        цитирует выбранный ответ. Цитата и в поле ввода, и в отправленном сообщении
+        показывает текст оригинала с обратными слэшами перед дефисами, звёздочками и
+        подчёркиваниями. Сам оригинал двумя строками выше отрисован правильно, так что
+        на одном экране одно и то же сообщение выглядит по-разному. Экранирование
+        попадает в отправленное сообщение и остаётся в истории.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Отправить сообщение и открыть у него тред через <code>Reply</code>.</li>
+        <li>Отправить в тред ответ с текстом вида <code>текст **bold** _it_ a-b</code>.</li>
+        <li>Навести на этот ответ, нажать <code>Reply here</code>, набрать текст
+          и отправить.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Обе строки видны в одной панели треда одновременно.</p>
+      <pre>оригинальный ответ в ленте треда:
+  "&lt;автор&gt; · 16:04 · QA-S2-QMD **b** _i_ x-y"
+
+цитата внутри нового сообщения:
+  "@&lt;автор&gt; · sent 16:04 · QA\-S2\-QMD \*\*b\*\* \_i\_ x\-y · &lt;новый текст&gt;"
+
+та же цитата в поле ввода до отправки:
+  "@&lt;автор&gt; · sent 16:04 · QA\-S2\-QMD \*\*b\*\* \_i\_ x\-y"</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Тело оригинала хранится экранированным — <code>GET
+        /api/v1/messaging/channels/&lt;ch&gt;/messages</code> отдаёт его со слэшами, — и
+        основная лента снимает это экранирование при отрисовке, а блок цитаты нет.
+        Расхождение целиком на стороне клиента, в рендере цитаты. Правильно
+        снимают его и панель треда, и страница <code>Saved Messages</code>,
+        и панель закреплённых, и карточка пересылки — пять поверхностей из семи,
+        так что образцов рядом достаточно.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Цитата показывает текст так же, как основная лента: без служебных слэшей.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Процитировать ответ с дефисами и <code>**</code>: в поле ввода и в
+          отправленном сообщении текст читается так же, как оригинал.</li>
+        <li>Второй участник видит цитату в том же виде на чистой загрузке.</li>
+        <li>Цитата ответа без спецсимволов по-прежнему выглядит правильно.</li>
+        <li>Отдельно проверить озвучку нового сообщения: там то же тело печатается
+          так же сырым. Независимость уже установлена: страницу
+          <code>Mentions</code> починили отдельным коммитом <code>2ab70fd07</code>
+          («render the message instead of printing its markdown»), он затрагивает
+          только <code>widgets/Mentions/**</code> и входит в текущую сборку —
+          на эту поверхность он не распространился.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Переключатель Send as file не влияет ни на запрос, ни на результат</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>У прикреплённой картинки есть переключатель <code>Send as file</code> /
+        <code>Send as photo</code>. Он меняет только собственную подпись: запрос на
+        отправку в обоих положениях одинаковый, и сообщение в обоих случаях приходит
+        картинкой с предпросмотром. Отправить изображение файлом нельзя, а интерфейс
+        показывает, что можно.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В канале нажать <code>Attach files</code> и выбрать картинку.</li>
+        <li>Нажать <code>Send as file</code> — подпись меняется на
+          <code>Send as photo</code>, то есть режим «файл» включён.</li>
+        <li>Отправить сообщение кнопкой <code>Send</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>режим «фото» (кнопка подписана "Send as file"):
+POST /api/v1/messaging/messages
+{"channel_id":"&lt;ch&gt;","file_ids":["&lt;file&gt;"],"idempotency_key":"…"}
+
+режим «файл» (кнопка подписана "Send as photo"):
+POST /api/v1/messaging/messages
+{"channel_id":"&lt;ch&gt;","file_ids":["&lt;file&gt;"],"idempotency_key":"…"}
+
+в ленте оба сообщения одинаковы: один &lt;img&gt;, кнопки
+  "Open &lt;имя файла&gt; · Add reaction · Reply · Forward · Save · More actions"
+чип в поле ввода в обоих режимах одинаков:
+  "&lt;имя файла&gt; · 389 B · Ready to send",  &lt;img&gt; 0, &lt;svg&gt; 17
+
+тело загрузки файла, перехвачено целиком (файл уходит на сервер
+в момент отправки, уже ПОСЛЕ переключения):
+режим «фото»:  POST /api/v1/files/upload   801 байт, части display_mode нет
+режим «файл»:  POST /api/v1/files/upload   801 байт, части display_mode нет</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Состояние переключателя не покидает браузер. Оба запроса, которые уходят при
+        отправке, в двух режимах одинаковы: тело загрузки файла совпадает побайтово
+        (801 байт) и части <code>display_mode</code> не содержит ни в одном из них,
+        а тело <code>POST /messaging/messages</code> совпадает по составу полей.
+        Файл при этом загружается уже после переключения, так что успеть режим мог.
+        Значит дефект целиком в клиенте — сервер о выборе не узнаёт.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>В режиме «файл» картинка приходит вложением-файлом, без предпросмотра
+        во всю ширину. Либо, если такой режим не поддерживается, переключателя нет.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Отправить картинку в режиме «файл»: в ленте карточка файла, а не
+          предпросмотр изображения.</li>
+        <li>Отправить ту же картинку в режиме «фото»: предпросмотр на месте.</li>
+        <li>Отправка не-картинки по-прежнему приходит файлом, переключателя у неё нет.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Переименование канала не проверяет имя, хотя форма создания приводит его к слагу</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Одно и то же поле «имя канала» ведёт себя по-разному в двух местах. При создании
+        клиент приводит введённое к слагу: пробелы становятся дефисами, заглавные —
+        строчными, отступы по краям убираются. При переименовании в
+        <code>Channel details</code> имя сохраняется ровно как набрано, включая пробелы,
+        заглавные, <code>/</code>, <code>\</code> и <code>?</code>. Канал получает имя,
+        которое форма создания никогда бы не выдала.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В сайдбаре нажать <code>Add channel</code>, ввести имя с пробелами и
+          заглавными, создать канал.</li>
+        <li>Открыть <code>Channel details</code>, в поле имени ввести
+          <code>Project Alpha Two</code> и нажать <code>Save</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>создание — в форме введено "   Project Alpha Two   "
+POST /api/v1/channels
+{"name":"project-alpha-two","type":"public","workspace_id":"&lt;ws&gt;"}
+в шапке и в сайдбаре: project-alpha-two
+
+переименование того же канала — введено "Project Alpha Two"
+PATCH /api/v1/channels/&lt;ch&gt;
+{"name":"Project Alpha Two","description":null}
+GET /api/v1/channels/&lt;ch&gt; → name "Project Alpha Two"
+в шапке и в сайдбаре: Project Alpha Two
+
+переименование принимает вообще всё — шесть подряд, каждое 200,
+имя сохраняется ровно как введено:
+  "team/alpha?beta"     → "team/alpha?beta"      слэш и вопросительный знак
+  "ИМЯ С Пробелами"     → "ИМЯ С Пробелами"      кириллица, пробелы, заглавные
+  "name with  spaces"   → "name with  spaces"    двойной пробел сохранён
+  "  padded  "          → "  padded  "           отступы по краям сохранены
+  "emoji-🚀-name"        → "emoji-🚀-name"         эмодзи
+  "UPPER/lower?Q"       → "UPPER/lower?Q"</pre>
+      <p>Пустое имя закрыто корректно: при пустом поле <code>Save</code> заблокирована.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Переименование приводит имя к тому же виду, что и создание, либо отклоняет
+        недопустимое с понятным сообщением. Одно поле — одно правило.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Переименовать канал, введя имя с пробелами и заглавными: сохраняется слаг.</li>
+        <li>Ввести имя со слэшем или вопросительным знаком: сохранение отклонено
+          или символы убраны.</li>
+        <li>Обычное переименование в корректный слаг по-прежнему работает и переживает
+          перезагрузку.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT][THREADS] Удалённый ответ остаётся в открытой панели треда вместе с прежним счётчиком</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Пока человек читает тред, удалённый ответ продолжает показываться ему
+        целиком, вместе с текстом, и счётчик <code>Replies (N)</code> не меняется.
+        Сообщение канала, удалённое тем же самым запросом, помечается «This message
+        was deleted» сразу же — то есть событие до клиента доходит. Привести панель
+        в соответствие можно только перезагрузкой.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть тред с ответом и оставить панель треда открытой.</li>
+        <li>Удалить этот ответ и, тем же действием, любое сообщение самого канала.</li>
+        <li>Смотреть на панель треда, не перезагружая страницу.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Оба сообщения удалены одним запросом, один клиент, один экран.</p>
+      <pre>DELETE …/messaging/channels/&lt;ch&gt;/messages
+     {"message_ids":[&lt;ответ треда&gt;,&lt;сообщение канала&gt;]}   → 200
+
+22 пробы по 1,5 с (33 секунды), панель треда открыта:
+  сообщение канала  "…This message was deleted"   уже на ПЕРВОЙ пробе
+  ответ в треде     "…DELPROP reply"              не изменился ни разу
+  заголовок панели  "Replies (1)"                 не изменился ни разу
+
+после перезагрузки
+  ответ             "This message was deleted"
+  заголовок         счётчик уменьшился
+
+КОНТРОЛЬ — та же панель треда, другие события того же ответа
+  правка ответа     → текст обновился на ПЕРВОЙ пробе (1,5 с)
+  реакция на ответ  → чип появился на ПЕРВОЙ пробе
+  то же для сообщения канала — тоже на первой пробе
+  то есть панель обновления получает и применяет; не применяется только удаление
+
+после полной перезагрузки страницы:
+  ответ становится "This message was deleted"
+  счётчик ответов ВСЁ РАВНО прежний — то есть завышен не только живьём</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Дело именно в удалении, а не в панели треда вообще: правка ответа и
+        реакция на него доезжают в ту же открытую панель за полторы секунды.
+        И событие удаления до клиента доходит — сообщение канала, удалённое тем же
+        запросом, помечается сразу, а при удалении закреплённого сообщения баннер
+        закреплённых пересчитывается живьём (5 из 5 → 4 из 4, без перезагрузки). Значит не применяется одно конкретное
+        событие на одной конкретной поверхности.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Удалённый ответ помечается удалённым в открытой панели треда так же
+        быстро, как сообщение канала, и счётчик ответов пересчитывается.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Удалённый ответ помечается удалённым в открытой панели без перезагрузки.</li>
+        <li>Счётчик <code>Replies (N)</code> и маркер ответов в канале уменьшаются.</li>
+        <li>Удаление сообщения канала работает как раньше.</li>
+        <li>Правка и реакции в открытой панели треда продолжают приходить живьём —
+          без регрессии.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
+    <h2>[BE][CHAT] Ответивший в треде не узнаёт о следующих ответах: ни уведомления, ни отметки, ни способа подписаться</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Человек отвечает в треде — например, задаёт вопрос — и о том, что ему
+        ответили, не узнаёт никак. Уведомление о новом ответе приходит только автору
+        исходного сообщения. Подписаться на тред нельзя: такого действия в панели
+        треда нет. Отметки о новых ответах у индикатора <code>N replies</code>
+        тоже нет, так что заметить ответ можно только случайно.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>A пишет сообщение в канал; B отвечает в его треде.</li>
+        <li>C отвечает в том же треде.</li>
+        <li>Сравнить уведомления B (участник треда) и A (автор исходного сообщения).</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Механизм уведомлений о треде работает — но только для автора родителя.</p>
+      <pre>после ответа C в треде, опрос 29 проб за 29 с,
+document.visibilityState=visible во всех пробах
+
+у B (ответил в треде дважды):
+  всего уведомлений 72 → 72, ни одного нового
+
+у A (автор исходного сообщения):
+  всего уведомлений 5 → 6
+  {"type":4,"title":"New thread reply","body":"…third party repl"}
+
+отдельным прогоном достроена вся картина — кто вообще узнаёт об ответе в треде:
+  автор исходного сообщения      уведомлений 189 → 190, «New thread reply» 1 → 2
+  участник треда (уже отвечал)   без изменений
+  участник канала вне треда      уведомлений 118 → 118, вообще ничего
+то есть узнаёт ровно один человек — автор; тот, кто в треде говорил, не узнаёт
+
+индикатор треда у B, до и после того как он открыл тред и прочитал:
+  до:    "6 replies"  weight 500  color rgb(13,17,23)  bg rgba(0,0,0,0)  83×32
+  после: "6 replies"  weight 500  color rgb(13,17,23)  bg rgba(0,0,0,0)  83×32</pre>
+      <p>В панели треда есть только <code>Replies (N)</code>, <code>Close replies</code>
+        и композер — действия «подписаться» там нет.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Ответ в треде доходит до тех, кто в этом треде уже говорил, — или у треда
+        есть видимое действие, которым на него можно подписаться.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Участник треда получает уведомление о новом ответе.</li>
+        <li>Автор исходного сообщения получает его по-прежнему, без дублей.</li>
+        <li>Тот, кто в треде не участвовал, лишних уведомлений не получает.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Заметка в <code>Saved Messages</code> — единственное своё сообщение без <code>Edit</code> и <code>Reply</code></h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>У страницы <code>Saved Messages</code> есть композер, и написанное там
+        сохраняется как обычная запись — заметка себе. Но в меню действий такой
+        заметки нет ни <code>Edit</code>, ни <code>Reply</code>. У сохранённой копии
+        сообщения в том же списке оба пункта есть, и у собственного сообщения
+        в обычном канале — тоже. Исправить опечатку в заметке можно только удалив
+        её и набрав заново.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Saved Messages</code> и отправить туда любой текст.</li>
+        <li>Открыть у него <code>More actions</code>.</li>
+        <li>Сравнить с меню сохранённой копии в том же списке и со своим сообщением
+          в обычном канале.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Все три сообщения написаны одним аккаунтом (<code>user_id</code> сверен
+        с <code>/auth/me</code>).</p>
+      <pre>заметка в Saved Messages
+  Add reaction | Forward | Copy text | Pin message | Delete | Share
+
+сохранённая копия в том же списке
+  Add reaction | Reply | Forward | Copy text | Pin message | Edit | Delete | Share
+
+собственное сообщение в обычном канале
+  Add reaction | Reply | Forward | Copy text | Seen by 1 | Save | Edit |
+  Hide for me | Share</pre>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Своё сообщение правится там же, где написано: у заметки в
+        <code>Saved Messages</code> есть <code>Edit</code>, как и у любого другого
+        своего сообщения.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>У заметки, написанной в <code>Saved Messages</code>, есть <code>Edit</code>,
+          и правка сохраняется.</li>
+        <li>У сохранённой копии меню не изменилось.</li>
+        <li>В обычном канале меню своего сообщения не изменилось.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] В <code>Channel details</code> не видно предела длины <code>Name</code> и <code>Topic</code>, а ошибка не говорит, что не так</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Владелец канала правит имя и тему в <code>Channel details → About</code>.
+        Ни у одного поля нет ограничения ввода, счётчика символов или подсказки
+        о пределе — набрать можно сколько угодно. Предел обнаруживается только
+        после <code>Save</code>, и сообщение не называет ни поле, ни число, хотя
+        сервер называет и то, и другое. Подобрать длину можно только перебором.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Channel details → About</code> в своём канале.</li>
+        <li>Вставить в <code>Topic</code> текст длиннее 256 символов
+          (или в <code>Name</code> длиннее 128) и нажать <code>Save</code>.</li>
+        <li>Контроль: открыть <code>Add channel</code> и вставить в поле имени тот же
+          длинный текст — ввод обрезается по пределу и рядом виден счётчик.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>Topic, 256 символов
+  PATCH /api/v1/channels/&lt;ch&gt; → 200
+  на экране: "Channel details saved"
+
+Topic, 257 символов
+  PATCH /api/v1/channels/&lt;ch&gt; → 400
+  {"code":400,"key":"COMMON_INVALID_INPUT",
+   "message":"invalid request body: description (too long (max 256))",
+   "trace_id":"…"}
+  на экране: "Could not update channel details."
+             "Check the entered information and try again."
+
+Name, 300 символов
+  PATCH /api/v1/channels/&lt;ch&gt; → 400
+  {"code":400,"key":"COMMON_INVALID_INPUT",
+   "message":"invalid request body: name (too long (max 128))","trace_id":"…"}
+  на экране: ровно те же две строки
+
+атрибуты полей: input maxlength = null, textarea maxlength = null,
+                aria-describedby = null, текста рядом с полями нет
+
+КОНТРОЛЬ — диалог создания канала, то же поле имени
+  вставлено 312 символов → в поле осталось 128
+  под полем счётчик: "128/128"
+  создание прошло, 200</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Ответ сервера называет и поле, и предел; на экран выводится одна и та же
+        общая пара строк независимо от того, какое поле не прошло проверку.
+        Нужное поведение в продукте уже есть — диалог создания канала обрезает ввод
+        по пределу и показывает счётчик; до панели редактирования оно не доехало.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Предел виден до отправки — счётчиком или ограничением ввода, — а если запрос
+        всё же отклонён, сообщение называет поле и предел.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>В <code>Topic</code> нельзя набрать больше предела, либо счётчик показывает,
+          сколько осталось — как в диалоге создания канала.</li>
+        <li>При отклонении сообщение называет поле и число.</li>
+        <li>Сохранение имени и темы в пределах лимитов работает по-прежнему.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] <code>Dismiss preview</code> убирает карточку ссылки только до следующего показа канала</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Под сообщением со ссылкой рисуется карточка предпросмотра, и у сообщения
+        есть кнопка <code>Dismiss preview</code>. Нажатие убирает карточку, но нигде
+        этого не сохраняет: достаточно перейти в другой канал и вернуться, чтобы
+        карточка оказалась на месте. Пользователь считает, что убрал её, и каждый раз
+        обнаруживает снова.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Отправить в канал сообщение со ссылкой на внешний сайт.</li>
+        <li>Навести курсор на сообщение и нажать <code>Dismiss preview</code>.</li>
+        <li>Перейти в другой канал и вернуться обратно.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>исходно                       ссылок в сообщении 2, карточка "External link" есть
+Dismiss preview               ссылок 1, карточки нет
+                              запросов к /api/v1/ (кроме GET): []
+                              записей в localStorage: []
+переход в другой канал и назад  ссылок 2, карточка снова есть
+Dismiss preview (второй раз)    ссылок 1, карточки нет
+
+область действия проверена отдельно — два сообщения со ссылками рядом:
+  до:                A ссылок 2, карточка есть   B ссылок 2, карточка есть
+  Dismiss у A:       A ссылок 1, карточки нет    B ссылок 2, карточка есть
+то есть скрывается ровно одна карточка, а не все — не сохраняется только выбор
+перезагрузка страницы           ссылок 2, карточка снова есть</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>При нажатии не уходит ни одного запроса, кроме GET, и не появляется ни одной
+        записи в localStorage — состояние живёт только в памяти текущего показа канала.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Убранная карточка остаётся убранной — как минимум для того, кто её убрал,
+        и после возврата в канал и перезагрузки.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>После <code>Dismiss preview</code> и возврата в канал карточки нет.</li>
+        <li>После перезагрузки страницы карточки по-прежнему нет.</li>
+        <li>У других сообщений со ссылками карточки остаются на месте.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Команда <code>/me</code>, выбранная из меню, не применяется — в канал уходит текст «<code>/me …</code>»</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В композере есть меню команд: набор <code>/</code> открывает список.
+        Пункт <code>/me</code> подписан «Send action message», но при выборе
+        из списка в композере остаётся буквальный текст <code>/me</code>. Пользователь
+        дописывает действие, нажимает <code>Send</code> — и в канал уходит сообщение,
+        начинающееся с <code>/me</code>. Соседний пункт того же меню,
+        <code>/shrug</code>, применяется правильно.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В композере набрать <code>/</code> и выбрать <code>/me</code> из списка.</li>
+        <li>Дописать текст действия и нажать кнопку <code>Send</code>.</li>
+        <li>Контроль: то же самое с пунктом <code>/shrug</code> из того же списка.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Команда остаётся в тексте сообщения; контрольная команда — нет.</p>
+      <pre>выбрано «/me — Send action message»
+  композер сразу после выбора:  "/me"          ← команда не поглощена
+  дописано:                     "/me PS1 waves"
+  POST /api/v1/messaging/messages  {"body":"/me PS1 waves", …}
+  в ленте:  &lt;автор&gt;, 19:04   /me PS1 waves
+
+ВТОРОЙ КОНТРОЛЬ — та же команда, но НАБРАНА целиком, из списка ничего не выбрано
+  набрано:                      "/me QA-METYPED waves at everyone"
+  Enter:                        композер → "&lt;имя автора&gt; QA-METYPED waves at everyone"
+                                команда применена, хвост сохранён, сообщение НЕ отправлено
+  второй Enter:                 отправлено, сохранено "&lt;имя автора&gt; QA\-METYPED waves…"
+  то есть набранная команда работает, а выбранная из меню — нет
+
+КОНТРОЛЬ — выбрано «/shrug — Insert shrug emoticon»
+  композер сразу после выбора:  "¯\_(ツ)_/¯"    ← команда поглощена
+  дописано:                     "¯\_(ツ)_/¯ PS2"
+  POST {"body":"¯\\\_\(ツ\)\_/¯ PS2", …}
+  в ленте:  &lt;автор&gt;, 19:04   ¯\_(ツ)_/¯ PS2</pre>
+      <p>Набранная целиком команда раскрывается — но только по клавише, и не
+        отправляет: первый Enter превращает содержимое композера в
+        «<code>&lt;Имя автора&gt; PS1 waves</code>», запроса при этом нет, отправляет
+        уже второй. Само раскрытие при этом работает как задумано: при включённом
+        <code>Markdown formatting</code> уходит <code>*&lt;Имя автора&gt; …*</code>
+        и сообщение отрисовывается курсивом. Ломается именно выбор из меню — там
+        команда остаётся в тексте, и это одинаково в обоих режимах.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>В <code>composer/utils/slashCommands.ts</code> сборщик <code>/me</code>
+        при пустом действии возвращает пустую вставку и не трогает композер:
+        <code>if (displayName === null || action.length === 0) return { text: '',
+        replaceComposer: false }</code> (строки 27–29). Выбор из меню происходит
+        до того, как действие набрано, поэтому в композере остаётся исходный
+        <code>/me</code>. У <code>/shrug</code> такой ветки нет — он подставляется
+        сразу.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Выбранная из меню команда применяется одинаково при отправке и кнопкой,
+        и клавишей, а её текст в сообщение не попадает.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li><code>/me</code> из меню + <code>Send</code>: в канале нет подстроки
+          <code>/me</code>.</li>
+        <li><code>/me</code> из меню + Enter: команда раскрывается и не остаётся в тексте.</li>
+        <li><code>/shrug</code> из меню продолжает работать по обоим путям.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Набранная целиком команда-эмотикон по Enter стирает всё, что набрано после неё</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Если команду не выбирать из списка, а набрать целиком вместе с текстом
+        сообщения, Enter заменяет всё содержимое композера одним эмотиконом.
+        Набранный текст пропадает без предупреждения, и сообщение при этом
+        не отправляется — нужен второй Enter, который отправит уже только эмотикон.
+        Так ведут себя три команды из четырёх: <code>/shrug</code>,
+        <code>/tableflip</code> и <code>/unflip</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В пустом композере набрать целиком <code>/shrug</code>, пробел
+          и любой текст — из выпадающего списка ничего не выбирать.</li>
+        <li>Нажать Enter.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>набрано "/shrug LOSS1 please review"
+  Enter #1 → композер "¯\_(ツ)_/¯"   ← "LOSS1 please review" потеряно, запроса нет
+  Enter #2 → POST {"body":"¯\\\_\(ツ\)\_/¯"}
+
+то же для остальных команд, один прогон подряд:
+  "/shrug QA-TAIL1"      → "¯\_(ツ)_/¯"         хвост потерян
+  "/tableflip QA-TAIL2"  → "(╯°□°)╯︵ ┻━┻"       хвост потерян
+  "/unflip QA-TAIL3"     → "┬─┬ ノ( ゜-゜ノ)"      хвост потерян
+  "/me QA-TAIL4"         → "&lt;Имя автора&gt; QA-TAIL4"  хвост СОХРАНЁН</pre>
+      <p>Тот же <code>/shrug</code>, выбранный из списка, текст не трогает: команда
+        заменяется эмотиконом на месте, а дописанное после сохраняется и уходит
+        вместе с ним.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>В <code>composer/utils/slashCommands.ts</code> у <code>/me</code> сборщик
+        читает свой аргумент — <code>build: (matchString) =&gt; { const action =
+        matchString.replace(/^me\s*/, '').trim() … }</code> (строка 24), — а у трёх
+        эмотиконов он объявлен без параметров: <code>build: () =&gt; ({ text: '…' })</code>
+        (строки 40, 46, 52). Набранное после команды входит в совпадение, но в сборщик
+        не попадает, поэтому заменяется целиком.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Команда заменяется эмотиконом на своём месте, остальной текст сохраняется,
+        и сообщение уходит тем же нажатием, что и любое другое.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li><code>/shrug</code> с текстом, набранный целиком: текст на месте,
+          сообщение ушло с первого Enter.</li>
+        <li>То же для <code>/tableflip</code> и <code>/unflip</code>.</li>
+        <li>Выбор команды из списка по-прежнему работает — без регрессии.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Напечатанное <code>@имя</code> выглядит как упоминание, но упоминанием не отправляется</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Если набрать <code>@имя</code> руками и не выбирать человека из выпадающего
+        списка, отправленное сообщение выглядит как обычное упоминание: та же цветная
+        кликабельная плашка с именем. Но упоминанием оно не является — получателю
+        приходит «New channel message» вместо «You were mentioned», и на странице
+        <code>Mentions</code> сообщения нет. Ни отправитель, ни получатель этого
+        не видят: на экране два случая неразличимы. Причём распознать человека клиент
+        умеет: набранный в другом регистре handle плашка всё равно подставляет с его
+        именем — а <code>mention_user_ids</code> при отправке остаётся пустым.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В канале набрать <code>@</code> и полный handle участника, затем пробел
+          и любой текст — из выпадающего списка ничего не выбирать. Отправить.</li>
+        <li>Контроль: тем же способом набрать <code>@</code>, но участника
+          <b>выбрать</b> из списка, дописать текст и отправить.</li>
+        <li>Сравнить оба сообщения на экране, уведомления получателя и его страницу
+          <code>Mentions</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Запросы на отправку различаются одним полем, отрисовка — ничем.</p>
+      <pre>POST /api/v1/messaging/messages
+  набрано:  {"channel_id":"&lt;ch&gt;","body":"@&lt;username&gt; MANUAL","idempotency_key":"…"}
+  выбрано:  {"channel_id":"&lt;ch&gt;","body":"@&lt;username&gt; PICKED",
+             "mention_user_ids":["&lt;user&gt;"],"idempotency_key":"…"}
+
+отрисовка обоих в одной ленте
+  MANUAL  BUTTON data-mention-user-id=&lt;user&gt; "@&lt;имя&gt;" color rgb(27,66,184) bg rgb(245,247,250)
+  PICKED  BUTTON data-mention-user-id=&lt;user&gt; "@&lt;имя&gt;" color rgb(27,66,184) bg rgb(245,247,250)
+
+уведомления получателя
+  MANUAL  {"type":1,"title":"New channel message","body":"@&lt;username&gt; MANUAL"}
+  PICKED  {"type":2,"title":"You were mentioned","body":"@&lt;username&gt; PICKED"}
+
+страница Mentions получателя, «All (8)»
+  самая свежая запись — PICKED; ни одной записи MANUAL
+
+плашку рисует что угодно после @ — четыре набранных вручную варианта,
+у всех mention_ids = 0:
+  @&lt;существующий handle&gt;      плашка "@&lt;имя человека&gt;"
+  @no_such_person_xyz         плашка "@no_such_person_xyz"   человека нет вовсе
+  @&lt;ТОТ ЖЕ HANDLE ЗАГЛАВНЫМИ&gt; плашка "@&lt;имя человека&gt;"    имя РАСПОЗНАНО
+  @&lt;обрезанный handle&gt;        плашка "@&lt;обрезанный handle&gt;"</pre>
+      <p>Так же отрисовывается <code>@handle</code> человека, которого в канале нет
+        и которого выпадающий список не предлагает.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Две половины клиента расходятся. Отправка берёт адресатов только из плашек
+        редактора — <code>packages/features/chat/ui-web/hooks/useComposer.ts:364</code>,
+        <code>collectMentionUserIds(submission.mentions, range)</code>; у набранного
+        текста таких узлов нет, поэтому поля <code>mention_user_ids</code> в запросе
+        не появляется. Отрисовка же разбирает текст тела и делает плашку из любого
+        совпадения — <code>packages/ui-kit-web/src/markdown/remarkAloqaMentions.ts:7</code>,
+        <code>/(^|[\s(\[{])@([a-z0-9_]+(?:[.-][a-z0-9_]+)*)/giu</code>, — не сверяясь
+        с <code>mention_ids</code> сообщения.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Отрисовка и отправка говорят об одном и том же. Либо набранный handle
+        становится настоящим упоминанием, либо он остаётся обычным текстом и плашкой
+        не оформляется — но сообщение не должно выглядеть как упоминание, не будучи им.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Набранный handle и выбранный из списка дают одинаковый результат:
+          либо оба уведомляют и попадают в <code>Mentions</code>, либо набранный
+          не оформляется плашкой.</li>
+        <li><code>@handle</code> человека, которого нет в канале, и вовсе несуществующий
+          handle не выдают себя за упоминание.</li>
+        <li>Handle, набранный в другом регистре, ведёт себя так же, как набранный точно:
+          либо и он становится упоминанием, либо плашка не подставляет имя человека.</li>
+        <li>Выбор из списка по-прежнему отправляет <code>mention_user_ids</code>
+          и уведомляет — без регрессии.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
+    <h2>[BE][CHAT] Состояние приглушения не отдаётся сервером: на другом устройстве канал показан обычным, хотя уведомления не приходят</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Приглушив канал на одном устройстве, на другом устройстве того же аккаунта
+        пользователь видит канал обычным — кнопка предлагает <code>Mute
+        notifications</code>. Уведомления при этом не приходят: на сервере приглушение
+        действует. Человек видит молчащий канал, который, судя по интерфейсу,
+        не приглушён, и снять приглушение может только приглушив канал заново
+        и нажав <code>Unmute</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Приглушить канал: <code>Mute notifications</code> → <code>For 1 hour</code>.</li>
+        <li>Открыть тот же канал под тем же аккаунтом в другом браузере
+          (свои cookie и localStorage) и посмотреть на кнопку в шапке.</li>
+        <li>Прислать в канал обычное сообщение от другого участника и подождать.</li>
+        <li>Контроль, что приглушение действительно применено на сервере: запрос
+          <code>POST …/notifications/channels/&lt;id&gt;/mute</code> отвечает <code>200</code>,
+          а снять приглушение удаётся только запросом <code>DELETE</code> на ту же ручку.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Второе устройство показывает канал неприглушённым и не получает уведомлений.</p>
+      <pre>устройство 1 — Mute notifications → For 1 hour
+  POST /api/v1/notifications/channels/&lt;ch&gt;/mute {"duration_seconds":3600} → 200 {"ok":true}
+  кнопка: Unmute notifications, aria-pressed=true
+  localStorage aloqa.channel.mute:
+    {"state":{"mutedByChannel":{"&lt;ch&gt;":1787755309836}},"version":1}
+
+устройство 2, тот же аккаунт и канал
+  кнопка: Mute notifications, aria-pressed=false
+  localStorage aloqa.channel.mute: null
+  прислано обычное сообщение, опрос 28 проб за 28 с
+  (document.visibilityState=visible во всех пробах):
+    total 30 → 30, ни одного нового уведомления
+
+контроль на устройстве 2 — приглушить заново и нажать Unmute
+  DELETE /api/v1/notifications/channels/&lt;ch&gt;/mute
+  такое же сообщение, опрос 23 пробы за 23 с:
+    total 30 → 31, {"type":1,"title":"New channel message",…}</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>То же самое и с приглушением личной переписки: тот же запрос
+        <code>POST …/notifications/channels/&lt;id&gt;/mute</code> и та же запись
+        в localStorage, ключом по id переписки; на втором устройстве переписка
+        показана обычной.</p>
+      <p>Состояние приглушения сервер наружу не отдаёт. Ручка принимает POST и DELETE,
+        а на GET отвечает <code>{"code":405,"key":"COMMON_METHOD_NOT_ALLOWED"}</code>;
+        в объекте канала в <code>GET /api/v1/workspaces/&lt;ws&gt;/channels</code>
+        соответствующего поля нет — ключи <code>id, name, type, workspace_id,
+        created_by, created_at, updated_at, last_activity_at</code>. Единственная копия
+        состояния — запись <code>aloqa.channel.mute</code> в localStorage того браузера,
+        который приглушал, так что узнать актуальное состояние клиенту неоткуда.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Приглушение принадлежит аккаунту, а не браузеру: на любом устройстве канал
+        показан приглушённым и снять приглушение можно одним действием.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Приглушение, сделанное на одном устройстве, видно на другом сразу после
+          загрузки канала — и для канала, и для личной переписки.</li>
+        <li><code>Unmute</code> на втором устройстве доступен без повторного
+          приглушения.</li>
+        <li>Приглушение с ограниченным сроком само истекает на обоих устройствах,
+          и после этого уведомления снова приходят.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Панель Channel details, открытая с клавиатуры, остаётся практически недостижимой</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Нажатие Enter на кнопке <code>Channel details</code> открывает панель, но фокус
+        остаётся на самой кнопке. Дальше Tab уходит не в открытую панель, а в ленту
+        сообщений и перебирает действия каждого сообщения по очереди. В канале с историей
+        до содержимого панели вперёд не добраться: число нажатий растёт вместе с числом
+        отрисованных сообщений.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал с историей и поставить фокус на кнопку
+          <code>Channel details</code>.</li>
+        <li>Нажать Enter — панель открывается.</li>
+        <li>Нажимать Tab и смотреть, куда попадает фокус.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Панель определялась как наименьший элемент, содержащий все <code>[role=tab]</code>
+        и кнопку <code>Close channel details</code>; попадание проверялось через
+        <code>panel.contains(document.activeElement)</code>.</p>
+      <pre>канал с ~15 отрисованными сообщениями
+  сразу после Enter: фокус на "Channel details",
+                     panel.contains(active) = false
+  Tab вперёд: панель достигнута на 119-м нажатии
+  путь: Messages → Open профиль → Add reaction → Reply → Forward →
+        Copy text → Save → More actions → (следующее сообщение) → …
+
+канал с 64 отрисованными сообщениями
+  Tab вперёд: за 200 нажатий панель НЕ достигнута
+  Shift+Tab назад: достигнута на 36-м, фокус на "Leave channel"
+
+Escape при этом работает правильно: панель закрывается, фокус на кнопке-триггере.
+То есть чинить нужно только момент открытия — закрытие уже ведёт себя как надо.</pre>
+      <p>Фокус-кольцо при этом видно у всех элементов обхода, а Escape панель закрывает.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Сразу после открытия <code>panel.contains(document.activeElement)</code> равно
+        <code>false</code> — панель не забирает фокус. Обратный обход показывает, что
+        в порядке обхода панель расположена раньше кнопки-триггера, а вперёд от кнопки
+        лежит вся лента сообщений.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Открытая панель забирает фокус на свой первый контрол, как это делает любое
+        всплывающее окно в приложении, и Tab дальше ходит по её содержимому.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Открыть <code>Channel details</code> с клавиатуры: фокус внутри панели.</li>
+        <li>Tab дальше перебирает контролы панели, а не ленту сообщений.</li>
+        <li>Escape закрывает панель и возвращает фокус на кнопку, с которой её открыли.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] При любой ошибке загрузки у вложения написано «сервер отклонил файл»</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Когда загрузка вложения не удаётся, под ним во всех случаях одна и та же надпись:
+        «The server rejected this file». Она появляется и при обрыве связи, когда запрос до сервера не дошёл,
+        и при ответе сервера 500, и при 413 «файл слишком велик» — то есть в том случае,
+        который человек мог бы исправить сам, выбрав файл поменьше. Вместо этого ему
+        сообщают, что файл отверг сервер. В продукте для этих случаев есть отдельные
+        формулировки, и ни одна не используется.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Прикрепить файл к сообщению в канале.</li>
+        <li>Сделать так, чтобы <code>POST …/files/upload</code> завершился ошибкой,
+          и отправить сообщение. Повторить для четырёх случаев: обрыв соединения,
+          «нет интернета», ответ 500, ответ 413.</li>
+        <li>Каждый раз читать надпись под вложением.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Разные отказы дают одну и ту же надпись, при том что тост рядом каждый раз называет верную причину. Проверено трижды:</p>
+      <pre>обрыв соединения   подпись  "The server rejected this file"
+                   тост     "Network error. Check your connection."
+ответ 500          подпись  "The server rejected this file"
+                   тост     "The file action could not be completed. Try again."
+ответ 413          подпись  "The server rejected this file"
+                   тост     "This file is larger than the allowed limit."
+
+отказ в каждом случае действительно внедрён — перехват сработал по одному разу
+рядом с подписью каждый раз ещё и "Could not send the message. Try again." </pre>
+      <p>Случай 413 показателен: сервер прямо называет причину, а человек её не узнаёт.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Нужные строки в продукте есть и не используются:
+        <code>chat.composer.attachments.error.network</code> — «Could not reach the server»,
+        <code>chat.composer.attachments.error.too_large</code> — «{filename} is too large»;
+        соответствие кодов и строк задано в
+        <code>packages/features/chat/ui-web/composer/AttachmentChip.tsx:29-30</code>, а сама
+        подпись берётся как <code>errorKeyByCode[attachment.errorCode ?? 'server']</code>
+        (там же, строка 56) — то есть «server» это запасной вариант при отсутствующем коде.
+        Почему код не доходит до чипа, я не устанавливал: транспорты загрузки
+        (<code>webXhrAdapter.ts</code>, <code>webLibraryUploadTransport.ts</code>) обрыв
+        обрабатывают правильно, как <code>network</code>.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Надпись соответствует тому, что произошло: при обрыве связи — про связь,
+        при слишком большом файле — про размер, «сервер отклонил файл» остаётся для
+        случая, когда сервер действительно ответил отказом.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Обрыв соединения: под вложением сказано про связь, а не про отказ сервера.</li>
+        <li>Ответ 413: сказано, что файл слишком велик, с именем файла.</li>
+        <li>Настоящий отказ сервера по-прежнему подписан «The server rejected this file».</li>
+        <li>Успешная загрузка проходит без предупреждений.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Неудачная отправка стирает набранное сообщение, а тост советует повторить</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Если сообщение не удалось отправить, композер очищается и набранный текст пропадает —
+        одинаково в канале, в личной переписке и в панели треда.
+        На экране при этом написано <code>Could not send the message. Try again</code> —
+        но повторять нечем: текст не сохраняется ни черновиком, ни через отмену
+        (<code>Cmd+Z</code>). Для короткой реплики это досадно, для длинной теряется вся
+        работа. Обрыв связи — самый частый повод для отказа и ровно тот случай, когда
+        повтор был бы уместен.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал или личную переписку и набрать в композере сообщение.</li>
+        <li>Сделать так, чтобы отправка не прошла — например, разорвать сеть, — и нажать
+          <code>Send</code>.</li>
+        <li>Посмотреть на композер.</li>
+        <li>То же самое без подмены запроса: ответить в треде архивного канала — панель
+          треда предлагает рабочий композер и <code>Send</code>, сервер отвечает
+          <code>403</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Композер пуст, набранное потеряно, а тост предлагает повторить отправку.</p>
+      <pre>обычный канал, отказ смоделирован перехватом запроса:
+
+обрыв сети   набрано "QA-FAILSEND-net"   &#8594; композер ""
+             "Could not send the message. Try again."
+             "Network error. Check your connection."
+ответ 500    набрано "QA-FAILSEND-500"   &#8594; композер ""
+             "Could not send the message. Try again."
+             "The service is temporarily unavailable. Try again…"
+ответ 403    набрано "QA-FAILSEND-403"   &#8594; композер ""
+             "Could not send the message. Try again."
+             "This channel is archived and cannot be changed."
+
+попытка вернуть текст:
+  набрано               "QA-UNDO-probe-long-message-body"
+  после отказа          ""
+  после Cmd+Z           ""
+  после второго Cmd+Z   ""
+  сообщения на сервере нет
+
+не зависит от поверхности — тот же отказ, тот же результат:
+  канал              набрано &#8594; композер ""
+  личная переписка   набрано &#8594; композер ""
+  панель треда       набрано &#8594; композер ""</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Узкая ответственная граница: ни в одном из случаев сообщения на сервере нет,
+        то есть текст существовал только на клиенте — и потеря целиком клиентская.
+        Набранное продукт вообще-то бережёт намеренно: черновик канала переживает и
+        переход в другой канал, и полную перезагрузку страницы, и возвращается дословно.
+        Правильное поведение есть и на соседнем пути того же
+        композера: при <b>правке</b> сообщения тот же отказ текст <b>сохраняет</b> —
+        <code>Save changes</code> → <code>PATCH</code> оборван → в композере по-прежнему
+        набранное, режим правки не сброшен, повтор возможен. Так же ведут себя и остальные
+        пути записи при том же отказе: поле переименования канала сохраняет набранное имя,
+        диалог пересылки остаётся открытым и называет неудавшийся адресат. Расходится
+        именно обработчик отправки, а не композер и не приложение в целом.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>После неудачной отправки набранный текст остаётся в композере, чтобы повтор был
+        возможен — ровно так, как предлагает сам тост.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Отказ по сети: текст остаётся в композере, повторное нажатие <code>Send</code>
+          отправляет его.</li>
+        <li>Успешная отправка по-прежнему очищает композер.</li>
+        <li>Сообщение с форматированием и с вложением после отказа сохраняется так же.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Композер предлагает выбрать файлы, которые затем отвергает как неподдерживаемые</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Диалог выбора файла в композере открывается с <code>accept</code>, куда входят
+        <code>image/*</code> и <code>text/*</code>, — то есть предлагает выбрать любую
+        картинку и любой текстовый файл. Проверка вложения при этом пользуется своим,
+        куда более коротким списком, и выбранный файл отвергается: «has an unsupported
+        file type», кнопка <code>Send</code> гаснет. Человек выбирает файл, который
+        приложение само ему и предложило. Для <code>.md</code> это особенно заметно:
+        в этой же сборке есть отрисовка Markdown-вложения прямо в сообщении.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал или личную переписку.</li>
+        <li>Приложить к сообщению картинку <code>.bmp</code> или текстовый файл
+          <code>.log</code> либо <code>.md</code> — диалог выбора их показывает.</li>
+        <li>Посмотреть на подпись под вложением и на кнопку <code>Send</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Вложение отклонено, отправка заблокирована.</p>
+      <pre>accept у поля выбора файла:
+  image/*, audio/*, text/*, .csv, .doc, .docx, .json, .pdf,
+  .ppt, .pptx, .rtf, .xls, .xlsx, .zip
+
+что происходит после выбора:
+  .bmp   (подпадает под image/*)   отвергнут, Send погашен
+  .log   (подпадает под text/*)    отвергнут, Send погашен
+  .md    (подпадает под text/*)    отвергнут, Send погашен
+  .txt                             принят
+  .zip                             принят
+  .xls                             принят
+
+подпись под отвергнутым вложением:
+  "&lt;имя&gt;.md has an unsupported file type"
+  271 &#215; 16 px, y = 902
+  произведение opacity по цепочке предков = 1
+  document.elementFromPoint в центре узла возвращает сам этот узел
+
+кнопка Send: disabled = true, клик не проходит, ни одного POST не уходит</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p><code>packages/features/chat/model/utils/attachmentValidation.ts:41-60</code> —
+        список композера <code>SUPPORTED_EXTENSIONS</code> перечислен поимённо
+        (<code>csv doc docx gif heic jpeg jpg json m4a mp3 ogg pdf png ppt pptx rtf txt
+        wav webm</code>…), тогда как <code>accept</code> у поля выбора задан категориями
+        <code>image/*</code> и <code>text/*</code>. Категория шире списка — отсюда
+        <code>errorCode: 'unsupported_type'</code> (строка 103) на файле, который диалог
+        предложил. Для <code>md</code> расхождение видно и внутри продукта: в разделе
+        <code>Files</code> список
+        <code>apps/web/src/features/files/utils/uploadValidation.ts:30-31, 105-107</code>
+        содержит <code>md</code>, <code>markdown</code> и <code>text/markdown</code>,
+        а отрисовщик Markdown-вложения в сообщении в сборке есть
+        (<code>apps/web/src/features/chat/MessageFileMarkdownCard.tsx</code>).</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Диалог выбора предлагает ровно то, что композер потом примет: либо список
+        расширений в <code>accept</code> совпадает с проверкой, либо проверка принимает
+        всё, что обещано категориями. Для <code>.md</code> — прикладывается и
+        показывается предпросмотром, как в остальном продукте.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Любой файл, который диалог выбора показал, композер принимает — проверить
+          на <code>.bmp</code>, <code>.log</code> и <code>.md</code>.</li>
+        <li><code>.txt</code>, <code>.csv</code>, <code>.zip</code> по-прежнему
+          прикладываются и отправляются.</li>
+        <li>Тип, которого нет ни в <code>accept</code>, ни в проверке, по-прежнему
+          отклоняется с той же подписью и с погашенным <code>Send</code>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Copy text копирует технический username вместо имени человека</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В сообщении с упоминанием на экране написано имя человека, а в буфер обмена
+        попадает его технический логин. Скопированный кусок переписки, вставленный
+        в другой чат или в документ, называет человека не так, как называет его само
+        приложение, и читателю приходится догадываться, кто это.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Отправить сообщение с упоминанием участника, выбрав его из подсказки
+          по <code>@</code>.</li>
+        <li>В меню этого сообщения нажать <code>Copy text</code> и вставить результат
+          куда-нибудь.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>на экране:        "@&lt;имя человека&gt;  QA-S2-COPYMENTION check"
+хранится:         "@&lt;username&gt;  QA\-S2\-COPYMENTION check"   mention_ids ["&lt;user&gt;"]
+в буфере обмена:  "@&lt;username&gt;  QA-S2-COPYMENTION check"
+
+сообщение с ДВУМЯ упоминаниями, оба выбраны из подсказки (mention_ids = 2):
+  хранится:         "@&lt;username1&gt;  @&lt;username2&gt;  QA\-LOW\-MULTI"
+  на экране:        "@&lt;имя1&gt; @&lt;имя2&gt; QA-LOW-MULTI"
+  в буфере обмена:  "@&lt;username1&gt;  @&lt;username2&gt;  QA-LOW-MULTI"
+то есть затрагивает каждое упоминание, а не одно; при этом экранирование
+из тела снято правильно — обрабатывать текст копирование умеет</pre>
+      <p>Обратные слэши при копировании снимаются правильно — не разворачивается
+        именно упоминание.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Текст в буфере получен из хранимого тела: экранирование снято, а
+        <code>@&lt;username&gt;</code> оставлен как есть, хотя в том же сообщении есть
+        <code>mention_ids</code>, по которым лента подставляет отображаемое имя.
+        Расхождение целиком в клиенте, на пути копирования.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>В буфер попадает тот же текст, который виден на экране, включая имя
+        упомянутого человека.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Скопировать сообщение с упоминанием: во вставленном тексте имя человека.</li>
+        <li>Сообщение с несколькими упоминаниями копируется целиком так же.</li>
+        <li>Сообщение без упоминаний и со спецсимволами копируется как раньше,
+          без обратных слэшей.</li>
+      </ul>
+    </div>
+  </article>
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT][A11Y] Озвучка нового сообщения читает служебное экранирование markdown</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>У ленты сообщений есть скрытая область, которая объявляет новое сообщение вслух
+        для программ чтения с экрана. В неё попадает тело сообщения в том виде, в каком
+        оно хранится, — с обратными слэшами перед дефисами и звёздочками. На экране то же
+        сообщение отрисовано чисто, поэтому расхождение слышно только тем, кто пользуется
+        озвучкой.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал и оставить его открытым.</li>
+        <li>С другого аккаунта отправить в этот канал сообщение с дефисами
+          и <code>**</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre>набрано в композере отправителем:
+  "QA-S2-V4B dash-dash **bold** _it_"
+ушло на сервер:
+  "QA\-S2\-V4B dash\-dash \*\*bold\*\* \_it\_"
+
+объявление у получателя (aria-live, sr-only, размер 1×1):
+  "New message from &lt;автор&gt;: QA\-S2\-V4B dash\-dash \*\*bold\*\* \_it\_"
+
+та же строка в ленте у него же:
+  "&lt;автор&gt;, 21:19   QA-S2-V4B dash-dash **bold** _it_"
+
+КОНТРОЛЬ — другое объявление в той же области aria-live:
+  "&lt;автор&gt; is typing…"     обратных слэшей нет
+то есть сама область объявлений исправна; сырым в неё уходит именно тело сообщения</pre>
+      <p>Слушатель услышит «QA обратный слэш дефис S2…» вместо текста сообщения.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Строка собирается в
+        <code>packages/features/chat/ui-web/hooks/useNewMessageAnnouncement.ts:85-87</code>
+        из тела, прогоняемого через <code>buildPreview</code>. Сам
+        <code>buildPreview</code> — строки 28–36 того же файла — только схлопывает
+        пробелы и обрезает по длине; снятия markdown-экранирования нет ни там,
+        ни на месте вызова, тогда как лента, панель треда, страница
+        <code>Saved Messages</code>, панель закреплённых и карточка пересылки
+        его снимают — пять поверхностей из семи делают это правильно.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Объявление читает тот же текст, который виден на экране, без служебных слэшей.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Получить сообщение с дефисами и <code>**</code>: объявление совпадает
+          с тем, что в ленте.</li>
+        <li>Сообщение без спецсимволов объявляется как раньше.</li>
+        <li>Собственное отправленное сообщение по-прежнему не объявляется.</li>
+        <li>Отдельно проверить цитату ответа в треде: там то же тело печатается
+          так же сырым. Независимость уже установлена: страницу
+          <code>Mentions</code> починили отдельным коммитом <code>2ab70fd07</code>,
+          затрагивающим только <code>widgets/Mentions/**</code> и входящим
+          в текущую сборку, — на эту поверхность он не распространился.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Список ролей канала печатает внутренний id роли отдельной строкой</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В <code>Channel details</code> на вкладке <code>Roles</code> под названием каждой
+        роли выводится её внутренний идентификатор — строка из пятнадцати символов вида
+        <code>R…</code>. Владельцу канала она ничего не говорит: это ключ записи в базе.
+        У системной роли канала, где описания нет, эта строка — единственное, что стоит
+        под названием, и занимает место, где ожидается пояснение, чем роль отличается
+        от остальных.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал, которым владеет текущий пользователь.</li>
+        <li>Открыть <code>Channel details</code>, перейти на вкладку <code>Roles</code>
+          и пролистать панель до списка ролей.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Под названием роли стоит отдельная строка с её идентификатором.</p>
+      <pre>текст блока строки роли:
+  "Channel owner
+   R**************"
+
+узел с идентификатором:
+  159 &#215; 20 px, y = 565 при высоте вьюпорта 1062
+  произведение opacity по цепочке предков = 1
+  document.elementFromPoint в центре узла возвращает сам этот узел
+  font-size 14.64px, color rgb(138, 149, 163)
+
+GET /channels/&lt;id&gt;/roles &#8594; 200
+  [{"id":"R**************","scope_type":"channel",
+    "name":"channel_owner_&lt;id&gt;","is_system":true,
+    "permissions":["channel.&lt;id&gt;.*"]}]
+  поля description в записи роли нет</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p><code>apps/web/src/features/settings/admin/company-roles/CompanyRoleDisplayRow.tsx:63-70</code>:
+        строка с описанием условная — <code>hasDescription ? … : null</code>, — а следующий
+        за ней <code>&lt;Text&gt;</code> с <code>{role.id}</code> печатается безусловно.
+        Поэтому идентификатор виден у каждой роли, а не только там, где описание пустое.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Под названием роли — её описание, а если описания нет, не выводится ничего.
+        Внутренний идентификатор на экран не попадает.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Роль без описания: под названием пусто, идентификатора нет.</li>
+        <li>Роль с описанием: показано описание.</li>
+        <li>Системная роль владельца канала по-прежнему помечена бейджем и остаётся
+          недоступной для редактирования и удаления.</li>
+      </ul>
+    </div>
+  </article>
+
+  <footer>Все находки относятся к веб-клиенту и проверены на сборке staging
+    <code>v0.61.0-rc.5</code>; ссылки на файлы и строки даны по коммиту
+    <code>c4b5386b4a3a</code>, которым собрана эта сборка. Каждая воспроизведена не менее двух раз, последний раз —
+    отдельным прогоном с чистой загрузки страницы уже после того, как была описана.</footer>
+</div>

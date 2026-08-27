@@ -1,0 +1,1574 @@
+<title>Права, которые ничего не открывают</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#f6f8f7; --surface:#ffffff; --ink:#16201f; --muted:#5c6a68;
+    --accent:#1f5f5b; --rule:#dbe3e1; --chip:#eef3f2;
+    --sev:#8a5710; --sev-bg:#fbf2e2; --sev-rule:#e8d2a8;
+    --area:#2b5578; --area-bg:#e9f0f6;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+      --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+      --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+      --area:#8fb6d8; --area-bg:#16232e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+    --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+    --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+    --area:#8fb6d8; --area-bg:#16232e;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.65; margin:0;
+    padding:clamp(28px,5vw,64px) clamp(18px,5vw,40px);
+  }
+  .wrap{max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:36px}
+  header{display:flex; flex-direction:column; gap:10px; border-bottom:2px solid var(--rule); padding-bottom:22px}
+  .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  h1{font-family:Spectral,Georgia,serif; font-weight:600; font-size:clamp(28px,4.4vw,40px);
+     line-height:1.18; margin:0; text-wrap:balance; letter-spacing:-.01em}
+  .lede{color:var(--muted); max-width:62ch; margin:0}
+  .summary{border-collapse:collapse; width:100%; font-size:14.5px}
+  .summary th{text-align:left; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+              color:var(--muted); font-weight:600; padding:0 12px 8px 0; border-bottom:1px solid var(--rule)}
+  .summary td{padding:11px 12px 11px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  .summary tr:last-child td{border-bottom:none}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{font-size:11.5px; font-weight:600; letter-spacing:.04em; padding:2.5px 8px; border-radius:3px;
+        white-space:nowrap; font-family:"IBM Plex Mono",monospace}
+  .sev{background:var(--sev-bg); color:var(--sev); border:1px solid var(--sev-rule)}
+  .area{background:var(--area-bg); color:var(--area); border:1px solid transparent}
+  article{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+          padding:clamp(20px,3.2vw,30px); display:flex; flex-direction:column; gap:16px}
+  article h2{font-family:Spectral,Georgia,serif; font-weight:600; font-size:21px; line-height:1.32;
+             margin:0; text-wrap:balance}
+  article p{margin:0; max-width:64ch}
+  h3{font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--muted);
+     font-weight:600; margin:0}
+  .block{display:flex; flex-direction:column; gap:8px}
+  pre{margin:0; background:var(--chip); border:1px solid var(--rule); border-radius:4px;
+      padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace;
+      font-size:13px; line-height:1.62; font-variant-numeric:tabular-nums}
+  ol,ul{margin:0; padding-left:20px; max-width:64ch}
+  li{margin-bottom:5px}
+  li::marker{color:var(--accent)}
+  kbd{font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--chip);
+      border:1px solid var(--rule); border-radius:3px; padding:1px 5px}
+  code{font-family:"IBM Plex Mono",monospace; font-size:13.5px; background:var(--chip);
+       border-radius:3px; padding:1px 4px}
+  .expect{border-left:3px solid var(--accent); padding:2px 0 2px 16px; display:flex;
+          flex-direction:column; gap:7px}
+  footer{color:var(--muted); font-size:13.5px; border-top:1px solid var(--rule); padding-top:18px}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">QA · Организация, права и настройки · 26 августа 2026 · второй проход</div>
+    <h1>Права, которые ничего не открывают</h1>
+    <p class="lede">Двадцать находок по разделам <code>Settings → Admin</code>, <code>Settings → Privacy &amp; security</code>,
+      <code>Settings → Sessions</code>, <code>Settings &#8594; Account</code>, <code>Settings &#8594; Profile</code>, <code>Settings &#8594; Appearance</code>, <code>Settings &#8594; About</code>, <code>Settings &#8594; Security</code>, <code>Settings &#8594; Notifications</code>, <code>Settings &#8594; Company</code> и странице создания компании. Проход был посвящён не экранам, а ролям: каждое право компании и workspace выдавалось
+      отдельной ролью по одному, и проверялось, что именно участник после этого может. Большинство прав открывают ровно то, что обещает их подпись &mdash;
+      из десяти прав компании таких шесть, &mdash; и на этом фоне видны три находки. Две из них на слое
+      компании: право, подписанное <code>View the company audit log</code>, не открывает журнал, который сервер его
+      обладателю отдаёт, а право создавать роли не открывает единственный экран, где роли создаются, хотя сервер роль
+      по его запросу создаёт. Третье на слое workspace: право приглашать открывает страницу, где неактивны все восемь
+      элементов создания. Каждая находка воспроизведена заново с нуля:
+      роль создавалась и назначалась повторно, страницы открывались с чистой загрузки.</p>
+    <p class="lede">Сборка: <code>v0.61.0-rc.5</code>. Ссылки на исходный код проверены на том коммите,
+      который развёрнут на стенде, а не в рабочем дереве.</p>
+  </header>
+
+  <table class="summary">
+    <thead><tr><th style="width:56%">Находка</th><th>Важность</th><th>Область</th></tr></thead>
+    <tbody>
+      <tr><td>Право приглашать в workspace открывает страницу, на которой неактивны все восемь элементов управления</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Право <code>View the company audit log</code> не открывает журнал аудита, хотя сервер отдаёт его обладателю</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Право создавать роли выдано, но экран, на котором роли создаются, не открывается</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Участнику с правом исключать предлагают удалить владельца компании — запрос отклоняется всегда</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Два элемента видимости присутствия противоречат друг другу, а подпись секции неверна для работающего</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Семь полей профиля и переключатель <code>Show timezone</code> обещают показать вас коллегам и ничего не показывают</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td><code>Sidebar position &rarr; Right</code> отмечается и сохраняется, но панель остаётся слева</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Пять настроек Appearance после перезагрузки возвращаются к значению по умолчанию, сохранив выбор пользователя</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Логотип компании заменяется в момент выбора файла — без кадрирования, подтверждения и возможности вернуть прежний</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Журнал аудита выводит служебные ключи событий и сырой JSON вместо описания произошедшего</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Блок хранилища подписан «My storage», хотя строкой ниже сказано, что хранилище общее</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Несохранённые изменения пропадают при переходе между разделами настроек, без предупреждения</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Второстепенный текст в настройках не дотягивает до контраста AA: 2.86:1 в светлой теме, 3.23:1 в тёмной</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Приглашение, отправленное без роли, выводится в списке как <code>Role unavailable</code></td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Подпись обещает, что приглашение можно принять в приложении — принять его там нельзя</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Сообщение об ошибке в <code>Notifications</code> называет условие и способ его снять неверно</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>При единственной сессии экран <code>Sessions</code> не предлагает ни одного действия</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Страница создания компании не содержит ни одного способа с неё уйти</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Четыре подзаголовка описывают содержимое, которого на странице нет</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>В узбекской локали месяц во всех датах выводится кодом <code>M08</code></td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+    </tbody>
+  </table>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Право приглашать в workspace открывает страницу, на которой неактивны все элементы управления</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Участнику выдано право <code>Invite members to the workspace (links and direct invitations)</code> и ничего больше. Раздел <code>Invites</code> появляется у него в навигации, страница открывается — но все восемь элементов обеих форм неактивны, и создать нельзя ни ссылку-приглашение, ни персональное приглашение. Неактивен в том числе флажок <code>Invite without a role</code>, которому роли не нужны вовсе. Право, выданное ровно для этой задачи, не даёт выполнить её ни одним способом.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти владельцем компании, открыть <code>Settings → Roles</code>, вкладка <code>Workspace roles</code>, и создать роль с единственным правом <code>Invite members to the workspace (links and direct invitations)</code>.</li>
+        <li>Назначить эту роль участнику без административных прав уровня компании (обычная роль участника на результат не влияет).</li>
+        <li>Войти этим участником в отдельном профиле браузера.</li>
+        <li>Открыть <code>Settings → Admin → Invites</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Все восемь элементов управления обеих форм создания неактивны — состояние устойчивое, перечислено повторно после четырёх опросов и на заново запущенном браузере. Страница объясняет это одной строкой про права на просмотр ролей. Сервер при этом то же самое действие разрешает. А кнопки у уже существующих приглашений, наоборот, активны — и не работают.</p>
+      <pre><code>элементы управления на странице, все disabled:
+  button   "Role"                       input[search]   "Search company members"
+  input    "Maximum uses"               input[checkbox] "&lt;получатель&gt;"
+  button   "Create invite link"         input[checkbox] "Invite without a role"
+                                        input[number]   "Expires in days (optional)"
+                                        button          "Send direct invites"
+на экране: "You need permission to view roles before assigning them."
+
+из той же сессии этого же участника:
+POST /api/v1/workspaces/invites {"workspace_id":"&lt;WS&gt;"}
+ -> 200 {"id":"&lt;ID&gt;","token":"&lt;TOKEN&gt;","workspace_id":"&lt;WS&gt;","used_count":0,
+         "role_ids":[],"status":"pending","expires_at":"2026-09-02T…","created_at":"2026-08-26T…"}
+
+Если в списке есть приглашения, у их строк появляются ДВЕ АКТИВНЫЕ кнопки:
+  button "Resend invite"   disabled=false
+  button "Revoke invite"   disabled=false
+нажатие Revoke invite (три прогона подряд, включая после полной перезагрузки):
+  запросов к API: ни одного
+  на экране:      "You need permission to view roles before assigning them."
+  приглашение:    по-прежнему status=pending, ничего не изменилось
+Сообщение говорит о назначении ролей, хотя пользователь отзывает приглашение.</code></pre>
+          </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Обе формы выключаются по признаку отказа в чтении ролей, а не по праву приглашать &mdash; и нужное правило записано прямо над строкой, которая его нарушает:</p>
+      <pre><code>apps/web/src/features/admin/AdminInvitesPanel.tsx:34
+    // ALK-2965: a role list that failed to load no longer disables the
+    // form. The backend accepts an invite with no roles, so a screen that
+    // cannot offer one still has an invite it can send.
+    isDisabled={panel.isMutating || panel.isRoleAccessDenied}          &lt;- строка 37
+
+apps/web/src/features/admin/AdminDirectInvitesPanel.tsx:92
+    isDisabled={isMutating || isRoleAccessDenied || isRoleError || isRoleLoading}</code></pre>
+      <p>Комментарий описывает ровно тот принцип, которого не хватает, и относится к случаю «список ролей не загрузился». Случай «читать роли не разрешено» остался в условии строкой ниже, и форма по-прежнему выключается целиком.</p>
+      <p>Приглашение без роли — штатный выбор этой же формы, и сервер его принимает: сгенерированный контракт для <code>POST /api/v1/workspaces/invites</code> гласит «Requires the <code>workspace.{workspace_id}.invite</code> permission. <code>role_ids</code> is optional: an empty list (or an absent field) creates an invite with no roles».</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Права приглашать достаточно, чтобы создать приглашение. Когда роли прочитать нельзя, недоступен только их выбор, а путь <code>Invite without a role</code> продолжает работать. Кнопки у существующих приглашений либо работают, либо неактивны — но не сообщают об ошибке, относящейся к другому действию.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Участник с единственным правом <code>Invite members to the workspace</code> создаёт ссылку-приглашение и отправляет персональное приглашение; приглашённый по нему входит в workspace.</li>
+        <li>Тот же участник, дополнительно получив <code>View workspace roles</code>, видит выбор ролей и пользуется им.</li>
+        <li>У владельца компании обе формы работают как прежде.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p><strong>ALK-2965</strong> (статус <code>TESTING</code>, то есть закрыта) описывает ровно этот сценарий, и её ожидаемый результат — «держатель права на приглашения открывает Invites и создаёт ссылку-приглашение и персональное приглашение; недоступные ему данные уровня компании не блокируют форму». Изменилось с тех пор одно: панель больше не показывает ошибки загрузки (<code>Could not load roles</code> с <code>Retry</code>, <code>Could not load all company members. Try again.</code>, <code>No company roles are available.</code>) — вместо них одна поясняющая строка. Форма при этом по-прежнему выключена целиком. То есть исправлена была половина про состояния ошибки, а не про доступность действия.</p>
+      <p>Рабочая связка проверена: если тому же участнику дополнительно выдать <code>View workspace roles</code> и не менять больше ничего, форма оживает целиком — активны выбор роли, поиск получателей, <code>Invite without a role</code> и оба поля; неактивными остаются только кнопки отправки, до выбора роли и получателя соответственно, что верно. То есть выбор фикса свободный: либо формы перестают зависеть от чтения ролей, либо зависимость видна там, где право выдают.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Право «View the company audit log» не открывает журнал аудита</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В списке прав роли есть право, подписанное <code>View the company audit log</code>. Его обладатель открывает <code>Settings → Admin → Audit log</code> и получает отказ <code>Admin access required</code>; самого пункта нет и в навигации. Сервер в это же время отдаёт ему журнал компании целиком. Право, названное именем экрана, этот экран не открывает — и то же самое у роли <code>Admin</code> уровня компании, которая несёт все права компании разом.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти владельцем компании, открыть <code>Settings → Roles</code>, вкладка <code>Company roles</code>, и создать роль с единственным правом <code>View the company audit log</code>. Назначить её участнику.</li>
+        <li>Убедиться, что права <code>audit.view</code> уровня workspace этому участнику не выдано — обычные права участника (<code>channel.create</code>, <code>channels.view</code>) на результат не влияют.</li>
+        <li>Войти этим участником в отдельном профиле браузера.</li>
+        <li>Открыть <code>Settings → Admin</code> и посмотреть состав группы <code>ADMIN</code>, затем открыть <code>…/settings/admin/audit-log</code> напрямую.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Страница показывает отказ и не содержит ни одного интерактивного элемента, а самого раздела в навигации нет. Два запроса из той же сессии расходятся между собой: журнал уровня компании сервер отдаёт, уровня workspace — нет.</p>
+      <pre><code>на экране: "Admin access required — You do not have permission to view the audit log.
+            A workspace owner or an administrator can grant this access."
+интерактивных элементов в области содержимого: 0
+
+СЛУЧАЙ 1 — выдано ровно одно право, company.&lt;CO&gt;.audit.view
+  права: company.&lt;CO&gt;.audit.view · company.&lt;CO&gt;.member.view
+         workspace.&lt;WS&gt;.channel.create · workspace.&lt;WS&gt;.channels.view
+  группа ADMIN в навигации: Company dashboard, Members        &lt;- Audit log отсутствует
+
+СЛУЧАЙ 2 — выдан весь wildcard компании, company.&lt;CO&gt;.*
+  права: company.&lt;CO&gt;.* · company.&lt;CO&gt;.member.view
+  группа ADMIN в навигации: Company dashboard, Members, Workspaces
+  Workspaces появился именно от wildcard — то есть wildcard в этой же группе работает,
+  а Audit log всё равно отсутствует, и страница выдаёт тот же отказ
+
+в обоих случаях, из той же сессии:
+GET /api/v1/companies/&lt;CO&gt;/admin/audit-log?limit=5   -> 200 {"entries":[{"id":"&lt;ID&gt;", …}]}  (5 записей)
+GET /api/v1/workspaces/&lt;WS&gt;/admin/audit-log?limit=5  -> 403 {"code":403,"key":"COMMON_PERMISSION_DENIED", …}
+
+СЛУЧАЙ 3 — выданы ВСЕ ДЕСЯТЬ прав компании поимённо, без wildcard
+  (workspace.create · role.get · role.manage · role.update · role.delete · member.view
+   member.kick · privacy.bypass · privacy.manage · audit.view)
+  группа ADMIN в навигации: Company dashboard, Members, Workspaces   &lt;- Audit log снова нет
+  страница журнала: отказ, интерактивных элементов 0
+  из той же сессии: GET /companies/&lt;CO&gt;/admin/audit-log -&gt; 200
+                    GET /workspaces/&lt;WS&gt;/admin/audit-log -&gt; 403
+  соседние разделы при этом открыты: Roles 38 элементов, Members 9, Workspaces 3
+То есть дело не в недостающем праве: их больше нет.
+
+КОНТРОЛЬ — то же действие audit.view, но выданное на слое workspace:
+  права: workspace.&lt;WS&gt;.audit.view
+  группа ADMIN в навигации: Company dashboard, Members, Audit log   &lt;- раздел появился
+  страница журнала: отказа нет, 4 элемента управления, 3 активны
+  GET /api/v1/workspaces/&lt;WS&gt;/admin/audit-log?limit=3 -> 200
+То же имя действия, другой слой — и всё работает. Раздел умеет открываться,
+просто спрашивает не про тот слой, на котором право выдано.</code></pre>
+      <p>Текст отказа при этом сообщает администратору компании, что доступ ему может выдать администратор.</p>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Признак доступа к разделу спрашивает только про слой workspace, поэтому право уровня компании открыть его не может:</p>
+      <pre><code>packages/features/admin/model/capabilities.ts:136
+    /**
+     * ALK-2997 / ALK-3167 — this read the authority flag and no permission at
+     * all, so it was UNDER-permissive: it refused even a workspace owner who
+     * did not also own the company, while the backend answered them 200.
+     *
+     * The rule is the backend's, quoted rather than guessed: super admin, the
+     * company owner, or the holder of `workspace.{wid}.audit.view`. …
+     * What is new is that reading the log can be delegated
+     * without also handing over the power to kick members and hand out roles.
+     */
+    const hasAuditLogSection =                                        &lt;- строка 148
+      hasElevatedAuthority ||
+      (workspaceId !== null &amp;&amp;
+        hasPermission({ action: 'audit.view', scopeId: workspaceId, scopeType: 'workspace' }))</code></pre>
+      <p>Комментарий называет и цель правки — «reading the log can be delegated», то есть чтение журнала должно делегироваться, — и способ: правило взято у бэкенда, «quoted rather than guessed». Но перечислено в нём только правило слоя workspace. Право <code>company.&lt;CO&gt;.audit.view</code> каталог прав выдаёт наравне с ним, и сервер по нему журнал компании отдаёт (200, см. выше) — в признак доступа оно не попало. Предыдущая правка чинила ровно эту же болезнь, названную в комментарии словом UNDER-permissive; для слоя компании она осталась.</p>
+      <p>Соседние разделы в том же файле спрашивают про свой слой: <code>Members</code> — про <code>member.view</code> и <code>member.kick</code> уровня компании, <code>Roles</code> — про <code>role.get</code> уровня компании, <code>Invites</code> — про <code>invite</code> уровня workspace. Раздел журнала аудита — единственный, который про слой компании не спрашивает вовсе.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Обладатель права <code>company.&lt;CO&gt;.audit.view</code>, в том числе полученного через wildcard <code>company.&lt;CO&gt;.*</code>, открывает журнал аудита и читает журнал компании, который сервер ему уже отдаёт.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Участник с ролью компании <code>Admin</code> видит <code>Audit log</code> в навигации, открывает его и читает записи.</li>
+        <li>Участник, у которого есть только право <code>audit.view</code> уровня workspace, по-прежнему открывает страницу — регрессии быть не должно.</li>
+        <li>Участник без обоих прав по-прежнему получает отказ, и текст отказа называет право, которого не хватает.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Признак доступа в его нынешнем виде <strong>появился в этой же, ещё не выпущенной сборке</strong>: коммит с правкой <code>ALK-2997</code> входит в диапазон <code>v0.60.0..v0.61.0-rc.5</code>, а последний стабильный релиз — <code>v0.60.0</code>. То есть слой компании можно добавить в то же условие до выпуска <code>v0.61.0</code>, пока правка ещё не разошлась.</p>
+      <p>Соседняя, но другая проблема: <strong>ALK-3535</strong> — та же страница, но про состав списка у владельца компании (события уровня компании в него не попадают), и другое место в коде — цель запроса, а не признак доступа. Исправление одной из них не закрывает вторую. <strong>ALK-2997</strong> (<code>TESTING</code>, то есть закрыта) — это администратор workspace, у которого доступ на этой сборке уже работает: её предусловия прямо оговаривают «User is not a company-level role holder», то есть ровно дополнение к описанному здесь случаю. И это не «страница ещё не сделана»: <code>ALK-3307</code> (Task, Backlog) описывает будущую страницу журнала уровня компании, но право <em>уже</em> в каталоге и <em>уже</em> предлагается в редакторе роли отдельным пунктом с этой подписью. Сегодня администратор может его выдать, получатель не получает ничего, и ни один экран об этом не сообщает. Существующая страница журнала при этом работает: то же действие <code>audit.view</code> на слое workspace открывает её полностью &mdash; значит подпись описывает рабочий экран, а не будущий. Закрывается любым из двух способов: признак доступа учитывает слой компании (журнал компании бэкенд уже отдаёт), либо право не предлагается, пока его некуда применить.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Право создавать роли выдано, но экран, на котором роли создаются, не открывается</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Право, подписанное в редакторе роли как <code>Create company roles and assign or revoke them for members</code>, выдаёт ровно то, что обещает: сервер создаёт роль по запросу его обладателя. Но единственный экран, на котором роли создаются, <code>Settings &rarr; Roles</code>, выдаёт ему отказ и не содержит ни одного элемента управления. Администратор выдал право, участник его получил, и воспользоваться им в интерфейсе нельзя ничем.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Создать роль уровня компании, отметив в ней только <code>Create company roles and assign or revoke them for members</code>.</li>
+        <li>Назначить её обычному участнику и войти под ним.</li>
+        <li>Открыть <code>Settings &rarr; Roles</code>, вкладка <code>Company roles</code>, и перечислить, что на странице есть.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Страница показывает отказ и ноль интерактивных элементов, а сервер при этом создаёт роль по запросу того же аккаунта в той же сессии. На слое workspace право с тем же смыслом ведёт себя так же, то есть дело не в конкретном слое, а в том, что экран управления ролями открывается по праву на <em>чтение</em>.</p>
+      <pre><code>на экране: "Admin access required — You do not have permission to view company roles.
+            A company owner or an administrator can grant this access."
+интерактивных элементов в области содержимого: 0
+
+права этого участника: company.&lt;CO&gt;.role.manage, company.&lt;CO&gt;.member.view
+
+из той же сессии:
+GET    /api/v1/companies/&lt;CO&gt;/roles   -> 403 {"key":"COMMON_PERMISSION_DENIED"}   (это role.get)
+POST   /api/v1/companies/&lt;CO&gt;/roles   -> 200 {"id":"&lt;ID&gt;","name":"…","scope_type":"company", …}
+DELETE /api/v1/companies/roles/&lt;ID&gt;   -> 403                                      (это role.delete)
+
+Контроль — те же права, выданные по одному, на том же экране:
+  workspace.create  -> в навигации ADMIN появляется Workspaces          работает
+  role.get          -> страница Roles открывается                       работает
+  member.view       -> Members отрисован, действий нет (только просмотр) работает
+  member.kick       -> Members отрисован и содержит 8 кнопок Remove     работает
+  role.manage       -> Roles: отказ, 0 элементов                        не работает
+
+То же самое на слое workspace. Право подписано «Manage workspace roles and assign them
+to members» и выдано как единственное:
+на экране: "You cannot view roles here — Managing roles in this workspace requires the
+            &ldquo;View workspace roles&rdquo; permission."
+интерактивных элементов: 0, строк в таблице: 0
+GET  /api/v1/workspaces/&lt;WS&gt;/roles -> 403
+POST /api/v1/workspaces/&lt;WS&gt;/roles -> 200   роль создана и видна владельцу</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Признак доступа к разделу спрашивает только про право <em>читать</em> роли, а про право их создавать не спрашивает вовсе:</p>
+      <pre><code>packages/features/admin/model/capabilities.ts:116
+  const hasRolesSection =
+    hasElevatedAuthority ||
+    (companyId !== null &&
+      hasPermission({ action: 'role.get', scopeId: companyId, scopeType: 'company' }))
+
+тремя строками выше — соседний раздел, сделанный правильно:
+packages/features/admin/model/capabilities.ts:111
+  const hasMembersSection =
+    hasElevatedAuthority ||
+    (companyId !== null &&
+      (hasPermission({ action: 'member.view', … }) ||
+        hasPermission({ action: 'member.kick', … })))</code></pre>
+      <p><code>Members</code> объединяет право смотреть и право действовать через <code>||</code> &mdash; поэтому <code>member.kick</code>, выданный в одиночку, открывает свой раздел. У <code>Roles</code> второго слагаемого нет, и <code>role.manage</code> не участвует в проверке. Текст отказа при этом верен &mdash; участник действительно не может просматривать роли, &mdash; и именно поэтому расхождение легко пропустить. Права <code>role.update</code> и <code>role.delete</code>, выданные по отдельности, упираются в тот же гейт.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Обладатель права на создание ролей может создать роль в интерфейсе. Либо, если форма без списка ролей не имеет смысла, зависимость видна там, где право выдают: отметка <code>Create company roles…</code> либо включает <code>View company roles</code>, либо прямо о ней предупреждает. То же для пары workspace-прав: <code>Manage workspace roles</code> и <code>View workspace roles</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Участник с одним правом <code>Create company roles and assign or revoke them for members</code> создаёт роль через интерфейс.</li>
+        <li>Он же назначает и отзывает роли участникам &mdash; вторая половина того же права.</li>
+        <li>Участник с правом <code>Manage workspace roles and assign them to members</code> доходит до вкладки <code>Workspace roles</code> и пользуется ею — тот же дефект есть на слое workspace, и чинить нужно оба.</li>
+        <li>Участник без прав на роли по-прежнему получает отказ, а владелец и администратор не теряют доступ к странице.</li>
+      </ul>
+    </div>
+  
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Связка, которая работает, проверена: если выдать <code>role.manage</code> <strong>вместе с</strong> <code>role.get</code>, страница открывается полностью &mdash; 28 элементов управления, форма создания роли со всеми флажками прав и активная кнопка <code>Create role</code>; <code>GET</code> и <code>POST</code> по ролям оба отвечают 200. То есть выбор фикса свободный: либо форма создания перестаёт зависеть от права на чтение, либо зависимость становится видна там, где право выдают. Отдельной задачи именно про это &mdash; что право не открывает свой экран &mdash; в проекте нет. <code>role.manage</code> в задачах встречается, но по другим поводам: <code>ALK-1898</code> и <code>ALK-1954</code> &mdash; про то, что это право <em>подписывалось</em> сырым ключом (на этой сборке уже не так: подпись «Create company roles and assign or revoke them for members», сырых ключей среди 20 прав каталога не осталось ни одного), а <code>ALK-1656</code> &mdash; это задача, которой признак доступа к администрированию и строился. То есть механизм заведён и работает для соседних разделов; здесь не закрыт один слой.</p>
+      <p><strong>И на этой же странице, соседней вкладкой, уже есть нужное поведение.</strong> Участник, у которого выдано только <code>role.get</code> уровня workspace, открывает вкладку <code>Workspace roles</code> и видит список ролей плюс прямую подсказку, чего именно ему не хватает:</p>
+      <pre><code>вкладка Workspace roles, держатель одного лишь workspace.&lt;WS&gt;.role.get:
+  "Managing roles for &lt;workspace&gt;
+   Create roles for this resource and grant them permissions.
+   Unavailable actions: Create role, Edit, Delete, Assign role, Remove role.
+   Ask an administrator for the required role permissions."
+  ниже — таблица ролей с их правами
+  GET /api/v1/workspaces/&lt;WS&gt;/roles -> 200 (3 роли)
+
+вкладка Company roles, держатель одного лишь company.&lt;CO&gt;.role.manage:
+  "Admin access required — You do not have permission to view company roles."
+  0 элементов управления, списка нет</code></pre>
+      <p>И ещё точнее: если выдать <code>role.manage</code> <em>на слое workspace</em> — ту же самую ситуацию, что описывает находка, — вкладка <code>Workspace roles</code> называет недостающее право прямо тем именем, под которым его выдают:</p>
+      <pre><code>держатель одного лишь workspace.&lt;WS&gt;.role.manage, вкладка Workspace roles:
+  "You cannot view roles here
+   Managing roles in this workspace requires the “View workspace roles” permission.
+   Ask a workspace or company administrator for access."
+
+тот же случай на слое компании, вкладка Company roles:
+  "Admin access required
+   You do not have permission to view company roles.
+   A company owner or an administrator can grant this access."</code></pre>
+      <p>Первый текст отвечает на то, что человек пытался сделать: «вы управляете ролями, для этого нужно право <code>View workspace roles</code>». Второй сообщает только, что просмотр недоступен, и связи с выданным правом не даёт. То есть продукт уже умеет и открывать раздел в урезанном виде, и называть недостающее право по имени &mdash; обе вкладки одной страницы это делают по-разному, и вкладка компании выбирает худший вариант.</p>
+      <p><strong>Этот же дефект уже чинили — на соседнем праве, и рассуждение осталось в коде.</strong> <code>ALK-3000</code> «Permission to remove company members cannot be used» описывает ровно ту же схему для <code>member.kick</code>: право выдано, экран требует права <em>читать</em> список, и воспользоваться выданным правом нельзя. Задача закрыта, и правка видна в том же файле, тремя строками выше нашей:</p>
+      <pre><code>packages/features/admin/model/capabilities.ts:105
+  // `member.kick` opens the section too (ALK-3000). Its holder was granted a
+  // company-member management right that has nowhere else to be used, and
+  // hiding the only surface that hosts it left the grant silently inert.
+  // The backend reads the roster for either grant (aloqa-backend PR 913);
+  // where it still refuses, the section states which grant is missing rather
+  // than concealing itself.</code></pre>
+      <p>«Право, которому больше негде примениться, при спрятанном экране остаётся молча неработающим» — это описание текущего состояния <code>role.manage</code>, написанное про <code>member.kick</code>. Тогда раздел научили открываться по любому из двух прав; у <code>Roles</code> второго слагаемого так и нет.</p>
+    </div>
+</article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Участнику с правом исключать предлагают удалить владельца компании</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Участнику с правом <code>Remove members from the company</code> страница <code>Members</code> показывает активную кнопку <code>Remove</code> в строке владельца компании. Диалог подтверждения обещает, что владелец потеряет доступ ко всем workspace компании, но запрос отклоняется всегда, а на экране появляется предложение повторить попытку — хотя повтор не сработает никогда. Собственная строка участника при этом заблокирована правильно, то есть механизм блокировки строки на этой странице уже есть.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти владельцем компании, открыть <code>Settings → Roles</code>, вкладка <code>Company roles</code>, и создать роль с единственным правом <code>Remove members from the company</code>.</li>
+        <li>Назначить эту роль участнику.</li>
+        <li>Войти этим участником и открыть <code>Settings → Admin → Members</code>.</li>
+        <li>Нажать <code>Remove</code> в строке владельца компании и подтвердить.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Состав участников не меняется, а причина отказа до пользователя не доходит: сервер называет её точно, экран заменяет её предложением повторить.</p>
+      <pre><code>строки таблицы: в строке владельца кнопка Remove активна
+                в собственной строке участника — disabled
+
+диалог: "Remove member — Remove &lt;владелец&gt; from the company?
+         They lose access to every workspace in this company."   [Cancel] [Remove member]
+
+подтверждение -> POST /api/v1/companies/kick -> 400
+  {"code":400,"key":"ORG_KICK_COMPANY_OWNER",
+   "message":"company owner cannot be kicked from the company","trace_id":"&lt;TRACE&gt;"}
+
+на экране: "Could not remove the member. Try again."
+состав участников после: не изменился, владелец на месте
+
+КОНТРОЛЬ — приложение умеет показывать конкретную причину, когда ключ ошибки распознан:
+  создать роль с уже занятым именем
+  POST /api/v1/companies/&lt;CO&gt;/roles -> 400
+    {"code":400,"key":"ORG_ROLE_NAME_TAKEN","message":"role with name … already exists in this scope"}
+  на экране: "A role with this name already exists here."
+То есть дело не в том, что ключи ошибок до интерфейса не доходят: для ORG_ROLE_NAME_TAKEN
+есть свой текст, а для ORG_KICK_COMPANY_OWNER показывается общий «Try again».</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Отказ постоянный и намеренный: <code>org-service/internal/features/v1/kick/service/kick_company.go</code> возвращает <code>ORG_KICK_COMPANY_OWNER</code>, и комментарий в этой же ветке называет именно данный случай — делегата с правом <code>company.{cid}.member.kick</code>, направленным на владельца. Данных, чтобы заблокировать строку, у страницы достаточно: при загрузке она запрашивает <code>GET /api/v1/companies/{id}</code>, и в ответе есть поле <code>owner</code> с идентификатором владельца.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>В строке владельца компании кнопка <code>Remove</code> неактивна и подписана причиной — так же, как это уже сделано для собственной строки участника. Если запрос всё же отклонён, показывается причина отказа, а не предложение повторить.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>В строке владельца компании кнопка <code>Remove</code> неактивна, и рядом сказано, почему.</li>
+        <li>Исключение обычного участника тем же правом по-прежнему работает.</li>
+        <li>Отказы <code>ORG_KICK_SELF</code>, <code>ORG_KICK_FORBIDDEN</code> и <code>ORG_COMPANY_NOT_MEMBER</code> показываются разным текстом, а не одним общим.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p><strong>ALK-2598</strong> (тип <code>Task</code>, <code>Backlog</code>) уже описывает обе половины этой задачи — и то, что кнопку не следует предлагать у владельца, и то, что отказы показываются одним общим текстом, — с указанием файла <code>apps/web/src/features/settings/admin/hooks/useAdminMembersSettingsPanel.ts</code>. Находка добавляет к ней только одно: на сборке <code>v0.61.0-rc.5</code> это по-прежнему воспроизводится, с измерением. Стоит объединить.</p>
+      <p>Тот же обобщённый текст встречается ещё в двух местах, и это делает правку общей, а не точечной. Если у участника отозвать право, пока он держит открытым журнал аудита, следующее нажатие <code>Next</code> получает <code>403 COMMON_PERMISSION_DENIED</code>, а на экране появляется пустая таблица с кнопкой <code>Retry</code> &mdash; без объяснения и без шанса, что повтор поможет; настоящая причина видна только после полной перезагрузки страницы (воспроизведено дважды). И <code>ALK-3126</code> описывает ровно эту же схему в звонках: «показывается общий 403 вместо причины запрета входа». Похоже, недостаёт одного общего правила: постоянный отказ не предлагает повтор и называет причину.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS] Два элемента видимости присутствия противоречат друг другу, а подпись секции неверна</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В секции <code>Settings → Privacy &amp; security → Visibility</code> два элемента управляют одним и тем же — кто видит, что вы сейчас активны. Список <code>Online status</code> не влияет ни на что: значение сохраняется, но другие участники продолжают видеть вас в сети. Переключатель <code>Show online status</code> тремя строками ниже работает по-настоящему. Подпись всей секции при этом сообщает, что не действует ни одна настройка из неё. У человека, который хочет скрыть присутствие, очевидный элемент молча не срабатывает, а работающий объявлен неподключённым.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings → Privacy &amp; security</code>, секция <code>Visibility</code>.</li>
+        <li>Поставить <code>Online status</code> в значение <code>Nobody</code>.</li>
+        <li>Вторым участником того же workspace, в отдельном профиле браузера, посмотреть присутствие первого.</li>
+        <li>Вернуть <code>Online status</code> в прежнее значение и выключить переключатель <code>Show online status</code>; повторить шаг 3.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Пять элементов идут подряд под одной подписью, без разделителя и без промежуточного заголовка: три списка и два переключателя. Результат у первого и последнего противоположный.</p>
+      <pre><code>подпись секции: "These preferences are saved, but they do not change what others can see yet."
+под ней:  Profile visibility / Online status / Last seen   — списки
+          Read receipts / Show online status               — переключатели
+
+Online status = Nobody
+  PUT /api/v1/auth/me/settings -> 200
+  сохранено и переживает перезагрузку: "online_visibility":"nobody", список показывает Nobody
+  переключатель Show online status при этом по-прежнему aria-checked="true"
+                                                             ← два элемента об одном и том же расходятся
+  у второго участника: {"user_id":"&lt;A&gt;","online":true}      ← без изменений
+
+Show online status = off  (обратное направление, отдельной проверкой с чистой загрузки)
+  список Online status на экране по-прежнему "Everyone"       ← расходятся и в эту сторону
+  auth/me: "online_visibility":"everyone"                      ← значение не менялось
+  PUT /api/v1/users/me/presence-settings/update -> 200
+  GET /api/v1/users/me/presence-settings -> {"hide_presence":true}
+  у второго участника: {"user_id":"&lt;A&gt;","online":false}     ← подействовало
+
+контроль: у третьего участника в тех же ответах online не менялся
+обратно:  переключатель включён -> у второго участника снова {"user_id":"&lt;A&gt;","online":true}
+
+список "Last seen" = Nobody, затем аккаунт уведён в офлайн
+  сохранено: "last_seen_visibility":"nobody"
+  у второго участника: {"user_id":"&lt;A&gt;","online":false,"last_seen_at":"2026-08-26T13:30:21Z"}
+                                                             ← время последнего визита по-прежнему видно</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Элементы пишут в разные хранилища: список — в <code>settings.privacy.online_visibility</code> на записи пользователя (<code>PUT /api/v1/auth/me/settings</code>), переключатель — в настройки присутствия (<code>PUT /api/v1/users/me/presence-settings/update</code>). В ответе <code>GET /api/v1/workspaces/{id}/presence</code>, из которого клиенты остальных участников рисуют присутствие, отражается только второе.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Оба элемента управляют одним состоянием видимости присутствия, а подпись секции относится только к тем настройкам, которые действительно ещё не подключены — это все три списка (<code>Profile visibility</code>, <code>Online status</code>, <code>Last seen</code>: каждый проверен, ни один не меняет того, что видит другой участник), но не переключатель, который работает.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li><code>Online status</code> в значении <code>Nobody</code> убирает пользователя из присутствия, которое видят остальные участники.</li>
+        <li>Изменение любого из двух элементов приводит второй в согласованное состояние.</li>
+        <li>Настройка переживает reload, и обратное переключение возвращает видимость.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Та же семья, что <strong>ALK-2964</strong> и <strong>ALK-2878</strong> (обе закрыты, <code>TESTING</code>), но другая пара элементов: там расходились <code>Active status</code> на экране <code>Profile</code> и <code>Show online status</code> на <code>Privacy &amp; security</code>, здесь — список и переключатель внутри одной секции. Направление исправления из ALK-2878 («связать оба элемента с одним authoritative presence setting») закрывает и этот случай, если применить его ко всем элементам присутствия, а не к той одной паре.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS] Семь полей профиля и переключатель <code>Show timezone</code> обещают показать вас коллегам и ничего не показывают</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Раздел <code>Settings &rarr; Account &rarr; Contact details</code> подписан &laquo;How your team can reach you outside chat.&raquo; и собирает <code>Phone</code>, <code>LinkedIn</code>, <code>GitHub</code>, <code>Website</code>. <code>Settings &rarr; Profile &rarr; Identity</code> собирает <code>Job title</code>, <code>Department</code> и <code>Pronouns</code>, а переключатель <code>Show timezone</code> обещает &laquo;Let teammates see your local timezone on your profile.&raquo; Все семь полей и переключатель сохраняются и переживают перезагрузку, но коллеге не видно ни одного из них. Человек заполняет профиль целиком и никак не может узнать, что для команды тот остался пустым.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В <code>Settings &rarr; Profile</code> заполнить <code>Job title</code>, <code>Department</code>, <code>Pronouns</code> и <code>Status message</code>, включить <code>Show timezone</code> и нажать <code>Save profile</code>. <code>Status message</code> нужен как контрольное поле: оно единственное из заполненных доходит до карточки.</li>
+        <li>В <code>Settings &rarr; Account</code> заполнить <code>Phone</code>, <code>LinkedIn</code>, <code>GitHub</code>, <code>Website</code> и нажать <code>Save changes</code>.</li>
+        <li>Перезагрузить страницу &mdash; все значения на месте.</li>
+        <li>Под другим аккаунтом того же workspace открыть карточку профиля первого: <code>Directories &rarr; People</code>, щёлкнуть по имени участника &mdash; карточка открывается по нажатию на имя, отдельной кнопки «профиль» в строке нет.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>В карточке профиля видны только имя и <code>Status message</code>. Ни одно из семи полей не появляется. Включённый <code>Show timezone</code> не меняет карточку вовсе &mdash; её текст совпадает с текстом до включения посимвольно.</p>
+      <pre><code>Сохранение работает:
+PUT /api/v1/users/me/status  -&gt; 200  {"text":"&hellip;","expires_at":null}
+PUT /api/v1/auth/me/settings -&gt; 200  {"privacy":{&hellip;},"profile":{"jobTitle":"&hellip;",
+                                      "pronouns":"&hellip;","department":"&hellip;","showTimezone":true},
+                                      "contacts":{"phone":"&hellip;","github":"&hellip;","website":"&hellip;","linkedin":"&hellip;"}}
+
+GET /api/v1/auth/me после перезагрузки — данные делятся надвое:
+  name             = "&hellip;"              <- верхний уровень
+  custom_status.text = "&hellip;"            <- верхний уровень
+  timezone         = "Asia/Tashkent"    <- верхний уровень
+  presence.online  = true               <- верхний уровень
+  settings.profile.jobTitle    = "&hellip;"
+  settings.profile.pronouns    = "&hellip;"
+  settings.profile.department  = "&hellip;"
+  settings.profile.showTimezone = true
+  settings.contacts.{phone,github,website,linkedin} = "&hellip;"
+
+Переключатель Show timezone, измеренный с двух сторон:
+  showTimezone = false -> в списке участников у этого пользователя поля timezone НЕТ
+  showTimezone = true  -> поле timezone появляется: "Asia/Tashkent"
+  контроль: у наблюдателя собственный timezone виден в обоих случаях
+  карточка профиля при этом не меняется ни на йоту — местного времени нет ни там, ни там
+
+Карточка профиля глазами другого участника workspace, чистая загрузка:
+  текст:   Имя | Имя | Status message | Message | Call | Block | Share
+           SHARED CHANNELS · 2 | два канала
+  кнопки:  Close profile, Message, Call, Block, Share, два канала
+  запросы: /users/&lt;user&gt;/status, /users/&lt;user&gt;/common-channels, /messaging/users/blocked
+
+Под другим аккаунтом ни один эндпоинт не отдаёт эти поля:
+GET /api/v1/users/&lt;user&gt;             -&gt; 404
+GET /api/v1/users/&lt;user&gt;/profile     -&gt; 404
+GET /api/v1/users/&lt;user&gt;/settings    -&gt; 404
+GET /api/v1/workspaces/&lt;ws&gt;/members  -&gt; 200; ключи участника: user_id, name, username,
+    is_guest, joined_at, custom_status, presence, timezone, roles — ни department, ни position</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Всё, что лежит под <code>settings.</code>, возвращается только владельцу и никому больше: <code>GET /api/v1/auth/me</code> отдаёт <code>contacts</code> и <code>profile</code> тому, чьи они, а ни один эндпоинт, доступный другому участнику, их не содержит &mdash; значит данные не теряются на клиенте, а вовсе не покидают сессию владельца. <code>Status message</code> виден именно потому, что у него отдельный эндпоинт <code>GET /api/v1/users/{id}/status</code>, который карточка запрашивает: карточка умеет показывать поле профиля, просто остальные семь до неё не доходят. С <code>showTimezone</code> ситуация другая и она сужает область правки: <strong>сервер этот переключатель соблюдает</strong>. При выключенном поле <code>timezone</code> в списке участников у этого пользователя <em>отсутствует</em>, при включённом &mdash; появляется (измерено обоими способами, см. блок выше). То есть данные до клиента доходят ровно тогда, когда пользователь это разрешил, и не доходят, когда запретил. Не хватает только отображения: при развёрнутом коммите ключ <code>showTimezone</code> встречается на web лишь в самом экране настроек (<code>apps/web/src/features/settings/ProfileAvailabilitySection.tsx:61-64</code> и <code>apps/web/src/features/settings/ProfileSettingsContent.tsx:39</code>) и в производных от него хуках и типах &mdash; ни один компонент карточки его не читает и местное время не считает.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Заполненные поля профиля видны коллегам там, где подписи разделов это обещают, а <code>Show timezone</code> действительно добавляет местное время в карточку. Либо, пока показывать их негде, подписи не обещают того, чего продукт не делает, и переключатель не предлагается.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Заполненные <code>Job title</code>, <code>Department</code>, <code>Pronouns</code> и четыре контакта видны другому участнику workspace в карточке профиля.</li>
+        <li>Включённый <code>Show timezone</code> добавляет в карточку местное время, выключенный &mdash; убирает.</li>
+        <li>Незаполненные поля не дают пустых строк и подписей без значений; владелец по-прежнему видит свои значения после перезагрузки.</li>
+      </ul>
+    </div>
+  
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Обе половины уже заводились и закрыты. <code>ALK-2801</code> &laquo;Local time отсутствует в профиле при включённом Show timezone&raquo; описывает переключатель тем же сценарием и тем же наблюдением &mdash; <code>timezone</code> приходит в <code>/workspaces/{workspaceId}/members</code>, а в карточке его нет; <code>ALK-2288</code> &mdash; та же тема со стороны backend. <code>ALK-618</code> &laquo;User Profile popup: enriched content&raquo; перечисляет, что карточка должна показывать: аватар, статус, ФИО, email, role / job title, общие каналы и местное время с кодом часового пояса. Все три в статусе <code>TESTING</code>, то есть закрыты. На сборке <code>v0.61.0-rc.5</code> в карточке есть имя, <code>Status message</code>, кнопки действий и общие каналы &mdash; ни email, ни job title, ни местного времени. <strong>Смежная находка того же дня, другой сектор:</strong> в отчёте по workspace описано, что в <code>Directories &rarr; People</code> все участники попадают в одну группу <code>OTHER</code>, а поиск по отделу и должности не находит никого. Корень общий &mdash; <code>department</code> и <code>jobTitle</code> не доходят до других пользователей, &mdash; но симптомы разные: там список и поиск в каталоге, здесь карточка профиля и все семь полей вместе с <code>Show timezone</code>. Чинить разумно вместе: как только поля начнут приходить в строке участника, закрываются обе.</p>
+    </div>
+</article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS] <code>Sidebar position &rarr; Right</code> отмечается и сохраняется, но панель остаётся слева</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В <code>Settings &rarr; Appearance</code> есть выбор <code>Sidebar position</code>: <code>Left</code> или <code>Right</code>. Вариант <code>Right</code> отмечается и переживает перезагрузку &mdash; состояние самого элемента полностью корректно, &mdash; но боковая панель не двигается: она остаётся на том же месте, что и при <code>Left</code>. Настройка выглядит применённой, не будучи применённой, и человеку нечем это заметить, кроме самой панели.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings &rarr; Appearance</code> и в <code>Sidebar position</code> выбрать <code>Right</code>.</li>
+        <li>Перейти в любой канал и посмотреть, где находится боковая панель.</li>
+        <li>Перезагрузить страницу &mdash; выбор сохранён, панель по-прежнему слева.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Панель остаётся слева, сразу за рельсом навигации, а <code>main</code> занимает всё пространство правее. Элемент управления при этом на чистой загрузке показывает именно <code>Right</code>.</p>
+      <pre><code>элемент на чистой загрузке:   Left=false, Right=true
+сохранено:                    "sidebarSide": "right"
+
+страница канала, ширина окна 1920:
+  nav  (рельс навигации)   x=0     right=72     w=72
+  aside (боковая панель)   x=72    right=372    w=300
+  main                     x=372   right=1920   w=1548
+  порядок: рельс &lt; панель &lt; main
+
+ожидалось при Right: панель у правого края (x ≈ 1620), main начинается с 72</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Настройки <code>Appearance</code> не уходят на сервер вовсе: переключение не порождает ни одного запроса к API, весь блок хранится в <code>localStorage</code> под ключом <code>aloqa.appearance</code>, а в <code>GET /api/v1/auth/me</code> раздела <code>appearance</code> нет (в <code>settings</code> только <code>privacy</code>, <code>profile</code>, <code>contacts</code>, <code>language</code>). Значит и запись, и применение целиком на клиенте, и потерять значение по дороге здесь негде &mdash; оно сохранено и прочитано верно. На этом же экране пять других настроек работают и восстанавливаются: <code>Density</code>, <code>Accent color</code>, <code>Light sidebar</code>, <code>Light navigation rail</code> и <code>Animations</code>.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>При <code>Right</code> боковая панель располагается у правого края окна, а основная область начинается сразу за рельсом навигации; <code>Left</code> возвращает прежнее расположение.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li><code>Right</code> переносит панель к правому краю, <code>Left</code> возвращает обратно.</li>
+        <li>Выбор сохраняется после перезагрузки и при переходах между каналами.</li>
+        <li>Свёрнутая и развёрнутая панель ведут себя одинаково в обоих положениях.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS] Пять настроек Appearance после перезагрузки возвращаются к значению по умолчанию, сохранив выбор пользователя</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В <code>Settings &rarr; Appearance</code> пять настроек &mdash; <code>Message layout</code>, <code>Show member roles</code>, <code>Link previews</code>, <code>Markdown preview panel</code>, <code>Animations</code> &mdash; переключаются, применяются и переживают переход между страницами, но после перезагрузки показывают значение по умолчанию. Выбранное при этом никуда не делось: оно лежит в хранилище нетронутым, то есть экран противоречит тому, что сам сохранил. Остальные настройки на том же экране перезагрузку переживают. У <code>Message layout</code> к этому добавляется вторая беда: пока он выбран, список сообщений не меняется вовсе.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings &rarr; Appearance</code>.</li>
+        <li>Изменить любую из пяти: <code>Message layout</code> на <code>Compact</code>, <code>Show member roles</code> / <code>Link previews</code> / <code>Animations</code> выключить, <code>Markdown preview panel</code> включить. Панель сохранения не появляется &mdash; настройка применяется сразу.</li>
+        <li>Перезагрузить страницу и посмотреть на те же элементы.</li>
+        <li>Для сравнения изменить <code>Density</code> или <code>Accent color</code> и снова перезагрузить.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Все пять ведут себя одинаково: элемент на экране откатывается, сохранённое значение остаётся выбранным пользователем. Настройки, которые перезагрузку переживают, при тех же действиях остаются на месте.</p>
+      <pre><code>Каждая настройка изменена, затем страница перезагружена:
+
+  настройка                 элемент до -> после клика   после перезагрузки   сохранено
+  Message layout            Standard   -> Compact       Standard             "compact"
+  Show member roles         вкл        -> выкл          вкл                  false
+  Link previews             вкл        -> выкл          вкл                  false
+  Markdown preview panel    выкл       -> вкл           выкл                 true
+  Animations                вкл        -> выкл          вкл                  false
+
+Контроль — те же действия с настройками, которые работают:
+  Density = Compact, Accent = #7c3aed, Sidebar tone, Rail tone, Theme
+  после перезагрузки элемент показывает выбранное, значение сохранено
+
+Хранилище после перезагрузки — запись целая, все 11 полей на месте:
+  {"theme":"light","density":"compact","accent":"#7c3aed","msgLayout":"compact",
+   "sidebarSide":"right","sidebarTone":"dark","railTone":"light","showRoles":true,
+   "linkPreviews":true,"markdownPreviewPanel":false,"animations":true}
+  ни один сетевой запрос при этом не уходит
+
+Отдельно, Message layout = Compact — строки сообщений до и после совпадают:
+  высота 63 / 38 / 38 px, padding 6px 20px / 1px 20px, gap 12px, шрифт 16px/24px
+  — посимвольно те же значения, что при Standard</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Отказывают ровно те настройки, у которых нет своей cookie. <code>apps/web/src/lib/cookieNames.ts:8-14</code> перечисляет шесть «оформительских» cookie (<code>theme</code>, <code>theme-resolved</code>, <code>density</code>, <code>accent</code>, <code>sidebar</code>, <code>sidebar-tone</code>, <code>rail-tone</code>) &mdash; это в точности список переживающих перезагрузку. Пять оставшихся живут только в общей записи в localStorage, и <code>resolveInitial</code> в <code>packages/core/src/preferences/utils/store.ts:44-66</code> называет их поимённо, предупреждая ровно об этом исходе: если при загрузке взять cookie-заготовку прежде localStorage, эти пять полей «snap to defaults on every cold boot». Наблюдается именно оно. Сама запись при этом читается и проходит проверку схемы (все 11 полей, значения допустимые), а запросов на сервер не уходит, так что значение теряется не при сохранении и не на бэкенде.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Настройка, применённая на экране, остаётся выбранной и после перезагрузки &mdash; так же, как тема, плотность и акцентный цвет. <code>Message layout</code> при этом действительно меняет вид списка сообщений.</p>
+    </div>
+
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Смежная находка того же дня в отчёте по workspace описывает то же самое на другой поверхности: свёрнутый сайдбар и режим списка с сортировкой в <code>Files</code> не переживают перезагрузку, притом что тема, плотность и акцент переживают. Набор настроек там другой (оболочка и <code>Files</code>, не <code>Settings &rarr; Appearance</code>), и в общей записи <code>aloqa.appearance</code> их нет &mdash; то есть механизм не тот же самый. Общее у находок одно и стоит того, чтобы смотреть их подряд: в приложении есть работающий способ сохранять предпочтения, и часть настроек к нему просто не подключена.</p>
+    </div>
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Каждая из пяти настроек сохраняет выбранное значение после перезагрузки и после повторного открытия приложения.</li>
+        <li>Настройки, работающие сейчас (тема, плотность, акцент, сторона и тон панелей), не теряют своего поведения.</li>
+        <li><code>Message layout</code> в положении <code>Compact</code> заметно меняет плотность списка сообщений.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][COMPANY] Логотип компании заменяется в момент выбора файла — без кадрирования, подтверждения и возможности вернуть прежний</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В <code>Settings &rarr; Company</code> нажатие <code>Upload image</code> и выбор файла меняют логотип компании немедленно: ни окна кадрирования, ни предпросмотра, ни кнопки сохранения, ни сообщения о том, что что-то произошло. Вернуть прежний логотип нечем &mdash; удаления нет ни на экране, ни в API, только замена другим файлом. Один промах в диалоге выбора файла необратимо меняет то, что видит вся компания. На соседнем экране, <code>Settings &rarr; Account</code>, тот же по смыслу шаг устроен ровно наоборот.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings &rarr; Company</code>, нажать <code>Upload image</code> и выбрать любую картинку.</li>
+        <li>Не нажимая больше ничего, посмотреть на аватар компании и на список запросов.</li>
+        <li>Для сравнения проделать то же самое в <code>Settings &rarr; Account</code>.</li>
+        <li>Поискать на странице компании способ убрать логотип.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Загрузка уходит сразу по выбору файла, и логотип уже заменён. Ни диалога, ни панели сохранения, ни уведомления не появляется ни разу &mdash; состояние опрашивалось каждые 200&nbsp;мс с момента до выбора файла.</p>
+      <pre><code>Settings → Company, выбор файла:
+  POST /api/upload/api/v1/companies/&lt;CO&gt;/avatar -> 200 {"avatar_url":"/public/&lt;NEW&gt;"}
+  аватар на странице: /public/&lt;OLD&gt;  ->  /public/&lt;NEW&gt;
+  диалогов за всё время: 0 · панель Save/Discard/Cancel: нет · уведомлений: нет
+  (воспроизведено дважды подряд)
+
+Settings → Account, тот же шаг:
+  диалог "Crop your photo | Zoom | Cancel | Apply"
+  после Apply — запросов нет, локальный предпросмотр (blob:), панель сохранения,
+  на странице: "New avatar ready. Select Save to apply it."  ("1 unsaved change")
+  загрузка уходит только по Save changes
+
+Убрать логотип компании нечем:
+  на странице только кнопка Upload image; слов remove/delete в тексте нет
+  DELETE /api/v1/companies/&lt;CO&gt;/avatar  -> 405 COMMON_METHOD_NOT_ALLOWED
+  контракт: /users/me/avatar -> DELETE, POST ;  /companies/{id}/avatar -> только POST</code></pre>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Логотип компании меняется так же осознанно, как личный аватар: выбранный файл сначала показывается, и замена происходит по явному подтверждению. Как минимум &mdash; после замены есть способ вернуться к варианту с инициалами.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Выбор файла в <code>Settings &rarr; Company</code> не меняет логотип до явного подтверждения.</li>
+        <li>После замены логотип можно убрать, и компания возвращается к инициалам.</li>
+        <li>Личный аватар в <code>Settings &rarr; Account</code> продолжает работать как прежде: кадрирование, предпросмотр, сохранение.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Про <em>личный</em> аватар кнопка удаления уже заведена &mdash; <code>ALK-2694</code> (открыта), её бэкенд-часть <code>ALK-2569</code> закрыта и действительно работает: <code>DELETE /api/v1/users/me/avatar</code> отвечает 204. Логотипов компании и workspace это не касается: у них в контракте только <code>POST</code>, так что там нужен ещё и эндпоинт. Дубликата у самой находки нет, но есть <strong>прецедент, и он полезнее</strong>: <code>ALK-1788</code> &mdash; «Profile avatar сохраняется сразу после выбора без Save changes» &mdash; это ровно то же поведение на личном аватаре, заведено как Bug и уже закрыто. На этой сборке в <code>Settings &rarr; Account</code> оно и правда исправлено: там теперь кадрирование и панель сохранения (видно в измерении выше). Логотип компании остался с прежним поведением. То есть желаемый порядок в приложении уже определён и реализован рядом &mdash; достаточно распространить его на компанию. Аватар workspace не проверялся: его flow, судя по контракту, такой же, а проверка означала бы поставить картинку, которую потом нечем снять.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Журнал аудита выводит служебные ключи событий и сырой JSON вместо описания произошедшего</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>На странице <code>Settings &rarr; Admin &rarr; Audit log</code> колонка <code>ACTION</code> показывает служебные ключи &mdash; <code>role.assigned</code>, <code>workspace.member_removed</code>, <code>invite.revoked</code>, &mdash; а колонка <code>METADATA</code> отдаёт сырой JSON с внутренними идентификаторами и строками прав. Заголовки колонок и даты при этом переведены и отформатированы, то есть оформлять страница умеет. Администратор приходит сюда узнать, кто кому выдал полномочия, и вместо ответа получает машинный вывод, который приходится разбирать глазами в каждой строке.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings &rarr; Admin &rarr; Audit log</code> под учётной записью, которой доступно чтение журнала.</li>
+        <li>Посмотреть колонки <code>ACTION</code> и <code>METADATA</code>.</li>
+        <li>Сменить язык интерфейса и открыть страницу заново.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Ни один из встретившихся типов событий не оформлен: в колонке действия стоит сам ключ. Смена языка ничего не меняет &mdash; в обеих локалях выводится одна и та же строка, так что это не пропуск перевода. Даты внутри <code>METADATA</code> вдобавок остаются в UTC, тогда как соседняя колонка переводит время в местное, и один и тот же момент показан на экране разными сутками.</p>
+      <pre><code>Заголовки и даты — оформлены и переведены:
+  en: ACTION | ACTOR | TARGET | CREATED | METADATA
+  ru: ДЕЙСТВИЕ | АВТОР | ЦЕЛЬ | СОЗДАНО | МЕТАДАННЫЕ
+  дата в строке (ru): "26 авг. 2026 г., 23:00"
+
+Колонка ACTION, все различные значения на 100 записях (78 строк на экране) —
+в обеих локалях выводятся дословно:
+  role.created · role.updated · role.deleted · role.assigned · role.revoked
+  invite.created · invite.revoked · invite.accepted
+  workspace.member_joined · workspace.member_removed
+оформленных среди них: 0 из 10
+
+Колонка METADATA, содержимое ячейки как есть:
+  {"scope_type":"workspace","permissions":["workspace.&lt;WS&gt;.audit.view"],
+   "scope_id":"&lt;WS&gt;","role_name":"&lt;имя роли&gt;"}
+
+Дата в METADATA не пересчитывается, в отличие от колонки даты. Строка invite.created:
+  колонка CREATED:  Aug 27, 2026, 2:46 AM        (местное время)
+  та же строка, METADATA:
+    {"role_ids":[],"expires_at":"2026-09-02T21:46:08.50908Z","kind":"link","max_uses":1}
+  тот же срок на экране Admin -&gt; Invites:  Sep 3, 2026, 2:46 AM   (местное время)
+
+При смене часового пояса браузера на America/New_York и перезагрузке:
+  дат в колонке CREATED пересчиталось:      99 из 99
+  дат внутри METADATA пересчиталось:         0 из 9</code></pre>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Строка журнала читается как фраза &mdash; кто, что и с кем сделал, &mdash; а подробности либо разложены по понятным полям, либо убраны под раскрытие. Служебный ключ уместен как запасной вариант для незнакомого события, а не как основное содержимое колонки.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Каждое из перечисленных событий выводится словами, и в колонке действия нет точечных ключей.</li>
+        <li>Незнакомое событие показывается как есть и не ломает страницу.</li>
+        <li>Обе локали дают осмысленный текст, а даты остаются в формате выбранного языка.</li>
+        <li>Даты в подробностях события показаны в часовом поясе пользователя, как и в колонке даты.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Речь о существующей странице журнала workspace. Задача <code>ALK-3307</code> (Backlog) описывает <em>другую</em>, ещё не сделанную страницу &mdash; журнал уровня компании, &mdash; и там прямо сказано: незнакомое значение <code>action</code> показывать как есть, то есть знакомые предполагается оформлять. На нынешней странице не оформлено ни одно из десяти. Не дубликат <code>ALK-3535</code> (там об отсутствии событий уровня компании в списке) и не <code>ALK-3536</code> (там о списке прав роли). Отдельно: <code>role:&lt;id&gt;</code> в колонке <code>TARGET</code> в эту находку не входит &mdash; по <code>ALK-3307</code> это предусмотренный запасной вариант для цели, не являющейся пользователем.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Блок хранилища подписан «My storage», хотя строкой ниже сказано, что хранилище общее</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В <code>Settings &rarr; Admin &rarr; Workspaces</code> кнопка <code>Show storage</code> раскрывает блок, озаглавленный <code>My storage in this workspace</code>. Последняя строка того же блока сообщает обратное: <code>Storage is shared by everyone in this workspace.</code> Числа при этом действительно общие &mdash; это квота workspace, а не доля участника. Администратор, читающий заголовок, понимает объём как свой личный и может решать по нему, сколько ещё можно загрузить.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings &rarr; Admin &rarr; Workspaces</code>.</li>
+        <li>Нажать <code>Show storage</code> у workspace.</li>
+        <li>Прочитать заголовок блока и последнюю строку в нём.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Заголовок и подпись в одном блоке противоречат друг другу. Числа приходят из workspace-эндпоинта и не зависят от того, кто смотрит.</p>
+      <pre><code>Один раскрытый блок, строки подряд:
+  "My storage in this workspace"
+  "0 B of 10 GB used"
+  "Call recordings storage"
+  "0 B of 30 GB used · 30 GB free"
+  "Storage is shared by everyone in this workspace."
+
+Запрос, наполняющий блок:
+  GET /api/v1/workspaces/&lt;WS&gt;/storage -> 200
+  {"quota_bytes":10737418240,"used_bytes":0,"free_bytes":10737418240,
+   "upload_limits":{"image":10485760,"document":52428800, …}}
+  — тот же ответ байт в байт у двух учётных записей с разными ролями
+
+  GET /api/v1/users/me/storage -> 404
+  {"code":404,"key":"COMMON_NOT_FOUND","message":"endpoint not found"}</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Заголовок берётся из ключа <code>settings.company.workspaces.quota.label</code> (<code>packages/core/src/i18n/dictionaries/en.ts:867</code>) &mdash; в самом словаре это назван <em>quota</em>, то есть квота workspace, а подписан как личное хранилище. Единственный источник чисел на экране &mdash; workspace-эндпоинт; пользовательского в контракте нет.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Заголовок называет то же, что и строка под ним, &mdash; хранилище workspace, общее для всех его участников.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Заголовок блока и пояснение под ним говорят об одном и том же.</li>
+        <li>Числа продолжают приходить из workspace-эндпоинта и совпадают у разных участников.</li>
+        <li>Раскрытие и сворачивание блока по-прежнему работает.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Это оставшаяся половина <code>ALK-2654</code> (Bug, REVIEW), где панель ходила в user-scoped маршрут и её требовалось перевести на <code>GET /workspaces/{id}/storage</code>. Эндпоинт исправлен &mdash; измерение выше это подтверждает, &mdash; а заголовок остался от прежнего, пользовательского смысла. Не дубликат <code>ALK-2850</code> (там о категориях в Files).</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS] Несохранённые изменения пропадают при переходе между разделами настроек, без предупреждения</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Формы настроек честно сообщают, что держат несохранённое: под формой появляется <code>1 unsaved change</code> и кнопки <code>Discard</code> / <code>Save</code>. Переход в соседний раздел по левой навигации &mdash; и обычная перезагрузка страницы &mdash; стирают эти изменения молча: ни диалога, ни подтверждения браузера, обработчика <code>beforeunload</code> нет вовсе. Человек, который начал править профиль, отвлёкся на соседний экран и вернулся, находит поле в прежнем виде, хотя минуту назад ему было сказано, что изменение удерживается.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings &rarr; Profile</code> и изменить <code>Display name</code>, не сохраняя.</li>
+        <li>Убедиться, что появилась подпись <code>1 unsaved change</code> и панель <code>Discard</code> / <code>Save profile</code>.</li>
+        <li>Перейти по левой навигации в <code>Settings &rarr; Appearance</code>.</li>
+        <li>Вернуться в <code>Settings &rarr; Profile</code> и посмотреть на поле.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Переход происходит сразу, изменения теряются, ни одного предупреждения не показывается. На возврате поле содержит прежнее значение, панели сохранения нет.</p>
+      <pre><code>Поле изменено, не сохранено:
+  на экране: "1 unsaved change"  +  Discard / Save profile
+  то же на Settings → Account:  "1 unsaved change"  +  Discard / Save changes
+
+Переход по ссылке навигации в Settings → Appearance:
+  диалогов [role=dialog] .......... 0
+  подтверждение браузера .......... не появлялось (слушатель dialog не сработал ни разу)
+  панель Save/Discard ............. исчезла
+
+Возврат в Settings → Profile:
+  поле ............................ исходное значение
+  панель Save/Discard ............. отсутствует
+  GET /api/v1/auth/me → name ...... прежний   (на сервер ничего не ушло — это верно)
+
+То же при обычной перезагрузке страницы, а не только при переходе внутри приложения:
+  обработчик beforeunload ......... не зарегистрирован
+                                    (отправленное вручную cancelable-событие никто не отменяет)
+  диалог браузера ................. не появляется
+  после перезагрузки .............. поле снова исходное, панели сохранения нет</code></pre>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Уход из раздела с несохранёнными изменениями либо спрашивает подтверждения, либо изменения сохраняются за пользователем до возврата. Молча терять то, о чём только что было сказано «удерживается», не следует.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Переход в соседний раздел с несохранёнными изменениями спрашивает подтверждение.</li>
+        <li>Отказ от перехода оставляет введённое на месте.</li>
+        <li><code>Discard</code> по-прежнему очищает форму без вопросов &mdash; это осознанное действие пользователя.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Тот же индикатор ведут две открытые задачи, но обе про его собственную корректность, а не про судьбу изменений: <code>ALK-3522</code> &mdash; ложный <code>1 unsaved change</code> при открытии <code>Profile</code> (на этой сборке <strong>не воспроизводится</strong>: ~165 проб с шагом 220&nbsp;мс от начала навигации, при пустых и при заполненных полях, и с установленным статусом &mdash; кандидат на закрытие), и <strong>ALK-3426</strong> &mdash; индикатор якобы возвращается на секунду после сохранения (на этой сборке <em>тоже не воспроизводится</em>: 58 проб за 12 с на обычной сети и 97 проб за 20 с при задержке 1200 мс &mdash; признак меняется один раз и обратно не возвращается; условие «проверить на замедленной сети» взято из самой задачи). Здесь речь о третьем: что происходит с изменениями, которые индикатор учитывает. Чинить разумно вместе с ними.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS][A11Y] Второстепенный текст в настройках не дотягивает до контраста AA: 2.86:1 в светлой теме, 3.23:1 в тёмной</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Заголовки групп в левой навигации настроек (<code>SETTINGS</code>, <code>ACCOUNT</code>, <code>WORKSPACE</code>, <code>ADMIN</code>), подписи секций и логины участников набраны цветом, который на своём фоне даёт <strong>2.86:1</strong> в светлой теме и <strong>3.23:1</strong> в тёмной. Для текста в 14&nbsp;px WCAG AA требует 4.5:1. Это не одна неудачная подпись: цвет приходит из общего токена, поэтому недобор одинаков на каждом экране раздела и в обеих темах.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть любой экран настроек &mdash; например <code>Settings &rarr; Admin &rarr; Members</code>.</li>
+        <li>Измерить контраст заголовков групп в левой навигации и логинов участников относительно их фактического фона.</li>
+        <li>Повторить в тёмной теме.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Это не один экран: во всём разделе настроек ниже порога оказались 92 текстовых узла на 17 маршрутах в светлой теме и 105 в тёмной, и в обеих ровно 91 из них — один и тот же цвет второстепенного текста. Прозрачность цвета учтена: в тёмной теме цвет полупрозрачный и сведён с фактическим фоном перед расчётом.</p>
+      <pre><code>Обойдены все 17 маршрутов раздела настроек, обе темы.
+Полупрозрачный цвет сводится с фактическим фоном перед расчётом.
+
+светлая тема   1672 видимых листовых узла с текстом, ниже порога AA — 92
+  rgb(138,149,163) — второстепенный текст            91   худшее 2.86:1 при пороге 4.5
+  rgb(22,163,74) на белом, 16.47px                    1   3.30:1
+
+тёмная тема    1673 узла, ниже порога AA — 105
+  rgba(255,255,255,0.36) — тот же второстепенный      91   худшее 3.23:1
+  белый на rgb(239,68,68)                             6   3.76:1
+  прочее                                              8
+
+маршрутов без единого нарушения: 0 в обеих темах (от 4 до 13 на маршрут)
+
+Какие это узлы, на примере одного экрана —
+  "SETTINGS" / "ACCOUNT" / "WORKSPACE" / "ADMIN"   14.03px
+  "MEMBERSHIP MANAGEMENT"                          14.03px
+  логины участников                                14.64px
+
+крупный текст (≥24px или ≥18.66px полужирный) считался по порогу 3:1 и его проходит</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Цвет берётся из токена <code>--color-text3</code>: <code>#8a95a3</code> в светлой теме (<code>packages/core/src/theme/theme.css:464</code>) и <code>rgba(255, 255, 255, 0.36)</code> в тёмной (<code>там же:340</code>). Токен используется в 137 файлах, то есть правка одна, а действие общее. В том же файле несколькими строками ниже стоит комментарий <code>ALK-1212: darkened for WCAG AA (4.5:1)</code> &mdash; то есть приведение токенов к порогу AA в проекте уже делалось, и этот в такую правку не попал.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Текст в 14&nbsp;px даёт не меньше 4.5:1 в обеих темах &mdash; в том числе заголовки групп навигации и логины, которые нужны, чтобы отличить одного участника от другого.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Заголовки групп навигации и логины участников дают 4.5:1 и выше в светлой и в тёмной теме.</li>
+        <li>Крупный текст по-прежнему проходит по своему порогу 3:1 и не становится темнее без нужды.</li>
+        <li>Остальные текстовые токены не теряют контраста от этой правки.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p><strong>Только у этой находки правка уже написана.</strong> Файлы, на которые ссылаются остальные находки (<code>capabilities.ts</code>, <code>store.ts</code>, <code>cookieNames.ts</code>, обе панели приглашений), с момента развёрнутой сборки в <code>develop</code> не менялись ни разу &mdash; то есть они по-прежнему открыты.</p>
+      <p><strong>ALK-3579</strong> описывает ровно этот токен &mdash; «text3 is the last legacy neutral and fails AA on all six grounds», с теми же значениями (<code>#8a95a3</code> в светлой, <code>rgba(255,255,255,0.36)</code> в тёмной) и с готовым решением. Мои замеры сходятся с её расчётом до сотых: <code>3.04:1</code> на белом и <code>3.23:1</code> на <code>#222731</code>. <strong>Разница в том, что она посчитана по объявлениям в <code>theme.css</code>, а здесь измерено на отрисованных экранах развёрнутой сборки</strong> &mdash; 91 узел в каждой теме, 17 маршрутов. Задача стоит в <code>TESTING</code>, а дефект на <code>v0.61.0-rc.5</code> воспроизводится &mdash; и причина установлена: <strong>правка существует, но не доехала.</strong> Коммит <code>30bda8c24</code> («converge the subtle text alias with the semantic ramp», ALK-3579) уже в <code>develop</code> и заменяет оба литерала на <code>var(--c-fg-subtle)</code>, но <strong>не входит ни в один тег</strong>, а развёрнутая сборка по-прежнему держит <code>#8a95a3</code> и <code>rgba(255,255,255,0.36)</code>. То есть делать здесь ничего не нужно, кроме как довезти правку до стенда; проверять стоит уже после этого. Это и есть основной смысл находки &mdash; не «нашли новое», а «закрытое не доставлено».</p>
+      <p>Соседняя причина, объясняющая, почему это всплыло сейчас: <code>ALK-3325</code> (в этой же невыпущенной сборке) перевела <code>--color-text2</code> на семантический токен и <em>намеренно</em> оставила <code>--color-text3</code> с литералом &mdash; в самом файле это записано комментарием. То есть значение старое, а вот рассогласование внутри шкалы приехало сейчас.</p>
+      <p>Другие открытые задачи этого класса &mdash; про другие места, не про <code>text3</code>: ALK-3498 (2.896:1 у <code>text-success</code> на светлой подложке; сюда же попадает единственный зелёный узел из измерения выше), ALK-3249 (4.108:1 в DeviceRequestPrompt), ALK-3316 (нейтральный бейдж проходит AA с запасом 0.05).</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Приглашение, отправленное без роли, выводится как Role unavailable</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Форма персональных приглашений предлагает явный вариант <code>Invite without a role</code>. Отправленное так приглашение возвращается в списке <code>Direct invite history</code> с подписью <code>Role unavailable</code> — сделанный выбор показан как сбой чтения данных. Приглашение с ролью в том же списке подписано именем роли, поэтому прочитать роли администратор может; неверна именно подпись пустого списка.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings → Admin → Invites</code>, блок <code>Direct invites</code>.</li>
+        <li>Отметить получателя и флажок <code>Invite without a role</code>, нажать <code>Send direct invites</code>.</li>
+        <li>Посмотреть появившуюся строку в <code>Direct invite history</code>.</li>
+        <li>Повторить с выбранной ролью вместо <code>Invite without a role</code> и сравнить строки.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Обе строки читал участник, которому доступны все роли компании, — в одной из них роль названа, в другой объявлена недоступной.</p>
+      <pre><code>"Invite without a role"    -> &lt;получатель&gt; | Pending | Role unavailable | &lt;дата&gt; | Resend invite  Revoke invite
+"Member · Workspace role"  -> &lt;получатель&gt; | Pending | Member           | &lt;дата&gt; | Resend invite  Revoke invite
+
+GET /api/v1/workspaces/&lt;WS&gt;/invites/direct -> 200
+  {"invites":[{"id":"&lt;ID&gt;","workspace_id":"&lt;WS&gt;","workspace_name":"&lt;WS_NAME&gt;",
+    "invited_by_name":"&lt;АВТОР&gt;","status":"pending","expires_at":"2026-09-02T…",
+    "created_at":"2026-08-26T…"}]}
+                                     ← поля role_ids в ответе нет вовсе</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Пустой список ролей и невозможность прочитать их имена дают один и тот же текст:</p>
+      <pre><code>apps/web/src/features/admin/hooks/useAdminDirectInviteRow.ts:107
+    roleNames.length === 0 ? t('admin.directInvites.table.roles.unknown') : roleNames.join(', ')
+
+packages/core/src/i18n/dictionaries/en.ts:4864
+    'admin.directInvites.table.roles.unknown': 'Role unavailable'</code></pre>
+      <p>Тот же приём применён к ссылкам-приглашениям — <code>apps/web/src/features/admin/AdminMembersInviteList.tsx:45</code> с ключом <code>admin.members.invites.table.roles.unknown</code> и тем же текстом.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Приглашение, отправленное без роли, подписано теми же словами, что предложила форма, — «без роли». Текст <code>Role unavailable</code> остаётся для случая, когда имена ролей действительно не удалось прочитать.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Приглашение, отправленное с <code>Invite without a role</code>, подписано в списке как «без роли».</li>
+        <li>Приглашение с ролью по-прежнему подписано именем роли.</li>
+        <li>У участника, которому роли читать нельзя, в этом столбце остаётся <code>Role unavailable</code>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ADMIN] Подпись обещает, что приглашение можно принять в приложении — принять его там нельзя</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>В блоке прямых приглашений <code>Settings &rarr; Admin &rarr; Invites</code> подряд стоят две фразы: &laquo;Email delivery may be delayed.&raquo; и &laquo;The invitation also appears in the recipient&rsquo;s in-app inbox.&raquo; Вместе они читаются как обещание: письмо может задержаться, но приглашение всё равно доступно в приложении. Принять его там нельзя. Получатель видит приглашение со всеми подробностями и ни одного действия рядом с ним, а сам текст отправляет его обратно к письму, которое может не прийти. Администратор, положившись на подпись, будет ждать вместо того, чтобы заняться доставкой почты.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В <code>Settings &rarr; Admin &rarr; Invites</code>, блок <code>Create direct invites</code>, выбрать участника компании, не состоящего в workspace, и нажать <code>Send direct invites</code>.</li>
+        <li>Войти под этим участником и открыть меню workspace &mdash; на кнопке появляется счётчик приглашений.</li>
+        <li>Посмотреть раздел <code>PENDING INVITES</code> и перечислить, что рядом с приглашением можно нажать.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Приглашение доходит и показано полностью, но действий рядом с ним нет ни одного &mdash; ни в меню workspace, ни в уведомлении.</p>
+      <pre><code>Отправка:
+POST /api/v1/workspaces/&lt;WS&gt;/invites/direct -> 200
+  {"invites":[{"id":"&lt;ID&gt;","workspace_id":"&lt;WS&gt;","recipient_user_id":"&lt;USER&gt;",
+               "invited_by":"&lt;USER&gt;","status":"pending", …}]}
+
+У получателя приглашение действительно есть:
+GET /api/v1/workspace-invites -> 200, приглашение с workspace_name, company_name, invited_by_name
+GET /api/v1/notifications     -> 200, NOTIF_TITLE_WORKSPACE_INVITE_RECEIVED
+                                 "You've been invited to the "&lt;WS&gt;" workspace"
+на кнопке меню workspace — видимый счётчик (span 22×24 px, фон rgb(36,84,216), текст "1")
+
+Раздел PENDING INVITES целиком:
+  PENDING INVITES | &lt;название workspace&gt; | &lt;название компании&gt; | Invited by &lt;имя&gt;
+  | Expires Sep 2, 2026, 8:08 PM | "Use the invite link from your email to accept or decline."
+
+интерактивных узлов внутри раздела: 0
+  (перечислены все потомки: button, a, input, select, textarea, role=button|link|menuitem|
+   checkbox|switch|option|tab, onclick, tabIndex&gt;=0 и cursor:pointer — не только кнопки)
+строка уведомления: кнопок и ссылок тоже нет</code></pre>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Подпись описывает то, что получатель действительно может сделать. Пока приглашение в приложении только показывается, подпись не предлагает его как замену письму &mdash; например, прямо говорит, что принять приглашение можно по ссылке из письма.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Подпись блока прямых приглашений соответствует тому, что получатель может сделать в приложении.</li>
+        <li>Отправитель понимает из экрана, нужна ли получателю почта, чтобы принять приглашение.</li>
+        <li>Если действия в приложении появятся, подпись меняется вместе с ними, а не остаётся прежней.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Речь только о подписи. Сама возможность принять приглашение в приложении отслеживается отдельно: <code>ALK-1713</code> (открыта) прямо объясняет, почему список сейчас только информационный &mdash; accept и decline принимают только токен, поэтому до появления контракта по <code>invite_id</code> фронтенд не может дать действия. Эта находка не про это, и дублировать ту задачу не нужно.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS] Сообщение об ошибке в <code>Notifications</code> называет условие и способ его снять неверно</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Выключить <code>In-app notifications</code> в одиночку сервер не даёт &mdash; и правильно делает, нужен хотя бы один способ доставки. Но сообщение объясняет отказ так: &laquo;while no other delivery method is enabled&raquo; и советует &laquo;Keep them on and try again&raquo;. Другого способа доставки на странице нет вовсе: там три переключателя, и оставшиеся два &mdash; это выключение уведомлений, а не доставка. Снять ограничение на самом деле можно, и совет &laquo;оставьте включённым и попробуйте ещё раз&raquo; &mdash; единственное, что не поможет.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings &rarr; Notifications</code>, выключить <code>In-app notifications</code>, нажать <code>Save preferences</code>.</li>
+        <li>Прочитать сообщение и поискать на странице тот &laquo;other delivery method&raquo;, который оно предлагает включить.</li>
+        <li>Включить <code>Mute channel notifications</code>, снова выключить <code>In-app notifications</code> и сохранить.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Сообщение называет условие, которого на странице не существует, и советует действие, которое ничего не меняет. При этом настройка выключается &mdash; вместе с <code>Mute channel notifications</code>, о котором сообщение не говорит.</p>
+      <pre><code>Попытка выключить только In-app notifications:
+PATCH /api/v1/notifications/settings {"in_app_enabled":false} -> 400
+  {"code":400,"key":"NOTIFICATION_NO_DELIVERY_CHANNEL",
+   "message":"нужен хотя бы один канал доставки: включите in_app_enabled или mute_all_channels"}
+на экране: "In-app notifications cannot be turned off while no other delivery method is
+            enabled. Keep them on and try again."
+           "Keep at least one notification delivery channel enabled."
+
+то же на русской локали — перевод точный, и неверный совет переносится целиком:
+           "Нельзя отключить уведомления в приложении, пока не включён другой
+            способ доставки. Оставьте их включёнными и повторите попытку."
+           "Оставьте включённым хотя бы один канал доставки уведомлений."
+проверены все четыре локали приложения (English, Russian, Uzbek, Uzbek Cyrillic):
+           текст переведён везде и везде советует одно и то же — оставить
+           включённым то, что пользователь выключает. Правка одной строки
+           в английском словаре проблему не закроет.
+
+Полный перебор: из 16 сочетаний четырёх флагов сервер отклоняет ровно 4 —
+те, где in_app_enabled=false И mute_all_channels=false. Два остальных флага
+(mute_unknown_dm_users, do_not_disturb_enabled) на запрет не влияют вовсе:
+  in_app=0, mute_all=0   -> 400 NOTIFICATION_NO_DELIVERY_CHANNEL  (4 сочетания из 4)
+  in_app=1 или mute_all=1 -> 200                                   (12 сочетаний из 12)
+То есть «other delivery method» из сообщения — это ровно один переключатель,
+и на странице он подписан Mute channel notifications.
+
+переключатели на странице, всего три:
+  In-app notifications · Mute channel notifications · Mute direct messages from unknown people
+никакого другого способа доставки среди них нет
+
+подпись секции на той же странице:
+  "Control notification delivery inside Aloqa. Browser notifications are not used."
+
+То же самое вместе с Mute channel notifications:
+PATCH /api/v1/notifications/settings {"in_app_enabled":false,"mute_all_channels":true} -> 200
+  {"in_app_enabled":false,"mute_all_channels":true, …}
+переживает перезагрузку</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Сервер называет условие точно: <code>включите in_app_enabled или mute_all_channels</code>. Текст на экране переводит вторую половину как &laquo;другой способ доставки&raquo;, хотя <code>mute_all_channels</code> &mdash; это <code>Mute channel notifications</code>, то есть выключение уведомлений в каналах, а не доставка. Отсюда и совет, который не ведёт никуда. Обе строки лежат в словаре: <code>packages/core/src/i18n/dictionaries/en.ts:4165</code> (<code>settings.notifications.error.allDisabled</code>) и <code>packages/core/src/i18n/dictionaries/en.ts:139</code> (<code>api.error.notifications.noDeliveryChannel</code>, привязан к ключу в <code>packages/core/src/api/errorPresentation.ts:445</code>).</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Сообщение называет то, что на странице есть, и то, что действительно снимет ограничение: чтобы выключить <code>In-app notifications</code>, нужно включить <code>Mute channel notifications</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Сообщение об отказе называет переключатель, который есть на этой же странице.</li>
+        <li>Следуя сообщению, пользователь доходит до нужного состояния без подсказок со стороны.</li>
+        <li>Само ограничение сохраняется: полностью без доставки и без мьюта настройки не сохраняются.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Речь только о тексте: сама проверка на стороне сервера верна, состояние после отказа восстанавливается корректно (после перезагрузки переключатель снова включён, как на сервере), панель сохранения остаётся, ничего ложно сохранённым не оказывается. Отдельной задачи про этот текст в проекте нет. Сам ключ <code>NOTIFICATION_NO_DELIVERY_CHANNEL</code> в проекте всё же встречается &mdash; в каталоге <code>ALK-3071</code> (закрыт), где для всех 225 ключей требовались переводы на все локали. Это не дубликат: там речь о наличии перевода, здесь &mdash; о том, что сам текст неверен по существу. Скорее наоборот, это подтверждает находку: ключ прошёл каталогизацию и перевод, и перевод добросовестно воспроизвёл ошибку. Формулировка одинакова во всех четырёх локалях &mdash; переводы точные, и потому повторяют ту же ошибку (ru: &laquo;пока не включён другой способ доставки&hellip; Оставьте их включёнными&raquo;; то же в обоих узбекских). То есть править нужно не одну строку, а по одной в каждом словаре, и обе задействованные: <code>settings.notifications.error.allDisabled</code> и <code>api.error.notifications.noDeliveryChannel</code>.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SECURITY] При единственной сессии экран Sessions не предлагает ни одного действия</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Экран <code>Settings → Sessions</code> подписан «Every device signed in to this account, and how to sign one out». При единственной активной сессии — обычное состояние аккаунта — в области содержимого нет ни одного интерактивного элемента: устройство перечислено, а сделать с ним нельзя ничего. Действия появляются, только когда сессий становится две. Экран обещает способ завершить сессию и в самом частом случае его не даёт.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти в аккаунт на одном устройстве и больше нигде.</li>
+        <li>Открыть <code>Settings → Sessions</code> и перечислить элементы управления в области содержимого.</li>
+        <li>Войти тем же аккаунтом во втором профиле браузера.</li>
+        <li>Открыть экран снова и перечислить элементы ещё раз.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Подпись экрана в обоих случаях одна и та же, состав элементов — разный.</p>
+      <pre><code>одна сессия:  GET /api/v1/security/sessions -> 200, одна запись
+              интерактивных элементов в области содержимого: 0
+              строка: "&lt;устройство&gt; | &lt;user agent&gt; | &lt;IP&gt; | &lt;время&gt; | Current session"
+
+две сессии:   GET /api/v1/security/sessions -> 200, две записи
+              интерактивных элементов: 2
+                button "Sign out"                 (в строке чужой сессии)
+                button "Sign out other sessions"</code></pre>
+      <p>Перечислялись все интерактивные элементы области содержимого — кнопки, ссылки, поля, переключатели, — без навигации настроек. У строки <code>Current session</code> действия нет ни в одном из двух состояний.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Либо у текущей сессии тоже есть действие, либо подпись экрана не обещает его тогда, когда действовать не над чем.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>При единственной сессии экран либо предлагает действие, либо подписан так, что действия не обещает.</li>
+        <li>При двух и более сессиях <code>Sign out</code> и <code>Sign out other sessions</code> работают как прежде.</li>
+        <li>Завершение чужой сессии по-прежнему приводит к тому, что её следующий запрос отвечает <code>401</code>.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Важность низкая потому, что тупика нет: выйти из аккаунта можно через меню профиля. Подпись <code>Unknown device</code> в строке — это отдельная, уже заведённая <strong>ALK-3005</strong>, и к отсутствию действий она отношения не имеет.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][ONBOARDING] Страница создания компании не содержит ни одного способа с неё уйти</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Новому пользователю приветственный экран предлагает <code>Create a company</code>; тот же пункт есть у всех остальных в переключателе компаний на <code>Settings &rarr; Company</code>. Обе дороги ведут на страницу <code>/company/create</code>, на которой во всём документе ровно два интерактивных элемента: поле имени и кнопка <code>Create</code>. Ни <code>Cancel</code>, ни <code>Back</code>, ни одной ссылки. Передумавшему остаётся кнопка «назад» в браузере.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти новым аккаунтом, у которого ещё нет компании, и дождаться приветственного экрана.</li>
+        <li>Нажать <code>Create a company</code>.</li>
+        <li>Перечислить интерактивные элементы страницы.</li>
+        <li>Повторить у аккаунта, который уже состоит в компании: <code>Settings &rarr; Company</code>, нажать кнопку с названием компании (переключатель компаний) &rarr; <code>Create a company</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Состав страницы одинаков у нового аккаунта и у владельца существующей компании — перечисление сделано по всему документу, а не по области содержимого.</p>
+      <pre><code>интерактивных элементов во всём документе: 2
+  input[text]              placeholder 'e.g. "Aloqa Inc"'
+  button[submit](disabled) "Create"
+
+заголовков h1–h6 и [role=heading]: нет ни одного
+ориентиров main / nav / header / footer / [role=main]: нет ни одного
+
+Контроль — те же измерения на остальных 14 маршрутах раздела настроек:
+  ровно один h1 на каждом, пропусков уровней нет (структура 1-2-2-2…),
+  ориентир main присутствует везде. Эта страница — единственная без них.
+весь текст страницы: "Create a company  Name  Use 2 to 128 characters.  Create"</code></pre>
+      <p>Соседние экраны продукта такой выход дают: диалог <code>Create workspace</code> имеет <code>Cancel</code>, страницы <code>/auth/verify-email</code>, <code>/magic-link/verify</code> и <code>/reset-password</code> — <code>Back to sign in</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>На странице есть возврат — <code>Cancel</code> или ссылка назад, — и она имеет заголовок страницы, как остальные полноэкранные шаги.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>С <code>/company/create</code> можно уйти, не пользуясь кнопкой «назад» браузера.</li>
+        <li>Создание компании по-прежнему работает: имя от 2 до 128 символов, <code>Create</code> активна только при валидном имени.</li>
+        <li>У страницы есть заголовок, который читается программой чтения с экрана.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Важность низкая: тупика нет, кнопка «назад» в браузере работает, и путь вперёд размечен — после создания компании пользователь попадает на <code>Settings → Company</code>, где его ждёт <code>Create your first workspace</code>. Отдельно проверено и дефектом не является: пока у новой компании нет ни одного воркспейса, разделы <code>Admin</code> её владельцу недоступны — но и в навигации их в этот момент нет, так что по продукту в это состояние не попасть.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS] Четыре подзаголовка описывают содержимое, которого на странице нет</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Подзаголовок раздела — первое, по чему человек понимает, что на странице искать. На четырёх страницах он перечисляет то, чего страница не показывает: <code>Workspaces</code> обещает рассказать, кто может открыть каждый workspace, <code>Company dashboard</code> — недавнюю активность, <code>About</code> — лицензии и куда обратиться за помощью, <code>Security</code> — ключи шифрования. Ничего из перечисленного на страницах нет, и человек ищет отсутствующее.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings → Admin → Workspaces</code> и прочитать подзаголовок, затем перечислить, что на странице есть.</li>
+        <li>Открыть <code>Settings → Admin → Company dashboard</code>, вкладка <code>Overview</code>, и сделать то же самое.</li>
+        <li>Открыть <code>Settings → About</code> и сделать то же самое.</li>
+        <li>Открыть <code>Settings → Security</code> и сделать то же самое.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <pre><code>Workspaces
+  подзаголовок: "Every workspace in this company, and who may open it."
+  на странице:  Create workspace | карточка workspace | Open … | Edit … | Show storage
+                (Show storage разворачивает объём хранилища и квоту записей)
+  о том, кто может открыть workspace, — ничего
+
+Company dashboard, вкладка Overview
+  подзаголовок: "One view of this company’s people, workspaces and recent activity."
+  на странице:  название компании | Workspaces 1 | Members 8 | Your role Owner
+                QUICK ACTIONS: Edit company profile, Create workspace, Invite members, Manage roles
+  никакого списка активности нет; при этом данные для него есть —
+  GET /api/v1/companies/{companyId}/admin/audit-log?limit=5 отдаёт последние события
+
+About
+  подзаголовок: "Version, licences and where to get help."
+  на странице:  Aloqa | Version v0.61.0-rc.5 | "Workspace messaging for fast-moving teams."
+                Diagnostics -> один переключатель Send crash reports
+  в области содержимого: ссылок 0, единственный работающий элемент — переключатель Send crash reports
+  вся страница — 278 символов текста, контейнер не прокручивается, ниже сгиба ничего
+  ни лицензий, ни ссылки на помощь или поддержку
+
+Security
+  подзаголовок: "Your password, two-factor authentication and encryption keys."
+  на странице:  Password -> Current password | New password | Confirm new password | Update password
+                Two-factor authentication -> "Two-factor authentication is off." | Enable
+  о ключах шифрования — ничего</code></pre>
+      <p>Числа на дашборде при этом верны: <code>Members 8</code> и <code>Workspaces 1</code> совпадают с тем, что отдают <code>…/members</code> и <code>…/workspaces</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Подзаголовок описывает то, что на странице есть, — либо страница показывает обещанное: состав доступа у каждого workspace, ленту последних событий на дашборде, лицензии со ссылкой на помощь, раздел ключей шифрования.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Подзаголовок <code>Workspaces</code> соответствует содержимому страницы.</li>
+        <li>Подзаголовок <code>Company dashboard</code> соответствует содержимому вкладки <code>Overview</code>.</li>
+        <li>Подзаголовок <code>About</code> соответствует содержимому страницы.</li>
+        <li>Подзаголовок <code>Security</code> соответствует содержимому своего раздела.</li>
+        <li>Если обещанные блоки добавляются — данные в них совпадают с <code>…/workspaces</code> и журналом аудита.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Для триажа</h3>
+      <p>Третий случай того же в этом разделе: <strong>ALK-3537</strong> — про подзаголовок <code>Workspace identity</code>, который обещает поля URL и default channel, — уже заведена и на этой сборке воспроизводится. Стоит закрывать вместе, одним проходом по подписям разделов, а не тремя тикетами.</p>
+      <p>Для <code>About</code> исправление особенно дешёвое: то, что обещает подзаголовок, в приложении <strong>уже есть, просто в другом месте</strong>. Элемент <code>Help &amp; resources</code> в левом рельсе открывает окно «Help &amp; shortcuts» со списком горячих клавиш и ссылкой <code>Open docs</code>. То есть на странице About не хватает не содержимого, а ссылки на него.</p>
+      <p>В проекте уже есть отдельная работа с этим принципом: <code>ALK-1714</code> «Make workspace settings truthful and edit-gated» (закрыта) прямо ставила задачу убрать из настроек workspace поля, которых бэкенд не хранит. Здесь тот же принцип, но про подзаголовки, а не про поля: подпись обещает содержимое, которого на странице нет.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][SETTINGS][I18N] В узбекской локали месяц во всех датах выводится кодом <code>M08</code></h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Узбекский — один из четырёх языков приложения. При нём каждая дата в интерфейсе показывает месяц служебным кодом: <code>2026 M08 27</code> вместо названия. Это не один экран — так выглядят даты в журнале аудита, в списке участников компании и в списке приглашений, то есть везде, где даты вообще есть. В трёх остальных языках, включая узбекскую кириллицу, даты читаются нормально.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Переключить язык на <code>Uzbek</code> — на экране входа или в <code>Settings → Account</code>.</li>
+        <li>Открыть <code>Settings → Admin → Audit log</code>, затем <code>Settings → Admin → Members</code> и <code>Settings → Admin → Invites</code>.</li>
+        <li>Прочитать колонки с датами.</li>
+        <li>Переключить язык на <code>Uzbek (Cyrillic)</code> и открыть те же три экрана.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Месяц заменён кодом на всех экранах с датами. Узбекская кириллица того же дефекта не имеет, хотя это тот же язык в другой письменности.</p>
+      <pre><code>одна и та же строка журнала аудита, четыре языка приложения:
+
+  English          "Aug 27, 2026, 7:38 AM"
+  Russian          "27 авг. 2026 г., 07:38"
+  Uzbek            "2026 M08 27 07:38"          &lt;- месяц кодом
+  Uzbek (Cyrillic) "27 авг, 2026 07:38"
+
+то же самое на других экранах, локаль Uzbek:
+  Admin → Members   "2026 M08 25 20:20"   "2026 M08 26 22:13"   "2026 M08 27 02:18"
+  Admin → Invites   "2026 M09 3 07:13"    "2026 M08 25 07:02"
+  (для сравнения, English)  "Aug 25, 2026, 8:20 PM"   "Sep 3, 2026, 7:13 AM"
+
+источник формата, замерено в самом браузере:
+  Intl.DateTimeFormat('uz',      {month:'long'}).format(...)  -> "M08"
+  Intl.DateTimeFormat('uz-Latn', {month:'long'}).format(...)  -> "M08"   (resolved: uz)
+  Intl.DateTimeFormat('uz-Cyrl', {month:'long'}).format(...)  -> "август"
+  Intl.DateTimeFormat('ru',      {month:'long'}).format(...)  -> "август"</code></pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Ответственная граница узкая и доказана измерением: <code>Intl.DateTimeFormat</code> возвращает <code>M08</code> для узбекской латиницы сам по себе, до всякого кода приложения — в данных ICU у этой локали нет названий месяцев, и все её варианты (<code>uz</code>, <code>uz-Latn</code>, <code>uz-Latn-UZ</code>) сводятся к одному. То есть форматирование дат делегировано платформе и приложение ничего не портит; починить это можно только не полагаясь на локаль <code>uz</code> для названий месяцев.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Даты на узбекском читаются так же, как на остальных трёх языках: месяц назван словом. Если платформа названий не даёт, они берутся из собственного словаря приложения — там уже переведён весь остальной интерфейс, включая экраны авторизации.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>В локали <code>Uzbek</code> месяц выводится словом на всех экранах, где есть даты: журнал аудита, участники, приглашения, сессии.</li>
+        <li>Три остальные локали не меняются, в том числе <code>Uzbek (Cyrillic)</code>.</li>
+        <li>Формат совпадает между списком и подробностями одной и той же записи.</li>
+      </ul>
+    </div>
+  </article>
+  <footer>
+    Сборка <code>v0.61.0-rc.5</code>, 26&ndash;27 августа 2026. Каждая находка воспроизведена не менее двух раз, с чистой
+    загрузки страницы; роли для проверки прав создавались заново под каждую. Ссылки на исходный код открыты на том
+    коммите, который развёрнут на стенде.
+    <br><br>
+    Что в этот проход <strong>не попало</strong>: разделы <code>System settings</code> и <code>Search reindex</code>
+    доступны только super-admin, такого аккаунта не было; переход по ссылке из письма (подтверждение адреса,
+    magic link) требует живого почтового ящика — проверены только те половины этих сценариев, что видны в интерфейсе;
+    включение 2FA пройдено до того места, где нужен код из письма (форма ввода, <code>Resend code</code>, <code>Cancel</code>), и брошенная процедура учётную запись в промежуточном состоянии не оставляет — но довести включение до конца и проверить вход по коду без почтового ящика нельзя.
+  </footer>
+</div>

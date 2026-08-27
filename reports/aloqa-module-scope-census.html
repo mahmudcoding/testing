@@ -1,0 +1,944 @@
+<title>Aloqa Module Scope Census</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+
+<style>
+  :root {
+    --paper:      #FBFAF7;
+    --surface:    #FFFFFF;
+    --surface-2:  #F2F1EC;
+    --ink:        #1C1E1F;
+    --ink-2:      #494D4C;
+    --ink-3:      #767A78;
+    --rule:       #DEDCD4;
+    --rule-2:     #EAE8E1;
+    --accent:     #0E6E62;
+    --accent-2:   #14A08E;
+    --accent-wash:#E4EFEC;
+    --ochre:      #9A6A12;
+    --garnet:     #8C2F39;
+
+    --f-display: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --f-body:    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 68ch;
+    --wide: 1120px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #141716;
+      --surface:    #1B1F1E;
+      --surface-2:  #222726;
+      --ink:        #E9EAE6;
+      --ink-2:      #B4B8B4;
+      --ink-3:      #868B88;
+      --rule:       #2E3432;
+      --rule-2:     #262B2A;
+      --accent:     #4FBFAE;
+      --accent-2:   #6FD3C3;
+      --accent-wash:#1B2A28;
+      --ochre:      #D3A445;
+      --garnet:     #D97583;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #141716;
+    --surface:    #1B1F1E;
+    --surface-2:  #222726;
+    --ink:        #E9EAE6;
+    --ink-2:      #B4B8B4;
+    --ink-3:      #868B88;
+    --rule:       #2E3432;
+    --rule-2:     #262B2A;
+    --accent:     #4FBFAE;
+    --accent-2:   #6FD3C3;
+    --accent-wash:#1B2A28;
+    --ochre:      #D3A445;
+    --garnet:     #D97583;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: var(--wide);
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    padding: 64px 0 34px;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(2.2rem, 5.2vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-family: var(--f-display);
+    font-style: italic;
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  .pins {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin-top: 4px;
+  }
+
+  .pin {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 4px 9px;
+    white-space: nowrap;
+  }
+
+  .pin b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- sections ---------- */
+
+  section { padding-top: 60px; }
+
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: var(--f-body);
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+    margin: 30px 0 10px;
+  }
+
+  .sec-note {
+    color: var(--ink-2);
+    max-width: var(--measure);
+    margin: 0 0 26px;
+  }
+
+  p { max-width: var(--measure); }
+
+  .rule-label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-top: 1px solid var(--rule);
+    padding-top: 8px;
+    margin-bottom: 18px;
+  }
+
+  /* ---------- scope chart ---------- */
+
+  .chart {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--rule);
+  }
+
+  .crow {
+    display: grid;
+    grid-template-columns: 210px 1fr 74px;
+    align-items: center;
+    gap: 18px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule-2);
+  }
+
+  .cname {
+    font-size: 14.5px;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .cname small {
+    display: block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .track {
+    position: relative;
+    height: 26px;
+    background: var(--surface-2);
+    border-radius: 2px;
+  }
+
+  .fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--accent);
+    border-radius: 2px 0 0 2px;
+    opacity: 0.88;
+  }
+
+  .tick {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    background: var(--ink);
+    opacity: 0.42;
+    transform: translateX(-1px);
+  }
+
+  .tick.out { background: var(--ochre); opacity: 0.9; }
+
+  .cval {
+    font-family: var(--f-mono);
+    font-size: 15px;
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cval span {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+
+  .axis {
+    display: grid;
+    grid-template-columns: 210px 1fr 74px;
+    gap: 18px;
+    margin-top: 8px;
+  }
+
+  .axis-inner {
+    grid-column: 2;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    color: var(--ink-3);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    margin-top: 20px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--ink-2);
+    align-items: center;
+  }
+
+  .legend i {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    margin-right: 7px;
+    vertical-align: -1px;
+  }
+
+  .legend .sw-fill { background: var(--accent); }
+  .legend .sw-tick { width: 2px; height: 13px; background: var(--ink); opacity: 0.42; border-radius: 0; }
+
+  /* ---------- tables ---------- */
+
+  .twrap { overflow-x: auto; margin: 0 0 8px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 9px 14px 9px 0;
+    border-bottom: 1px solid var(--rule-2);
+    vertical-align: top;
+  }
+
+  thead th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+
+  td.num, th.num {
+    text-align: right;
+    font-family: var(--f-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding-right: 0;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  .barcell {
+    width: 190px;
+    min-width: 130px;
+  }
+
+  .minibar {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 2px;
+    position: relative;
+    margin-top: 6px;
+  }
+
+  .minibar > i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--accent);
+    border-radius: 2px;
+    display: block;
+  }
+
+  /* ---------- sector cards ---------- */
+
+  .lanes {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    margin-top: 18px;
+  }
+
+  .lane {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 15px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .lane-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--rule-2);
+    padding-bottom: 8px;
+  }
+
+  .lane-id {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .lane-pct {
+    font-family: var(--f-mono);
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lane ul { margin: 0; padding-left: 17px; }
+  .lane li { font-size: 13.5px; line-height: 1.5; margin-bottom: 3px; color: var(--ink-2); }
+  .lane li b { color: var(--ink); font-weight: 500; }
+
+  .lane-foot {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    margin-top: auto;
+    padding-top: 6px;
+  }
+
+  /* ---------- callouts ---------- */
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-wash);
+    padding: 14px 18px;
+    border-radius: 0 4px 4px 0;
+    margin: 22px 0;
+    max-width: var(--measure);
+  }
+
+  .callout.warn { border-left-color: var(--ochre); background: transparent; border: 1px solid var(--rule); border-left: 3px solid var(--ochre); }
+
+  .callout p { margin: 0; font-size: 14.5px; }
+  .callout p + p { margin-top: 9px; }
+
+  .callout strong { font-weight: 600; }
+
+  code, .m {
+    font-family: var(--f-mono);
+    font-size: 0.88em;
+    background: var(--surface-2);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  .caveats { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--rule); }
+
+  .caveat {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 20px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule-2);
+  }
+
+  .caveat h4 {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .caveat h4 span {
+    display: block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--ochre);
+    letter-spacing: 0.05em;
+    margin-top: 3px;
+  }
+
+  .caveat p { margin: 0; font-size: 14px; color: var(--ink-2); max-width: 70ch; }
+
+  footer {
+    margin-top: 70px;
+    padding-top: 20px;
+    border-top: 2px solid var(--ink);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    line-height: 1.75;
+  }
+
+  @media (max-width: 720px) {
+    .crow, .axis { grid-template-columns: 128px 1fr 60px; gap: 11px; }
+    .caveat { grid-template-columns: 1fr; gap: 5px; }
+    .cname { font-size: 13px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Aloqa · QA scope census</div>
+    <h1>How much of Aloqa is each module?</h1>
+    <p class="standfirst">Five independent measurements taken from the frontend and backend source, reconciled into one scope weight per module — so parallel test sectors can be sized to carry comparable depth.</p>
+    <div class="pins">
+      <span class="pin">frontend <b>origin/develop @ 7a99aa99e880</b></span>
+      <span class="pin">backend <b>741804e5dc9f</b></span>
+      <span class="pin">measured <b>2026-08-25</b></span>
+      <span class="pin">hand-written <b>279k FE + 134k BE LOC</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Scope weight per module</h2>
+    <p class="sec-note">The bar is the composite weight. The ticks are the five separate measurements that fed it — where they cluster, the estimate is solid; where they scatter, the module is lopsided between frontend and backend, and the caveats below say why.</p>
+
+    <div class="chart">
+      <!-- max axis 45% -->
+      <div class="crow">
+        <div class="cname">Calls<small>meetings · webrtc</small></div>
+        <div class="track">
+          <i class="fill" style="width:77.8%"></i>
+          <i class="tick" style="left:95.1%"></i><i class="tick" style="left:79.6%"></i><i class="tick" style="left:78.9%"></i><i class="tick" style="left:73.8%"></i><i class="tick" style="left:64.0%"></i>
+        </div>
+        <div class="cval">35.0%<span>28.8–42.8</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Chat<small>channels · dms · threads</small></div>
+        <div class="track">
+          <i class="fill" style="width:41.8%"></i>
+          <i class="tick" style="left:52.2%"></i><i class="tick" style="left:35.1%"></i><i class="tick" style="left:31.3%"></i><i class="tick" style="left:47.6%"></i><i class="tick" style="left:44.7%"></i>
+        </div>
+        <div class="cval">18.8%<span>14.1–23.5</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Admin &amp; org management<small>company · workspace · roles</small></div>
+        <div class="track">
+          <i class="fill" style="width:27.1%"></i>
+          <i class="tick out" style="left:13.8%"></i><i class="tick out" style="left:35.3%"></i><i class="tick" style="left:30.9%"></i><i class="tick" style="left:32.4%"></i><i class="tick" style="left:26.2%"></i>
+        </div>
+        <div class="cval">12.2%<span>6.2–15.9</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Shell &amp; directories<small>sidebar · notifications · people</small></div>
+        <div class="track">
+          <i class="fill" style="width:19.3%"></i>
+          <i class="tick" style="left:15.1%"></i><i class="tick" style="left:17.6%"></i><i class="tick" style="left:17.8%"></i><i class="tick" style="left:16.7%"></i><i class="tick" style="left:27.1%"></i>
+        </div>
+        <div class="cval">8.7%<span>6.8–12.2</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Calendar<small>events · scheduled meetings</small></div>
+        <div class="track">
+          <i class="fill" style="width:14.2%"></i>
+          <i class="tick" style="left:14.2%"></i><i class="tick" style="left:12.2%"></i><i class="tick" style="left:14.7%"></i><i class="tick" style="left:10.2%"></i><i class="tick" style="left:17.3%"></i>
+        </div>
+        <div class="cval">6.4%<span>4.6–7.8</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Settings (personal)<small>account · privacy · sessions</small></div>
+        <div class="track">
+          <i class="fill" style="width:14.0%"></i>
+          <i class="tick" style="left:9.8%"></i><i class="tick out" style="left:0.4%"></i><i class="tick out" style="left:23.6%"></i><i class="tick" style="left:15.8%"></i><i class="tick" style="left:15.6%"></i>
+        </div>
+        <div class="cval">6.3%<span>0.2–10.6</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Files<small>uploads · viewer · browser</small></div>
+        <div class="track">
+          <i class="fill" style="width:12.4%"></i>
+          <i class="tick" style="left:11.3%"></i><i class="tick" style="left:12.0%"></i><i class="tick" style="left:13.3%"></i><i class="tick" style="left:7.1%"></i><i class="tick" style="left:15.8%"></i>
+        </div>
+        <div class="cval">5.6%<span>3.2–7.1</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Auth &amp; onboarding<small>login · signup · invites</small></div>
+        <div class="track">
+          <i class="fill" style="width:10.7%"></i>
+          <i class="tick out" style="left:4.0%"></i><i class="tick out" style="left:21.1%"></i><i class="tick" style="left:11.1%"></i><i class="tick" style="left:15.8%"></i><i class="tick" style="left:6.4%"></i>
+        </div>
+        <div class="cval">4.8%<span>1.8–9.5</span></div>
+      </div>
+
+      <div class="crow">
+        <div class="cname">Search<small>global · in-channel</small></div>
+        <div class="track">
+          <i class="fill" style="width:4.7%"></i>
+          <i class="tick" style="left:6.7%"></i><i class="tick" style="left:9.1%"></i><i class="tick out" style="left:0.9%"></i><i class="tick" style="left:2.4%"></i><i class="tick" style="left:5.1%"></i>
+        </div>
+        <div class="cval">2.1%<span>0.4–4.1</span></div>
+      </div>
+    </div>
+
+    <div class="axis"><div class="axis-inner"><span>0%</span><span>15%</span><span>30%</span><span>45%</span></div></div>
+
+    <div class="legend">
+      <span><i class="sw-fill"></i>composite weight</span>
+      <span><i class="sw-tick"></i>individual measurement</span>
+      <span><i class="sw-tick" style="background:var(--ochre);opacity:.9"></i>outlier — see caveats</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>What was measured</h2>
+    <p class="sec-note">Every file in both repos was classified into one module, then counted five ways. Generated code (ogen, protobuf — 402k lines of it) and test code were excluded from the product totals.</p>
+
+    <div class="twrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Measurement</th>
+            <th>What it counts</th>
+            <th class="num">Weight</th>
+            <th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>User-visible strings</b></td>
+            <td>i18n dictionary keys, attributed to a module by which files reference them — the closest proxy for how much a person can actually see and read</td>
+            <td class="num">25%</td>
+            <td class="num">3,365</td>
+          </tr>
+          <tr>
+            <td><b>UI components</b></td>
+            <td>Non-test <span class="m">.tsx</span> components — how many distinct things render</td>
+            <td class="num">25%</td>
+            <td class="num">1,227</td>
+          </tr>
+          <tr>
+            <td><b>Frontend code</b></td>
+            <td>Hand-written non-test lines across <span class="m">packages/features</span>, <span class="m">apps/web</span> features and widgets</td>
+            <td class="num">20%</td>
+            <td class="num">278,781</td>
+          </tr>
+          <tr>
+            <td><b>API operations</b></td>
+            <td>Distinct method + path pairs in the generated OpenAPI contract — how many behaviours sit behind the screens</td>
+            <td class="num">15%</td>
+            <td class="num">280</td>
+          </tr>
+          <tr>
+            <td><b>Backend code</b></td>
+            <td>Hand-written non-test Go, generated code removed</td>
+            <td class="num">15%</td>
+            <td class="num">134,175</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p><strong>Two methods, independently, agree.</strong> Attributing i18n keys by namespace and by actual code reference were computed separately and land within a percentage point of each other on every module (Calls 34.1% vs 34.8%). That agreement is the main reason to trust the composite.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where the measurements disagree</h2>
+    <p class="sec-note">Four modules have a wide spread. Each has a cause, and each changes how you should read its number.</p>
+
+    <div class="caveats">
+      <div class="caveat">
+        <h4>Settings<span>0.2% ↔ 10.6%</span></h4>
+        <p>Almost entirely a frontend module — many screens and controls, but nearly no backend of its own, since it reads and writes through the user and org endpoints. Treat 6.3% as real UI work with very little server behaviour behind it.</p>
+      </div>
+      <div class="caveat">
+        <h4>Admin &amp; org<span>6.2% ↔ 15.9%</span></h4>
+        <p>The inverse: heavy backend (roles, permissions, invites, audit), comparatively thin UI. Also note the org-administration screens physically live inside <span class="m">features/settings/</span>, not <span class="m">features/admin/</span> — the census reassigns them, so this number is higher than the directory layout suggests.</p>
+      </div>
+      <div class="caveat">
+        <h4>Auth &amp; onboarding<span>1.8% ↔ 9.5%</span></h4>
+        <p>Small, simple screens sitting on top of a substantial auth service — sessions, tokens, magic links, verification, 2FA. The screens are quick to test; the state machine behind them is not.</p>
+      </div>
+      <div class="caveat">
+        <h4>Search<span>0.4% ↔ 4.1%</span></h4>
+        <p>The lowest number here is the least trustworthy in the whole census. Search has a real 46-file UI — filters, tabs, sort, scope chips, result groups — but its strings are hardcoded rather than translated, so the i18n measure badly understates it. Read Search as nearer 3%.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <p><strong>Routes are a trap.</strong> Calls occupies just 6 of the app's 51 routes but 35% of its functionality — nearly all of it lives in states inside a single in-call route. Counting screens or URLs to size a module would understate Calls by roughly a factor of five.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Inside Calls</h2>
+    <p class="sec-note">At 35%, Calls cannot be one sector against any sensible split. It divides cleanly along lines that match how it is actually built and exercised.</p>
+
+    <div class="twrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cluster</th>
+            <th class="barcell">Share of whole app</th>
+            <th class="num">of Calls</th>
+            <th class="num">of app</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Entry &amp; lifecycle — create, lobby, ringing, waiting room, end, recovery</td><td class="barcell"><div class="minibar"><i style="width:100%"></i></div></td><td class="num">20.6%</td><td class="num">7.2%</td></tr>
+          <tr><td>Hub, history &amp; post-call detail</td><td class="barcell"><div class="minibar"><i style="width:79%"></i></div></td><td class="num">16.2%</td><td class="num">5.7%</td></tr>
+          <tr><td>In-call core — media, controls, tiles, devices, quality</td><td class="barcell"><div class="minibar"><i style="width:76%"></i></div></td><td class="num">15.7%</td><td class="num">5.5%</td></tr>
+          <tr><td>In-call people &amp; moderation — participants panel, host powers</td><td class="barcell"><div class="minibar"><i style="width:50%"></i></div></td><td class="num">10.4%</td><td class="num">3.6%</td></tr>
+          <tr><td>In-call collaboration — chat, screen share, recording</td><td class="barcell"><div class="minibar"><i style="width:49%"></i></div></td><td class="num">10.1%</td><td class="num">3.5%</td></tr>
+          <tr><td>Side rooms &amp; breakout</td><td class="barcell"><div class="minibar"><i style="width:43%"></i></div></td><td class="num">8.7%</td><td class="num">3.1%</td></tr>
+          <tr><td>Guest access &amp; join links</td><td class="barcell"><div class="minibar"><i style="width:33%"></i></div></td><td class="num">6.7%</td><td class="num">2.4%</td></tr>
+          <tr><td>Meeting settings</td><td class="barcell"><div class="minibar"><i style="width:27%"></i></div></td><td class="num">5.5%</td><td class="num">1.9%</td></tr>
+          <tr><td style="color:var(--ink-3)">Debug / dev surfaces — low test value</td><td class="barcell"><div class="minibar"><i style="width:29%;opacity:.4"></i></div></td><td class="num" style="color:var(--ink-3)">6.0%</td><td class="num" style="color:var(--ink-3)">2.1%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Inside Chat</h3>
+    <div class="twrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cluster</th>
+            <th class="barcell">Share of whole app</th>
+            <th class="num">of Chat</th>
+            <th class="num">of app</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Message actions — edit, delete, reactions, pin, forward, save</td><td class="barcell"><div class="minibar"><i style="width:100%"></i></div></td><td class="num">26.9%</td><td class="num">5.1%</td></tr>
+          <tr><td>Composer &amp; sending — attachments, link previews, typing</td><td class="barcell"><div class="minibar"><i style="width:90%"></i></div></td><td class="num">24.2%</td><td class="num">4.6%</td></tr>
+          <tr><td>Channel management &amp; info — members, archive, mute, header</td><td class="barcell"><div class="minibar"><i style="width:82%"></i></div></td><td class="num">22.1%</td><td class="num">4.2%</td></tr>
+          <tr><td>Mentions &amp; unread</td><td class="barcell"><div class="minibar"><i style="width:20%"></i></div></td><td class="num">5.5%</td><td class="num">1.0%</td></tr>
+          <tr><td>Threads &amp; replies</td><td class="barcell"><div class="minibar"><i style="width:18%"></i></div></td><td class="num">5.0%</td><td class="num">0.9%</td></tr>
+          <tr><td>DMs &amp; profiles</td><td class="barcell"><div class="minibar"><i style="width:16%"></i></div></td><td class="num">4.5%</td><td class="num">0.8%</td></tr>
+          <tr><td>Files &amp; media in chat</td><td class="barcell"><div class="minibar"><i style="width:12%"></i></div></td><td class="num">3.3%</td><td class="num">0.6%</td></tr>
+          <tr><td>Call events in chat</td><td class="barcell"><div class="minibar"><i style="width:12%"></i></div></td><td class="num">3.3%</td><td class="num">0.6%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Balanced sector splits</h2>
+    <p class="sec-note">A <b>sector</b> is what a session tests; a <b>lane</b> is the isolated fixture set and browser block it runs on. The letters are aligned — sector A is meant to run on lane A — but they are separate things. Bundles are kept coherent on setup cost, so everything needing the multi-browser call rig is concentrated and only the sectors that need it pay for it. The chosen five-sector shape is below; the alternatives after it are balanced purely on scope weight, for comparison.</p>
+
+    <div class="rule-label">Five sectors — two for Calls, one for Chat, two for everything else · chosen</div>
+    <div class="lanes">
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector A · calls</span><span class="lane-pct">15.7%</span></div>
+        <ul>
+          <li><b>Inside the call:</b> media &amp; controls, tiles, devices, quality</li>
+          <li>Participants panel &amp; host powers</li>
+          <li>In-call chat, screen share, recording</li>
+          <li>Side rooms &amp; breakout</li>
+        </ul>
+        <div class="lane-foot">full call rig · 3–4 browsers · costliest hour-for-hour</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector B · calls</span><span class="lane-pct">17.2%</span></div>
+        <ul>
+          <li><b>Around the call:</b> create, lobby, ringing, end, recovery</li>
+          <li>Hub, history &amp; post-call detail</li>
+          <li>Meeting settings</li>
+          <li>Guest access &amp; join links</li>
+        </ul>
+        <div class="lane-foot">2 browsers + guest window</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector C · chat</span><span class="lane-pct">18.8%</span></div>
+        <ul>
+          <li>Composer &amp; sending, attachments, link previews</li>
+          <li>Message actions — edit, delete, reactions, pin, forward</li>
+          <li>Channels, members, archive; DMs; threads; mentions</li>
+        </ul>
+        <div class="lane-foot">2–3 browsers · whole module intact</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector D · rest</span><span class="lane-pct">23.3%</span></div>
+        <ul>
+          <li><b>Admin &amp; org management</b> — company, workspace, roles, invites, audit</li>
+          <li><b>Settings (personal)</b></li>
+          <li><b>Auth &amp; onboarding</b></li>
+        </ul>
+        <div class="lane-foot">who you are and what you may do · needs the outsider account</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector E · rest</span><span class="lane-pct">22.8%</span></div>
+        <ul>
+          <li><b>Shell, navigation &amp; directories</b></li>
+          <li><b>Calendar</b></li>
+          <li><b>Files</b></li>
+          <li><b>Search</b></li>
+        </ul>
+        <div class="lane-foot">what is in the workspace and how you find it</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><strong>Unbalanced on scope, balanced on effort — which is the point.</strong> The Calls sectors carry 15.7% and 17.2% while the two catch-all sectors carry 23.3% and 22.8%, a 7.6 pp spread. That gap is not a flaw in the split: in-call work costs far more per unit of scope than settings or directory work — three to four browsers, real media, multi-participant state, timing-sensitive checks.</p>
+      <p>At an in-call cost of roughly 1.45× per unit, sector A's 15.7% comes out at about 22.8 effort-equivalent points, level with sectors D and E. That multiplier is reasoned from the setup burden rather than measured, so treat it as a working assumption — but it means this shape should finish closer to level than the raw percentages suggest.</p>
+      <p>Within each pair the balance is tight regardless: 1.5 pp between the two Calls sectors, 0.5 pp between the two catch-alls.</p>
+    </div>
+
+    <div class="rule-label" style="margin-top:38px">Six sectors — 3.6 pp spread · Chat must now be split too</div>
+    <div class="lanes">
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector A</span><span class="lane-pct">15.7%</span></div>
+        <ul>
+          <li><b>Calls — inside the call:</b> media &amp; controls, participants &amp; moderation, in-call chat / share / recording, side rooms</li>
+        </ul>
+        <div class="lane-foot">full call rig · 3–4 browsers</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector B</span><span class="lane-pct">17.2%</span></div>
+        <ul>
+          <li><b>Calls — around the call:</b> create, lobby, ringing, end, recovery; hub, history &amp; detail; meeting settings; guest links</li>
+        </ul>
+        <div class="lane-foot">2 browsers + guest window</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector C</span><span class="lane-pct">14.7%</span></div>
+        <ul>
+          <li><b>Chat — conversation:</b> composer &amp; sending, message actions, threads, mentions</li>
+          <li><b>Search</b></li>
+        </ul>
+        <div class="lane-foot">2 browsers · one busy channel</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector D</span><span class="lane-pct">14.9%</span></div>
+        <ul>
+          <li><b>Chat — spaces:</b> channel management &amp; info, DMs, files in chat, call events</li>
+          <li><b>Shell, navigation &amp; directories</b></li>
+        </ul>
+        <div class="lane-foot">finding and managing places · 3+ accounts</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector E</span><span class="lane-pct">17.0%</span></div>
+        <ul>
+          <li><b>Admin &amp; org management</b></li>
+          <li><b>Auth &amp; onboarding</b></li>
+        </ul>
+        <div class="lane-foot">identity and org · needs the outsider account</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector F</span><span class="lane-pct">18.3%</span></div>
+        <ul>
+          <li><b>Calendar</b></li>
+          <li><b>Files</b></li>
+          <li><b>Settings (personal)</b></li>
+        </ul>
+        <div class="lane-foot">single browser for most of it</div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <p><strong>Six is where Chat stops fitting in one sector</strong> — at 18.8% it exceeds the 16.3% target, so it has to divide the way Calls already does. That division costs more than the Calls one did. In-call and around-call are genuinely different jobs with different rigs; Chat's halves both want the same setup — two browsers and a channel with history — so splitting duplicates the setup without making either sector cheaper, and the border between "message actions" and "channel management" is soft enough that each sector will keep wandering into the other.</p>
+      <p>Six sectors also means six reports to read and triage in one day, which is usually the binding constraint rather than the testing itself.</p>
+    </div>
+
+    <div class="rule-label" style="margin-top:38px">Four sectors — 5.4 pp spread</div>
+    <div class="lanes">
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector A</span><span class="lane-pct">22.1%</span></div>
+        <ul><li><b>Calls — live in-call</b> (all five in-call clusters)</li><li><b>Guest access</b></li><li><b>Search</b></li></ul>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector B</span><span class="lane-pct">24.9%</span></div>
+        <ul><li><b>Calls — entry &amp; lifecycle</b></li><li><b>Calls — hub &amp; detail</b></li><li><b>Calendar</b></li><li><b>Files</b></li></ul>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector C</span><span class="lane-pct">27.5%</span></div>
+        <ul><li><b>Chat</b></li><li><b>Shell &amp; directories</b></li></ul>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector D</span><span class="lane-pct">23.3%</span></div>
+        <ul><li><b>Admin &amp; org management</b></li><li><b>Settings (personal)</b></li><li><b>Auth &amp; onboarding</b></li></ul>
+      </div>
+    </div>
+
+    <div class="rule-label" style="margin-top:38px">Three sectors — 3.0 pp spread</div>
+    <div class="lanes">
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector A</span><span class="lane-pct">35.0%</span></div>
+        <ul><li><b>Calls</b>, entire module</li></ul>
+        <div class="lane-foot">owns the call rig outright</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector B</span><span class="lane-pct">32.9%</span></div>
+        <ul><li><b>Chat</b></li><li><b>Calendar</b></li><li><b>Files</b></li><li><b>Search</b></li></ul>
+        <div class="lane-foot">messaging and content</div>
+      </div>
+      <div class="lane">
+        <div class="lane-top"><span class="lane-id">Sector C</span><span class="lane-pct">32.0%</span></div>
+        <ul><li><b>Admin &amp; org management</b></li><li><b>Shell &amp; directories</b></li><li><b>Settings (personal)</b></li><li><b>Auth &amp; onboarding</b></li></ul>
+        <div class="lane-foot">identity, org and chrome</div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <p><strong>Scope is not effort.</strong> These weights size how much functionality a sector covers, not how long it takes to cover it. A unit of in-call testing costs several times a unit of settings testing — multiple browsers, real media, timing-sensitive state. If sectors are timeboxed rather than scoped, the in-call sector should get the longest box or the smallest share.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Excluded from the totals</h2>
+    <p class="sec-note">Three features render in the UI but are design mockups — every one of them reads from a shared static fixture module and none makes a single API call. They are not testable functionality and are left out of the percentages above.</p>
+
+    <div class="twrap">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Route</th><th class="num">FE lines</th><th class="num">Components</th><th class="num">API calls</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>AI assistant &amp; AI search</td><td><span class="m">/w/{ws}/ai</span></td><td class="num">931</td><td class="num">16</td><td class="num">0</td></tr>
+          <tr><td>Telephony — dial pad, call log, contacts</td><td><span class="m">/w/{ws}/phone</span></td><td class="num">709</td><td class="num">12</td><td class="num">0</td></tr>
+          <tr><td>App marketplace</td><td><span class="m">/w/{ws}/apps</span></td><td class="num">450</td><td class="num">6</td><td class="num">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:18px">Also excluded: the Calls debug surfaces (2.1% of the app), which are developer instrumentation rather than product; the mobile and desktop apps, which are outside the web testing scope; and 402k lines of generated OpenAPI and protobuf code.</p>
+  </section>
+
+  <section>
+    <h2>Running a sector</h2>
+    <p class="sec-note">This page is the reasoning behind the split. The working definitions — what each sector covers, where its borders sit, which accounts and browsers it needs, and the filenames it writes — live in <span class="m">SECTORS.md</span> in the QA repo, so a session reads them rather than having a scope pasted into its prompt.</p>
+
+    <div class="twrap">
+      <table>
+        <thead>
+          <tr><th>Sector</th><th>Runs on</th><th class="num">Scope</th><th>Writes its files under</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>A · Calls, inside the call</td><td>lane A</td><td class="num">15.7%</td><td><span class="m">calls-inside</span></td></tr>
+          <tr><td>B · Calls, around the call</td><td>lane B</td><td class="num">17.2%</td><td><span class="m">calls-around</span></td></tr>
+          <tr><td>C · Chat</td><td>lane C</td><td class="num">18.8%</td><td><span class="m">chat</span></td></tr>
+          <tr><td>D · Org, identity &amp; settings</td><td>lane D</td><td class="num">23.3%</td><td><span class="m">org</span></td></tr>
+          <tr><td>E · Workspace content &amp; chrome</td><td>lane E</td><td class="num">22.8%</td><td><span class="m">workspace</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p><strong>A session is started with just a letter.</strong> <span class="m">/run-until 14:00 A</span> means sector A on lane A, and nothing more needs saying — the repo's always-loaded instructions send the session to <span class="m">SECTORS.md</span> for the rest. Sector and lane are named separately only when they differ.</p>
+      <p style="margin-top:10px">This also keeps the timebox clean: it replays whatever task text it was given every time it refuses to let a session stop, so a pasted scope would be re-injected over and over. A single letter is not.</p>
+    </div>
+  </section>
+
+  <footer>
+    Aloqa module scope census · measured 2026-08-25 against frontend <span class="m">7a99aa99e880</span> and backend <span class="m">741804e5dc9f</span><br>
+    Percentages will drift as the product changes — re-run the census when the split stops matching what sessions actually find.
+  </footer>
+
+</div>

@@ -1,0 +1,475 @@
+<title>Блокировка и Saved</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#f6f8f7; --surface:#ffffff; --ink:#16201f; --muted:#5c6a68;
+    --accent:#1f5f5b; --rule:#dbe3e1; --chip:#eef3f2;
+    --sev:#9a6412; --sev-bg:#fbf2e2; --sev-rule:#e8d2a8;
+    --area:#2b5578; --area-bg:#e9f0f6;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+      --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+      --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+      --area:#8fb6d8; --area-bg:#16232e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+    --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+    --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+    --area:#8fb6d8; --area-bg:#16232e;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.65; margin:0;
+    padding:clamp(28px,5vw,64px) clamp(18px,5vw,40px);
+  }
+  .wrap{max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:36px}
+  header{display:flex; flex-direction:column; gap:10px; border-bottom:2px solid var(--rule); padding-bottom:22px}
+  .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  h1{font-family:Spectral,Georgia,serif; font-weight:600; font-size:clamp(28px,4.4vw,40px);
+     line-height:1.18; margin:0; text-wrap:balance; letter-spacing:-.01em}
+  .lede{color:var(--muted); max-width:62ch; margin:0}
+  .summary{border-collapse:collapse; width:100%; font-size:14.5px}
+  .summary th{text-align:left; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+              color:var(--muted); font-weight:600; padding:0 12px 8px 0; border-bottom:1px solid var(--rule)}
+  .summary td{padding:11px 12px 11px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  .summary tr:last-child td{border-bottom:none}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{font-size:11.5px; font-weight:600; letter-spacing:.04em; padding:2.5px 8px; border-radius:3px;
+        white-space:nowrap; font-family:"IBM Plex Mono",monospace}
+  .sev{background:var(--sev-bg); color:var(--sev); border:1px solid var(--sev-rule)}
+  .area{background:var(--area-bg); color:var(--area); border:1px solid transparent}
+  article{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+          padding:clamp(20px,3.2vw,30px); display:flex; flex-direction:column; gap:16px}
+  article h2{font-family:Spectral,Georgia,serif; font-weight:600; font-size:21px; line-height:1.32;
+             margin:0; text-wrap:balance}
+  article p{margin:0; max-width:64ch}
+  h3{font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--muted);
+     font-weight:600; margin:0}
+  .block{display:flex; flex-direction:column; gap:8px}
+  pre{margin:0; background:var(--chip); border:1px solid var(--rule); border-radius:4px;
+      padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace;
+      font-size:13px; line-height:1.62; font-variant-numeric:tabular-nums}
+  ol,ul{margin:0; padding-left:20px; max-width:64ch}
+  li{margin-bottom:5px}
+  li::marker{color:var(--accent)}
+  kbd{font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--chip);
+      border:1px solid var(--rule); border-radius:3px; padding:1px 5px}
+  code{font-family:"IBM Plex Mono",monospace; font-size:13.5px; background:var(--chip);
+       border-radius:3px; padding:1px 4px}
+  .expect{border-left:3px solid var(--accent); padding:2px 0 2px 16px; display:flex;
+          flex-direction:column; gap:7px}
+  footer{color:var(--muted); font-size:13.5px; border-top:1px solid var(--rule); padding-top:18px}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">QA · Chat · 26 августа 2026</div>
+    <h1>Чат: блокировка, непрочитанное и повторяющийся текст</h1>
+    <p class="lede">Пять находок по чату. Две важные: блокировка человека срабатывает,
+      но интерфейс сообщает обратное и не даёт её снять, и счётчик непрочитанного
+      не появляется, пока не перезагрузить страницу. Остальные три — про
+      повторяющийся и лишний текст на экране.</p>
+  </header>
+
+  <div class="block expect">
+    <h3>Отчёт перепроверен</h3>
+    <p>Все пять находок переоткрыты в браузере на сборке <code>v0.61.0-rc.4</code> —
+      это на семь коммитов новее сборки, на которой отчёт составлялся, и ни один из них
+      не затрагивает описанные здесь экраны. Подтвердились все пять; ложных срабатываний
+      не найдено, из отчёта ничего не удалено. Уточнены два места: в находке 1 из шагов
+      убрана лишняя перезагрузка (дефект виден и без неё), в находке про счётчик
+      непрочитанного добавлен замер WebSocket, который показывает причину.</p>
+  </div>
+
+  <table class="summary">
+    <thead><tr><th style="width:52%">Находка</th><th>Важность</th><th>Область</th></tr></thead>
+    <tbody>
+      <tr><td>Карточка заблокированного человека утверждает, что заблокировать его нельзя,
+              и не даёт разблокировать</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Блокировка проходит молча — ни подтверждения, ни уведомления</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>На странице Saved текст сохранённого сообщения показан дважды</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Счётчик непрочитанного не появляется, пока страницу не перезагрузить</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Карточка предпросмотра ссылки повторяет домен трижды и ничего к ссылке не добавляет</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+    </tbody>
+  </table>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][PROFILE] Карточка заблокированного человека утверждает, что заблокировать его нельзя, и не даёт разблокировать</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Пользователь блокирует человека из его карточки. Блокировка срабатывает, но
+        при следующем открытии той же карточки кнопка <code>Block</code> в ней неактивна,
+        под кнопками стоит строка про неподтверждённое членство в workspace, а кнопки
+        <code>Unblock</code> нет вообще. Снять блокировку из карточки нельзя — только
+        в <code>Settings</code> → <code>Privacy &amp; security</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Directories</code> → вкладка <code>People</code>.</li>
+        <li>Нажать на строку участника — откроется карточка с кнопками
+          <code>Message</code>, <code>Call</code>, <code>Block</code>, <code>Share</code>.</li>
+        <li>Нажать <code>Block</code> — карточка закроется.</li>
+        <li>Снова открыть карточку того же человека. Перезагружать страницу не нужно:
+          состояние одинаковое и сразу, и после полной перезагрузки.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Кнопка <code>Block</code> неактивна, показана строка <code>This user cannot be
+        blocked until their workspace membership is verified.</code>, кнопки
+        <code>Unblock</code> нет. Членство в workspace при этом в порядке — та же карточка
+        показывает общий канал в блоке <code>SHARED CHANNELS</code>.</p>
+      <pre>GET /api/v1/messaging/users/blocked
+200 {"users":[{"id":"…","name":"…","blocked_at":"…"}],"total":1}
+
+карточка того же человека — состояние одинаковое в двух случаях:
+  (a) повторное открытие карточки без перезагрузки
+  (b) полная чистая загрузка (about:blank → load → клик по строке)
+
+  текст: "… Message Call Block Share
+          This user cannot be blocked until their workspace membership is verified.
+          SHARED CHANNELS · 2 &lt;канал&gt; &lt;канал&gt; …"
+  интерактивные элементы карточки:
+          Close profile(вкл) Message(вкл) Call(вкл) Block(ВЫКЛ) Share(вкл) &lt;канал&gt;(вкл) &lt;канал&gt;(вкл)
+  узлов со словом Unblock нет нигде на странице, не только в карточке
+
+контроль, человек, которого не блокировали:
+  Block(вкл), строки про членство нет — при том, что он не состоит ни в одном общем канале</pre>
+      <p>Перечислены все видимые интерактивные элементы карточки, а не только ожидаемые
+        кнопки. Замер повторён на двух сборках.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>В карточке уже заблокированного человека вместо неактивной кнопки
+        <code>Block</code> показывается активная <code>Unblock</code> — снимать
+        блокировку нужно там же, где её поставили. Строки про неподтверждённое
+        членство в workspace быть не должно: она противоречит факту блокировки.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Заблокировать человека, перезагрузить страницу, открыть его карточку:
+          в ней активная кнопка <code>Unblock</code> и никакого текста про членство.</li>
+        <li>Нажать <code>Unblock</code> прямо в карточке:
+          <code>GET /api/v1/messaging/users/blocked</code> отдаёт <code>total: 0</code>,
+          кнопка снова становится <code>Block</code>, переписка открывается.</li>
+        <li>Карточка человека, которого никогда не блокировали, и раздел
+          <code>Settings</code> → <code>Privacy &amp; security</code> продолжают
+          работать как раньше.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][PROFILE] Блокировка проходит молча — ни подтверждения, ни уведомления</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Нажатие <code>Block</code> в карточке человека сразу закрывает карточку: ни вопроса
+        «вы уверены», ни уведомления об успехе, ни возможности отменить. После блокировки
+        обе стороны теряют возможность написать друг другу и позвонить. Кнопка
+        <code>Block</code> при этом стоит в одном ряду с <code>Message</code>,
+        <code>Call</code> и <code>Share</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Directories</code> → вкладка <code>People</code>.</li>
+        <li>Нажать на строку участника → откроется карточка человека.</li>
+        <li>Нажать <code>Block</code> и следить за экраном.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Карточка закрывается, и на экране не появляется ничего. Блокировка при этом
+        выполнена — см. измерение в находке 1.</p>
+      <pre>нажатие Block → 16 снимков экрана с шагом 300 мс, начиная до нажатия
+
+  диалоги подтверждения:   ни одного
+  уведомления:             ни одного
+  карточка человека:       закрыта уже к первому снимку (300 мс)
+  ошибки в консоли:        нет</pre>
+      <p>Уведомления отбирались по фактической видимости — проверкой
+        <code>display</code>, <code>visibility</code> и произведения
+        <code>opacity</code> по цепочке предков, — а не по одной только роли элемента.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Блокировка спрашивает подтверждение либо показывает уведомление об успехе
+        с возможностью отменить. В самом приложении обе формы уже есть для менее
+        серьёзных действий:</p>
+      <pre>Выход из канала    диалог: "Leave channel / You will lose access to this
+                   channel unless you are added back."  [Cancel] [Leave]
+Скрыть сообщение   уведомление: "Message hidden for you"  [Undo]
+Заблокировать      ничего</pre>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Нажать <code>Block</code>: появляется подтверждение или уведомление
+          с отменой, и пользователь видит, что действие произошло.</li>
+        <li>Отменить действие (отказ в диалоге или <code>Undo</code> в уведомлении):
+          <code>GET /api/v1/messaging/users/blocked</code> отдаёт <code>total: 0</code>,
+          переписка с человеком по-прежнему открывается.</li>
+        <li>Подтверждения у соседних действий не пропали: <code>Leave channel</code>
+          по-прежнему спрашивает, <code>Hide for me</code> по-прежнему показывает
+          уведомление с <code>Undo</code>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] На странице Saved текст сохранённого сообщения показан дважды</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Пользователь сохраняет текстовое сообщение и открывает страницу
+        <code>Saved</code>. Текст сообщения отрисован в записи два раза подряд:
+        один раз как тело записи и второй — внутри карточки-цитаты с ссылкой на
+        исходное сообщение. Страницу с несколькими сохранёнными записями тяжело читать.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть любой канал, навести курсор на текстовое сообщение.</li>
+        <li>Нажать <code>Save</code> в ряду кнопок над сообщением.</li>
+        <li>Открыть <code>Saved</code> в левой панели.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>В записи два видимых абзаца с одним и тем же текстом, на разных координатах.</p>
+      <pre>видимые листовые узлы одной записи на странице Saved:
+
+SPAN.sr-only    "&lt;автор&gt;, 10:44"        y = 737
+SPAN            "View original"          y = 740
+P.m-0           "&lt;текст сообщения&gt;"      y = 766   ← тело записи
+SPAN            "@&lt;автор&gt;"              y = 804
+BUTTON          "#&lt;канал&gt;"              y = 804
+SPAN            "sent 10:41"             y = 804
+P.m-0           "&lt;текст сообщения&gt;"      y = 832   ← он же в карточке источника</pre>
+      <p>Видимость проверена по всей цепочке предков — это не скрытый дубль. Механизм
+        виден на контрасте: у сохранённого <em>пересланного</em> сообщения тело пустое,
+        и дублирования нет.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Сохранённое сообщение показывается один раз — либо как обычное сообщение
+        с пометкой, откуда оно сохранено, либо как карточка источника.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Сохранить обычное текстовое сообщение и открыть <code>Saved</code>:
+          текст виден ровно один раз.</li>
+        <li>Сохранить пересланное сообщение с пустым телом: карточка источника
+          по-прежнему показывает текст оригинала, пустой заглушки не появляется.</li>
+        <li>Переход к оригиналу из сохранённой записи (<code>View original</code>
+          и ссылка на канал) по-прежнему открывает исходное сообщение.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Счётчик непрочитанного в списке каналов не появляется, пока страницу не перезагрузить</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Пользователь читает один канал, в это время кто-то пишет в другой — не приглушённый —
+        канал, где пользователь состоит. В списке каналов слева ничего не меняется:
+        счётчика непрочитанного нет. Он появляется только после перезагрузки страницы.
+        То есть пока человек сидит в приложении, он не узнаёт о новых сообщениях
+        в других каналах вообще.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти двумя пользователями, оба состоят в одном общем канале.</li>
+        <li>Первый: открыть общий канал (чтобы сбросить непрочитанное), затем перейти
+          в другой канал и остаться в нём. Вкладку не сворачивать.</li>
+        <li>Второй: написать сообщение в общий канал.</li>
+        <li>Первый: смотреть на строку общего канала в списке слева, никуда не переходя.</li>
+        <li>Перезагрузить страницу, оставаясь в том же канале.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Больше минуты подряд строка канала не меняется. Сразу после перезагрузки —
+        без единого перехода в сам канал — счётчик появляется.</p>
+      <pre>опрос строки канала в списке слева каждые 300 мс, начиная до сообщения
+второго пользователя; три прогона — 39 с, 77,7 с и 68,7 с
+
+  в начале                    aria-label: "&lt;общий канал&gt;"
+  все снимки всех прогонов    aria-label: "&lt;общий канал&gt;"      изменений нет
+  document.visibilityState    "visible"     (вкладка не свёрнута и не троттлится)
+
+перезагрузка страницы, пользователь остаётся в том же канале (/c/&lt;другой канал&gt;):
+  сразу после                 aria-label: "&lt;общий канал&gt;, 1 unread messages"
+
+сервер всё это время знает верный ответ:
+GET /workspaces/{workspaceId}/unread → unread_count: 1 для этого канала</pre>
+      <p>Дело не в том, что соединение оборвалось: пока строка стояла мёртвой, второй
+        пользователь написал в канал, который первый в тот момент <em>смотрел</em>, —
+        сообщение приехало живьём, и сам список каналов в этот же момент перестроился.
+        Рендерится он исправно, не появляется именно счётчик.</p>
+      <p>Перезагрузка действительно необходима — переходы внутри приложения счётчик
+        не оживляют:</p>
+      <pre>клик по строке канала в списке слева        → счётчика нет
+переход в другой раздел приложения кликом   → счётчика нет
+  (обе проверки без единой навигации: performance.getEntriesByType("navigation").length = 1
+   до и после, то есть документ тот же)
+полная перезагрузка                         → "&lt;общий канал&gt;, 1 unread messages"</pre>
+      <p>Канал не приглушён — кнопка в его шапке в состоянии
+        <code>Mute notifications</code>, <code>aria-pressed="false"</code>.</p>
+      <p>Проверено и на втором канале, который в этой сессии <em>никогда</em>
+        не приглушали — чтобы исключить остаточное состояние mute:</p>
+      <pre>канал, который не приглушали ни разу
+кнопка в шапке: aria-label "Mute notifications", aria-pressed=false
+
+опрос его строки в sidebar каждые 300 мс, 31,5 с, начиная до сообщения:
+  изменений нет вовсе
+после reload:  aria-label "&lt;этот канал&gt;, 1 unread messages"</pre>
+      <p><strong>Почему счётчику неоткуда взяться.</strong> Обёртка на
+        <code>window.WebSocket</code>, обе стороны обмена, за всю сессию:</p>
+      <pre>клиент ОТПРАВИЛ ровно две подписки:
+  {"type":"subscribe","channel_id":"&lt;канал, который открыт&gt;"}
+  {"type":"subscribe","channel_id":"&lt;DM&gt;"}
+  подписки на общий канал нет; подписки на весь workspace нет
+
+клиент ПОЛУЧИЛ, пока в общий канал приходило сообщение:
+  {"channel_id":"&lt;открытый канал&gt;","type":"subscribed"}
+  {"channel_id":"&lt;DM&gt;","type":"subscribed"}
+  {"channel_id":"&lt;открытый канал&gt;","last_read_seq":7,"type":"channel_read"}
+  {"channel_id":"&lt;открытый канал&gt;","last_read_seq":7,"type":"channel_read_receipt",…}
+  {"type":"pong"}
+  кадров про новое сообщение в общем канале: 0</pre>
+      <p>Клиент подписывается только на открытый канал и на DM, поэтому про активность
+        в остальных каналах ему ничего и не присылают. Обновлять счётчик нечем до полной
+        загрузки страницы, которая заново запрашивает
+        <code>/workspaces/{workspaceId}/unread</code>.</p>
+      <p><strong>Связь с ALK-2905.</strong> Там описан тот же симптом теми же словами
+        («не появляется в реальном времени, но после reload показывает»), но только для
+        <em>приглушённых</em> каналов, и причина записана как «web не применяет realtime
+        unread update к приглушённым каналам». Оба канала здесь не приглушены, один
+        из них не приглушался никогда — значит, дело не в mute. Замер подписок выше
+        объясняет, почему: realtime unread update не приходит вообще ни для какого канала,
+        поэтому фильтр по приглушённости тут ни при чём и исправление, ограниченное
+        приглушёнными каналами, эту проблему не закроет.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Счётчик непрочитанного появляется у канала сразу, как только туда приходит
+        сообщение, без перезагрузки страницы — так же, как само сообщение доезжает
+        в реальном времени внутри открытого канала.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Находясь в другом канале, получить сообщение в общий: счётчик у него
+          появляется в течение нескольких секунд, без перезагрузки.</li>
+        <li>Открыть этот канал: счётчик сбрасывается, и при возврате в другой канал
+          не появляется снова.</li>
+        <li>Приглушённый канал ведёт себя по своим правилам и не начинает
+          показывать счётчик там, где не должен.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CHAT] Карточка предпросмотра ссылки повторяет домен трижды и ничего к ссылке не добавляет</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Пользователь отправляет сообщение со ссылкой. Под ссылкой рисуется карточка
+        предпросмотра, в которой домен повторён три раза, а вместо описания страницы
+        стоит слово <code>External link</code>. Заголовок, описание и изображение
+        страницы не подтягиваются, при этом карточка занимает больше половины
+        высоты сообщения.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть любой канал.</li>
+        <li>Отправить сообщение из одной ссылки на внешний сайт.</li>
+        <li>Посмотреть на карточку под ссылкой.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Карточка содержит только домен и слово <code>External link</code> — ничего,
+        чего не было бы в самой ссылке.</p>
+      <pre>видимые листовые узлы одного сообщения, чистая загрузка:
+
+A     "https://developer.mozilla.org/en-US/docs/Web/CSS"   y = 723  ← ссылка в тексте
+SPAN  "developer.mozilla.org"                              y = 764  ┐
+SPAN  "-"                                                  y = 764  │ шапка карточки
+SPAN  "External link"                                      y = 764  ┘
+SPAN  "developer.mozilla.org"                              y = 788  ← заголовок карточки
+SPAN  "developer.mozilla.org/en-US/docs/Web/CSS"           y = 816  ← адрес в карточке
+
+высота всего сообщения: 173 px
+в теле сообщения на сервере полей link_preview / preview / embeds нет</pre>
+      <p>Воспроизведено дважды — на разных адресах и в разных каналах.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Ожидаемый результат</h3>
+      <p>Либо карточка показывает настоящие данные страницы — заголовок, описание,
+        изображение, — либо её не должно быть: ссылка в тексте уже кликабельна.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Отправить ссылку на страницу с заголовком и описанием: карточка показывает
+          их, а не домен трижды.</li>
+        <li>Отправить ссылку, у которой метаданных нет (или страница недоступна):
+          карточка не появляется либо показывает домен один раз, без слова
+          <code>External link</code> вместо описания.</li>
+        <li>Сама ссылка в тексте по-прежнему кликабельна и сохраняет
+          <code>target="_blank"</code> и <code>rel="noopener noreferrer nofollow"</code>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <footer>Все находки относятся к веб-клиенту. Каждая воспроизведена не менее двух раз
+    с чистой загрузки страницы, а затем переоткрыта заново при перепроверке отчёта
+    на более новой сборке staging.</footer>
+</div>

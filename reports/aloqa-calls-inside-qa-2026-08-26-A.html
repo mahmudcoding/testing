@@ -1,0 +1,908 @@
+<title>Модерация и устройства в звонке</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#f6f8f7; --surface:#ffffff; --ink:#16201f; --muted:#5c6a68;
+    --accent:#1f5f5b; --rule:#dbe3e1; --chip:#eef3f2;
+    --sev:#9a6412; --sev-bg:#fbf2e2; --sev-rule:#e8d2a8;
+    --area:#2b5578; --area-bg:#e9f0f6;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+      --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+      --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+      --area:#8fb6d8; --area-bg:#16232e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+    --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+    --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+    --area:#8fb6d8; --area-bg:#16232e;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.65; margin:0;
+    padding:clamp(28px,5vw,64px) clamp(18px,5vw,40px);
+  }
+  .wrap{max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:36px}
+  header{display:flex; flex-direction:column; gap:10px; border-bottom:2px solid var(--rule); padding-bottom:22px}
+  .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  h1{font-family:Spectral,Georgia,serif; font-weight:600; font-size:clamp(28px,4.4vw,40px);
+     line-height:1.18; margin:0; text-wrap:balance; letter-spacing:-.01em}
+  .lede{color:var(--muted); max-width:62ch; margin:0}
+  .summary{border-collapse:collapse; width:100%; font-size:14.5px}
+  .summary th{text-align:left; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+              color:var(--muted); font-weight:600; padding:0 12px 8px 0; border-bottom:1px solid var(--rule)}
+  .summary td{padding:11px 12px 11px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  .summary tr:last-child td{border-bottom:none}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{font-size:11.5px; font-weight:600; letter-spacing:.04em; padding:2.5px 8px; border-radius:3px;
+        white-space:nowrap; font-family:"IBM Plex Mono",monospace}
+  .sev{background:var(--sev-bg); color:var(--sev); border:1px solid var(--sev-rule)}
+  .area{background:var(--area-bg); color:var(--area); border:1px solid transparent}
+  article{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+          padding:clamp(20px,3.2vw,30px); display:flex; flex-direction:column; gap:16px}
+  article h2{font-family:Spectral,Georgia,serif; font-weight:600; font-size:21px; line-height:1.32;
+             margin:0; text-wrap:balance}
+  article p{margin:0; max-width:64ch}
+  h3{font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--muted);
+     font-weight:600; margin:0}
+  .block{display:flex; flex-direction:column; gap:8px}
+  pre{margin:0; background:var(--chip); border:1px solid var(--rule); border-radius:4px;
+      padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace;
+      font-size:13px; line-height:1.62; font-variant-numeric:tabular-nums}
+  ol,ul{margin:0; padding-left:20px; max-width:64ch}
+  li{margin-bottom:5px}
+  li::marker{color:var(--accent)}
+  kbd{font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--chip);
+      border:1px solid var(--rule); border-radius:3px; padding:1px 5px}
+  code{font-family:"IBM Plex Mono",monospace; font-size:13.5px; background:var(--chip);
+       border-radius:3px; padding:1px 4px; overflow-wrap:anywhere}
+  .expect{border-left:3px solid var(--accent); padding:2px 0 2px 16px; display:flex;
+          flex-direction:column; gap:7px}
+  footer{color:var(--muted); font-size:13.5px; border-top:1px solid var(--rule); padding-top:18px}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">QA · Calls — внутри звонка · 26 августа 2026</div>
+    <h1>Внутри звонка: права, бан-лист, устройства и Side Rooms</h1>
+    <p class="lede">Девять находок по тому, что происходит после того, как участник уже
+      в звонке. Три тяжёлые. Выбор микрофона в панели устройств не переключает микрофон:
+      звук молча уходит на системное устройство по умолчанию, а в списке отмеченным остаётся
+      прежнее. Назначение администратора встречи выдаёт право, которое не выбирали и нельзя
+      снять. Список заблокированных расходится между ведущим и co-host — один и тот же человек
+      может числиться одновременно участником звонка и заблокированным. Ещё три действия
+      ведущего сообщают об успехе, которого не было: просьба вернуться из Side Room,
+      приглашение заблокированного и отзыв демонстрации экрана. Две про Side Rooms: только что
+      созданную комнату нельзя выбрать как назначение перевода, а переход гостя в комнату не
+      доходит до ведущего событием вовсе — панель исправляется сама, до минуты спустя.
+      И отдельно: комната изолирует чат, звук, видео и демонстрацию экрана, но не реакции —
+      они всплывают у всех в главном звонке.</p>
+  </header>
+
+  <table class="summary">
+    <thead><tr><th style="width:52%">Находка</th><th>Важность</th><th>Область</th></tr></thead>
+    <tbody>
+      <tr><td>Назначение администратора встречи выдаёт право Manage meeting settings, которое не выбирали и нельзя снять</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>Список заблокированных не обновляется у второго модератора: бан и разбан видит только тот, кто их сделал</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Выбор микрофона в звонке не переключает микрофон: звук уходит на системный по умолчанию</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Ask to return to main room не работает ни для кого: участнику ничего не показывают, для гостя запрос падает с 403</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Ведущий может пригласить в звонок того, кого сам заблокировал: приглашение уходит, принять его нельзя</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Отзыв демонстрации экрана не сопровождается видимым сообщением тому, кто показывал</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Только что созданная пустая Side Room недоступна как назначение в Move to Side Room</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Переход гостя в Side Room не доходит до ведущего событием: панель исправляется сама, до минуты спустя</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Реакция, отправленная внутри Side Room, показывается всем в главном звонке</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+    </tbody>
+  </table>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">backend</span></div>
+    <h2>[BE][CALLS] Назначение администратора встречи выдаёт право «Manage meeting settings», которого не выбирали и которое нельзя снять</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Диалог <code>Admin permissions…</code> позволяет ведущему выдать участнику
+        отдельные права — тринадцать независимых галочек. Какой бы набор ни отметили,
+        сервер дополнительно включает <code>Manage meeting settings</code>. Снять его
+        нельзя: галочка снимается, запрос уходит со значением <code>false</code>, сервер
+        отвечает успехом и продолжает отдавать право включённым. В итоге участник, которому
+        дали одно узкое право, получает всю панель <code>Meeting settings</code> и может
+        переименовать звонок, поставить пароль, сменить режим входа и открыть гостевую
+        ссылку всем участникам.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В звонке открыть <code>Participants</code> → <code>Participant actions</code>
+          у обычного участника → <code>Admin permissions…</code>.</li>
+        <li>Отметить одно право (например <code>Manage chat</code>), остальные оставить
+          выключенными, нажать <code>Assign as admin</code>.</li>
+        <li>Снова открыть <code>Admin permissions…</code> у того же участника.</li>
+        <li>Снять <code>Manage meeting settings</code> и нажать <code>Assign as admin</code>.
+          Открыть диалог ещё раз.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>При повторном открытии диалога отмечено два права вместо одного. Снятие лишнего
+        права не срабатывает — оно возвращается.</p>
+      <pre>Состояние галочек в момент отправки (снято с самого диалога):
+  Manage chat = true
+  остальные двенадцать = false, в том числе Manage meeting settings = false
+
+POST /api/v1/meeting/{meetingId}/admins/{userId}
+{"can_manage_chat":true,"can_manage_microphone":false,"can_manage_camera":false,
+ "can_manage_screen_share":false,"can_manage_breakout_rooms":false,"can_pin_video":false,
+ "can_assign_admins":false,"can_manage_reactions":false,"can_approve_requests":false,
+ "can_kick_participants":false,"can_mute_participants":false,"can_manage_recording":false,
+ "can_manage_meeting_settings":false}
+-> 204
+
+GET /api/v1/meeting/{meetingId}/my-permissions      (от лица назначенного участника)
+-> 200
+{"role":"admin","permissions":{ ... "can_manage_chat":true,
+                                    "can_manage_meeting_settings":true,
+                                    ...все остальные false }}
+
+Панель Meeting settings у него открывается полностью, изменение сохраняется:
+PATCH /api/v1/meeting/{meetingId} {"name":"&lt;новое имя&gt;"} -> 200</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Клиент отправляет <code>can_manage_meeting_settings:false</code> в теле запроса —
+        тело снято целиком и приведено выше. Сервер отвечает 204 и продолжает отдавать это
+        право включённым. Значит поле либо игнорируется, либо переопределяется на стороне
+        сервера: в клиенте его никто не выбрасывает.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Участнику выдаются ровно те права, которые отмечены в диалоге. Снятая галочка
+        снимает право.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Назначение администратора с одним отмеченным правом даёт ровно одно право
+          в <code>my-permissions</code>.</li>
+        <li>Снятие <code>Manage meeting settings</code> действительно его снимает, и после
+          этого панель <code>Meeting settings</code> у участника недоступна.</li>
+        <li>Остальные двенадцать прав по-прежнему выдаются и снимаются по отдельности.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS] Список заблокированных участников не обновляется у второго модератора: бан и разбан видит только тот, кто их сделал</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Панель <code>Participants</code> показывает ведущему и co-host раздел
+        <code>BLOCKED</code> со списком заблокированных и кнопкой <code>Unban</code>.
+        Любое изменение этого списка применяется только у того, кто его сделал. У второго
+        модератора список остаётся прежним до перезагрузки страницы: забаненный в нём не
+        появляется, разбаненный не исчезает. Ведущий и co-host смотрят на одну и ту же
+        панель и видят разные данные. Хуже всего выглядит разбан: вернувшийся в звонок
+        человек показан у второго модератора одновременно в списке участников и в
+        <code>BLOCKED</code> — с предложением разбанить того, кто прямо сейчас говорит.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Начать звонок втроём, второму участнику выдать <code>Make co-host</code>.</li>
+        <li>Ведущий: <code>Participants</code> → <code>Participant actions</code> у третьего
+          участника → <code>Ban</code> → подтвердить.</li>
+        <li>Посмотреть панель <code>Participants</code> у co-host.</li>
+        <li>Ведущий: <code>Unban</code> в разделе <code>BLOCKED</code>. Разбаненный входит
+          заново, ведущий впускает его из зала ожидания.</li>
+        <li>Снова посмотреть панель у co-host.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>У co-host раздел <code>BLOCKED</code> не появляется после бана и не исчезает после
+        разбана. Состав участников при этом обновляется у него вовремя.</p>
+      <pre>Оба прогона — на клиенте co-host, только что перезагруженном, поэтому его копия
+списка на старте заведомо верна.
+
+(а) БАН. Панель ведущего сразу после действия:
+      BLOCKED (1)  &lt;имя&gt;  &lt;email&gt;  Unban
+
+    Панель co-host, наблюдение 45 с с шагом 500 мс — всего два состояния:
+        0 ms   Participants 4 in call | HOST | CO-HOST (you) | &lt;участник&gt; | &lt;цель&gt;
+     7522 ms   Participants 3 in call | HOST | CO-HOST (you) | &lt;участник&gt;
+     раздела BLOCKED не появилось ни разу
+     &lt;- цель исчезла из списка за 7,5 с: событие о составе доехало, бан-лист нет
+
+(б) РАЗБАН. Ведущий снимает бан примерно на 5-й секунде наблюдения:
+      DELETE /api/v1/meeting/{meetingId}/participants/{userId}/ban -> 204
+
+    Панель co-host, наблюдение 45 с с шагом 500 мс:
+        1 ms   3 in call | BLOCKED (1) &lt;имя&gt; &lt;email&gt; Unban
+    19319 ms   3 in call | WAITING (1) &lt;имя&gt; Admit Deny | BLOCKED (1) &lt;имя&gt; &lt;email&gt; Unban
+    28180 ms   4 in call | &lt;имя&gt; В СПИСКЕ УЧАСТНИКОВ  | BLOCKED (1) &lt;имя&gt; &lt;email&gt; Unban
+     раздел BLOCKED не изменился ни разу, хотя в том же окне пришли два других
+     realtime-события: заявка разбаненного на вход и рост состава после впуска
+
+    reload страницы -> раздел BLOCKED сразу верный</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Список заблокированных — отдельный запрос
+        <code>GET /meeting/:meetingId/bans</code> (<code>packages/core/src/api/routes.ts:366</code>,
+        ключ <code>callsKeys.participantBans</code> в
+        <code>packages/core/src/state/queries/callsKeys.ts:203</code>). Этот ключ
+        инвалидируется ровно в двух местах, и оба — внутри самих мутаций бана и разбана
+        (<code>packages/features/calls/model/mutations.ts:3854</code> и <code>:3884</code>),
+        то есть перезапрашивает список только тот клиент, который выполнил действие. Ни один
+        realtime-обработчик этот ключ не трогает. На проводе у второго модератора в момент
+        бана приходит единственный текстовый кадр
+        <code>{"type":"workspace.call.live.participants_changed", ...}</code> — в нём нет
+        ничего про бан, и именно по нему обновляется состав участников. Ссылки на исходник
+        — по задеплоенному коммиту.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Раздел <code>BLOCKED</code> обновляется у всех, кому он показан, тем же порядком,
+        что и состав участников: после бана появляется, после разбана исчезает, без
+        перезагрузки.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>После бана раздел <code>BLOCKED</code> появляется и у ведущего, и у co-host без
+          перезагрузки.</li>
+        <li>После разбана он исчезает у обоих, и вернувшийся участник не числится
+          одновременно в звонке и в <code>BLOCKED</code>.</li>
+        <li>Состав участников и смена ролей продолжают обновляться живьём, как сейчас.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS] Выбор микрофона в звонке не переключает микрофон: звук уходит на системный по умолчанию, а в списке отмеченным остаётся прежний</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Во время звонка панель <code>Select microphone</code> показывает списки микрофонов
+        и динамиков. Выбор конкретного микрофона в ней не срабатывает: активным становится
+        системное устройство по умолчанию, а отметка в списке остаётся на прежнем устройстве.
+        Человек, который переключается с микрофона ноутбука на гарнитуру, оказывается на том
+        же микрофоне ноутбука и по списку этого не видит. Обойти это внутри приложения нечем:
+        раздел динамиков в той же панели переключается нормально, а микрофон — нет.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Подключить к машине хотя бы два устройства ввода звука и войти в звонок
+          с включённым микрофоном.</li>
+        <li>В тулбаре звонка открыть <code>Select microphone</code> и выбрать в разделе
+          <code>MICROPHONE</code> именованный микрофон — не строку «системное по умолчанию».</li>
+        <li>Открыть эту панель снова и посмотреть, какая строка отмечена; проверить, какое
+          устройство публикуется.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Выбранная строка не отмечается, а публикуемая аудиодорожка уезжает на устройство
+        по умолчанию. Ниже — один прогон и три контроля: динамики в той же панели, строка
+        «по умолчанию» в списке микрофонов и проверка самого браузера.</p>
+      <pre>Отметка — атрибут data-selected на строке устройства.
+Дорожка — RTCRtpSender.track.getSettings() у отправителя.
+
+исходно  дорожка  label="&lt;микрофон B&gt;"  deviceId=&lt;id B&gt;
+         список   data-selected=true на строке "&lt;микрофон B&gt;"
+
+выбираю "&lt;микрофон A&gt;"   (клик подтверждён: на строке было data-selected=false)
+         дорожка  label="&lt;системный микрофон по умолчанию&gt;"  deviceId=default
+         список   data-selected=true по-прежнему на "&lt;микрофон B&gt;"
+
+устойчиво: опрос дорожки каждые 2 с в течение 24 с — значение не менялось
+повтор из состояния «и отметка, и дорожка на устройстве по умолчанию», два раза:
+         выбираю "&lt;микрофон A&gt;" -> дорожка default, отметка не сдвинулась
+         выбираю "&lt;микрофон B&gt;" -> дорожка default, отметка не сдвинулась
+
+КОНТРОЛЬ 1 — та же панель, раздел SPEAKER:
+         выбираю "&lt;динамик A&gt;"   отметка "&lt;динамик B&gt;" -> "&lt;динамик A&gt;"   переключается
+КОНТРОЛЬ 2 — та же панель, строка «по умолчанию» в разделе MICROPHONE:
+         выбираю её          отметка "&lt;микрофон B&gt;" -> строка «по умолчанию»  переключается
+КОНТРОЛЬ 3 — умеет ли браузер выдать конкретное устройство на этой машине:
+         getUserMedia({audio:{deviceId:{exact:&lt;id&gt;}}}) по каждому устройству ввода
+           просил "&lt;по умолчанию&gt;" -> получил "&lt;по умолчанию&gt;"  deviceId=default
+           просил "&lt;микрофон A&gt;"   -> получил "&lt;микрофон A&gt;"    deviceId=&lt;id A&gt;
+           просил "&lt;микрофон B&gt;"   -> получил "&lt;микрофон B&gt;"    deviceId=&lt;id B&gt;
+
+КОНТРОЛЬ 4 — что записывает сам клиент в своё хранилище настроек устройств
+(localStorage, ключ aloqa-call-device-prefs):
+         исходно                     preferredMicDeviceId = null
+         выбираю "&lt;микрофон A&gt;"       preferredMicDeviceId = null       не записалось
+         выбираю строку «по умолчанию»  preferredMicDeviceId = "default"  записалось
+         (в том же объекте preferredSpeakerDeviceId = &lt;конкретный id&gt; —
+          выбор динамика записался как конкретное устройство)
+КОНТРОЛЬ 5 — тот же выбор в списке КАМЕР:
+         выбираю камеру      строка отмечается, preferredCameraDeviceId = &lt;конкретный id&gt;
+         то есть из четырёх списков панели не работает ровно один — именованный микрофон
+
+воспроизведено на трёх учётных записях в одном звонке, а также с нуля:
+хранилище настроек устройств очищено, страница перезагружена — выбор именованного
+микрофона по-прежнему не меняет ни дорожку, ни отметку, ни запись в хранилище</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Ответственность сужена измерением, а не догадкой. Контроль 3 снимает браузер
+        и медиастек: ограничение по точному <code>deviceId</code> для этих же устройств
+        соблюдается. Контроли 1 и 2 снимают саму панель и её механизм отметки: и список
+        динамиков, и строка «по умолчанию» в списке микрофонов отмечаются как надо. Не
+        работает ровно один путь — выбор именованного микрофона внутри звонка; он же
+        оставляет в публикуемой дорожке системный псевдоидентификатор <code>default</code>
+        вместо конкретного id устройства. Контроль 4 показывает, где обрывается цепочка:
+        выбор именованного микрофона не доходит даже до собственного хранилища настроек
+        клиента — <code>preferredMicDeviceId</code> остаётся прежним, тогда как выбор строки
+        «по умолчанию» и выбор динамика записываются туда сразу.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Выбранный микрофон становится активным, его строка отмечается выбранной, а в
+        публикуемой дорожке стоит конкретный <code>deviceId</code> этого устройства.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Выбор именованного микрофона в звонке меняет публикуемое устройство и отмечает
+          выбранную строку.</li>
+        <li>Возврат на строку «системное по умолчанию» тоже отмечается и применяется.</li>
+        <li>Выбор динамика продолжает работать как раньше.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS][SIDE ROOMS] Действие «Ask to return to main room» не работает ни для кого: залогиненному участнику ничего не показывают, для гостя запрос падает с 403</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>У участника, ушедшего в Side Room, в меню ведущего есть действие
+        <code>Ask to return to main room</code>. Позвать им обратно нельзя никого. Обычному
+        участнику ведущий получает подтверждение «Asked … to return to the main room», а до
+        самого участника не доходит ничего — он остаётся в комнате и не знает, что его звали.
+        Для гостя запрос вообще отклоняется с 403, и ведущему честно показывают «Could not
+        send the request». Другого способа позвать человека обратно в интерфейсе нет: в панели
+        Side Rooms есть только создание комнаты, <code>Add people</code>, <code>Join</code>
+        и полное закрытие комнаты.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Создать Side Room и войти в неё вторым участником.</li>
+        <li>Ведущий: <code>Participants</code> → <code>Participant actions</code> у этого
+          участника → <code>Ask to return to main room</code>.</li>
+        <li>Смотреть на экран участника.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Для обычного участника на экране не появляется ничего. Ниже сначала одно окно
+        наблюдения, где выполняется заведомо работающее действие того же класса, а потом
+        проверяемое; поиск идёт по всему видимому тексту страницы. Затем — тот же пункт меню,
+        применённый к гостю.</p>
+      <pre>Наблюдение 42 с, шаг 400 мс, поиск по всему видимому DOM:
+
+t ≈ 4 c   ведущий: "Ask … to turn on camera"
+  4831 ms   у участника: "… asked you to turn on your Camera"      &lt;- контроль прошёл
+
+t ≈ 16 c  ведущий: "Ask to return to main room"
+          POST /api/v1/meeting/{meetingId}/breakout-rooms/return-request
+          {"user_id":"{userId}"} -> 204
+          за оставшиеся ~26 с на экране участника не появилось ничего
+
+Тост ведущего, замер на его же странице с шагом 300 мс:
+  +303 ms   "Asked … to return to the main room"
+ +5437 ms   исчез
+
+ТОТ ЖЕ ПУНКТ МЕНЮ, ПРИМЕНЁННЫЙ К ГОСТЮ (вошёл по гостевой ссылке, сидит в Side Room):
+
+POST /api/v1/meeting/{meetingId}/breakout-rooms/return-request
+{"user_id":"&lt;participant id гостя&gt;"}     &lt;- в поле user_id уходит id участника
+-> 403 {"code":403,"key":"REALTIME_ACCESS_DENIED","message":"access denied",
+        "trace_id":"&lt;trace&gt;"}
+тост ведущего: "Could not send the request"
+
+Перехватчик WebSocket на странице гостя за весь сеанс записал 2260 кадров типов
+participant_admitted, participant_joined, subscribe, subscribed,
+participant_joined_breakout, ping, pong — кадра return_to_main_requested среди них нет.</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Кадр до участника <b>доходит</b> — снят перехватчиком WebSocket на его странице:
+        <code>{"type":"return_to_main_requested","breakout_room_id":…,"participant_id":…,"requested_by":…}</code>.
+        Показать его некому: на задеплоенном коммите единственная подписка на константу
+        <code>BreakoutReturnToMainRequested</code>
+        (<code>packages/core/src/realtime/events.ts:210</code>) находится в
+        <code>apps/web/src/features/guest-meeting/hooks/useGuestBreakoutRealtime.ts:723</code>,
+        а строки диалога <code>calls.breakout.returnRequest.title/.stay/.return</code>
+        читаются только в <code>useGuestBreakoutReturnPrompt.ts:44-46</code> — обе точки
+        внутри фичи guest-meeting. У обычного, залогиненного участника обработчика этого
+        кадра нет — поэтому пришедший кадр ничего не рисует. У гостя обработчик как раз есть,
+        но до него не доходит сам кадр: запрос отклоняется на 403 ещё у ведущего.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Участнику — и залогиненному, и гостю — показывается предусмотренный диалог
+        «You were asked to return to the main room.» с кнопками <code>Stay</code> и
+        <code>Return</code>. Ведущий видит подтверждение отправки только тогда, когда просьба
+        действительно ушла.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Залогиненный участник в Side Room получает диалог с <code>Stay</code> и
+          <code>Return</code>; <code>Return</code> возвращает его в главную комнату.</li>
+        <li>Гость в Side Room получает тот же диалог, а запрос по нему не отклоняется
+          с 403.</li>
+        <li>Если участник уже в главной комнате, действие остаётся no-op и ведущему не
+          показывается подтверждение отправки.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS] Ведущий может пригласить в звонок того, кого сам заблокировал: приглашение уходит, звонит и всегда падает</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Заблокировав участника, ведущий видит его в панели <code>Participants</code>
+        в разделе <code>BLOCKED</code> с кнопкой <code>Unban</code>. Диалог
+        <code>Add to call</code> в той же панели по-прежнему предлагает этого человека как
+        обычного приглашаемого — без пометки и без блокировки выбора. Приглашение уходит,
+        ведущему показывают «Invited 1 people to the call», приглашённому звонит, а
+        <code>Accept</code> всегда заканчивается отказом. Экран самого заблокированного при
+        этом советует ровно этот путь: «Ask them to invite you again».</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li><code>Participants</code> → <code>Participant actions</code> у участника →
+          <code>Ban</code> → подтвердить.</li>
+        <li><code>Add to call</code> → отметить того же человека → <code>Invite</code>.</li>
+        <li>На стороне приглашённого нажать <code>Accept</code> во всплывающем
+          приглашении.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Приглашение принимается сервером, ведущему показывается успех, а приём приглашения
+        отклоняется. Об отказе ведущему не сообщают.</p>
+      <pre>Список в диалоге Add to call у ведущего (второй в списке заблокирован):
+    &lt;участник A&gt;        In call
+    &lt;заблокированный&gt;                &lt;- ни пометки, ни блокировки выбора
+    &lt;участник B&gt;        In call
+    &lt;участник C&gt;        In call
+
+POST /api/v1/meeting/{meetingId}/invite {"user_ids":["{userId}"]}   -> 204
+тост ведущего, +302 ms: "Invited 1 people to the call"
+
+У приглашённого через ~6 с: "… is calling…"   [Decline] [Accept]
+Accept -> POST /api/v1/meeting/{meetingId}/join -> 403
+{"code":403,"key":"REALTIME_MEETING_BANNED",
+ "message":"user is banned from this meeting","trace_id":"&lt;trace&gt;"}
+
+экран приглашённого: "Could not join the call — You cannot join because you were
+                     removed from this meeting."  (единственная кнопка Dismiss)</pre>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Либо <code>Add to call</code> помечает заблокированного и не даёт его выбрать —
+        кнопка <code>Unban</code> находится в той же панели, — либо
+        <code>POST /invite</code> отвечает ошибкой, и ведущий видит причину вместо
+        «Invited 1 people to the call».</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Заблокированный участник не предлагается в <code>Add to call</code> либо помечен
+          так, что его нельзя выбрать.</li>
+        <li>Если приглашение всё же ушло, ведущий видит отказ, а не подтверждение
+          отправки.</li>
+        <li>Приглашение обычного, незаблокированного участника по-прежнему доходит и
+          принимается.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS] Отзыв демонстрации экрана не сопровождается видимым сообщением тому, кто показывал</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Ведущий может оборвать чужую демонстрацию экрана действием
+        <code>Revoke screen sharing</code>. Показ прекращается, плитка исчезает у всех,
+        кнопка у показывавшего возвращается в <code>Share screen</code> и становится
+        неактивной — попросить снова он уже не может, — и видимого сообщения ему
+        не появляется. Для микрофона и камеры такие же действия ведущего
+        сопровождаются понятным сообщением, так что молчит ровно тот случай, где догадаться
+        нельзя: пропавший посреди показа экран выглядит как сбой приложения, а не как
+        решение ведущего.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Участник показывает экран (у него кнопка <code>Stop sharing</code>).</li>
+        <li>Ведущий: <code>Participants</code> → <code>Participant actions</code> у него →
+          <code>Revoke screen sharing</code> → подтвердить.</li>
+        <li>Смотреть на экран того, кто показывал.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Демонстрация прекращается, сообщения нет. Ниже — одно окно наблюдения с контролем:
+        сначала выполняется соседнее действие ведущего, которое сообщение показывает.</p>
+      <pre>Наблюдение 55 с, шаг 350 мс, поиск по всем листовым узлам видимого DOM;
+искомое — /A host|not allowed|stopped your|muted your|turned off your/,
+то есть ожидаемая строка входит в шаблон поиска. Для каждого найденного
+текста записан размер элемента. Отметки — время от начала наблюдения.
+
+фаза 1, контроль — ведущий выключает участнику микрофон:
+  10569 ms   250x26   &lt;p&gt;      "A host muted your microphone"
+
+фаза 2, проверяемое действие:
+  PUT /api/v1/meeting/{meetingId}/participants/{userId}/permissions
+      {"screen_share":false} -&gt; 200
+  40529 ms   1x1      &lt;span&gt;   "Screen sharing is not allowed for you in this call."
+  строка "A host stopped your screen sharing" не появилась ни разу
+
+Тот же текст лежит в атрибуте title кнопки (элемент 44x44) — его надо навести.
+Текст постоянный: он остаётся и спустя минуты, то есть это подпись состояния
+отключённой кнопки, а не уведомление о событии.</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Нужная строка в сборке есть и доехала на стенд: на задеплоенном коммите
+        <code>packages/core/src/i18n/dictionaries/en.ts:3331</code> содержит
+        <code>'calls.moderation.screenShareStoppedByHost': 'A host stopped your screen
+        sharing'</code>, и она же лежит в отданном браузеру JS — в том же чанке, что
+        работающие «A host muted your microphone» и «A host turned off your camera».</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Показывавшему показывается «A host stopped your screen sharing» тем же способом,
+        что сообщения про микрофон и камеру.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>После <code>Revoke screen sharing</code> показывавший видит сообщение о том, что
+          показ остановил ведущий.</li>
+        <li>Сообщения про микрофон и камеру продолжают приходить как раньше.</li>
+        <li>Когда участник останавливает показ сам, лишнего сообщения не появляется.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS][SIDE ROOMS] Только что созданная пустая Side Room недоступна как назначение в «Move to Side Room»</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Ведущий создаёт Side Room, чтобы развести туда людей, открывает меню участника —
+        и этой комнаты в разделе <code>MOVE TO SIDE ROOM</code> нет. В список попадают только
+        комнаты, в которых уже кто-то сидит. Получается замкнутый круг: чтобы перевести
+        человека в комнату, в ней уже должен кто-то быть, а посадить туда первого через меню
+        нельзя. При этом сама комната полностью рабочая — участник заходит в неё кнопкой на
+        её же карточке в панели Side Rooms. То есть два контрола в одной панели расходятся:
+        карточка пускает внутрь, меню ведущего ту же комнату не предлагает.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li><code>Side Rooms</code> → <code>New Side Room</code> → создать комнату. Создатель
+          сразу оказывается внутри, поэтому нажать <code>Leave Side Room</code>, чтобы
+          комната осталась пустой.</li>
+        <li><code>Participants</code> → <code>Participant actions</code> у любого
+          участника.</li>
+        <li>Посмотреть раздел <code>MOVE TO SIDE ROOM</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Пустая комната как назначение не предлагается. Она появляется в списке ровно в тот
+        момент, когда в неё кто-то входит.</p>
+      <pre>GET /api/v1/meeting/{meetingId}/breakout-rooms
+    Room A   status=active    participant_count=2
+    Room B   status=waiting   participant_count=0
+
+Меню участника (он находится в Room A) — перечислены все текстовые узлы меню:
+    Ask to return to main room | Make co-host | Admin permissions… |
+    Device permissions… | Remove from call | Ban | Ask … to unmute |
+    Ask … to turn on camera | MOVE TO SIDE ROOM | Move to Room A
+
+    предлагается только комната, где он уже сидит; пустой Room B отсутствует
+
+Момент перехода, снятый отдельно:
+    Room B  status=waiting, count=0  -> раздела MOVE TO SIDE ROOM в меню НЕТ ВООБЩЕ
+    (участник заходит в Room B сам)
+    Room B  status=active,  count=1  -> появляется "Move to Room B", и перевод срабатывает
+
+Не устаревший клиент: после reload ведущего картина та же.
+Не обрезанное меню: scrollHeight == clientHeight (467 == 467), overflow: visible.
+
+А САМ УЧАСТНИК В ЭТУ ЖЕ ПУСТУЮ КОМНАТУ ЗАХОДИТ БЕЗ ПРОБЛЕМ — кнопкой на её карточке
+в той же панели Side Rooms:
+
+    до:    Room A  status=active   count=2      (участник здесь)
+           Room B  status=waiting  count=0      (ведущему в меню не предлагается)
+
+    участник жмёт Switch на карточке Room B ->
+    "Switch to this room? You'll leave Room A and move to the selected side room."
+
+    после: Room A  status=active   count=1
+           Room B  status=active   count=1      участник внутри</pre>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Только что созданная комната доступна как назначение перевода — это основной
+        сценарий работы с Side Rooms: ведущий создаёт комнаты и распределяет по ним людей.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Пустая, только что созданная комната предлагается в
+          <code>MOVE TO SIDE ROOM</code>, и перевод в неё срабатывает — так же, как в неё уже
+          сейчас заходит сам участник с карточки комнаты.</li>
+        <li>При нескольких открытых комнатах в списке присутствуют все, а не одна.</li>
+        <li>Комната, в которой участник уже находится, в его списке назначений не
+          предлагается.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS][SIDE ROOMS] Переход гостя в Side Room не доходит до ведущего событием: панель исправляется сама, до минуты спустя</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Гость, вошедший по гостевой ссылке, заходит в Side Room. Его собственный экран
+        сразу показывает комнату, и участники комнаты видят его сразу — а панель
+        <code>Participants</code> у ведущего ещё около сорока секунд показывает гостя так,
+        будто он в главном звонке — до минуты, пока клиент ведущего не перечитает состав
+        сам. Всё это время ведущий действует по неверным данным: в меню такого гостя ему
+        предлагается перевод в комнату, где гость уже сидит, и не предлагается
+        <code>Ask to return to main room</code>. У обычного участника тот же переход доходит
+        меньше чем за секунду.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Впустить в звонок гостя по гостевой ссылке.</li>
+        <li>Открыть Side Room, в которой уже кто-то есть.</li>
+        <li>Гость заходит в эту комнату сам.</li>
+        <li>Смотреть панель <code>Participants</code> у ведущего, не перезагружая её.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Панель ведущего показывает гостя в главном звонке ещё десятки секунд — задержка
+        плавает от прогона к прогону, потому что состав перечитывается периодически. Ниже —
+        два прогона по одной переменной в каждом, оба с только что перезагруженного клиента
+        ведущего; переход происходит на ~5-й секунде наблюдения.</p>
+      <pre>Наблюдение панели ведущего 75 с, шаг 500 мс; переход в комнату выполняется
+примерно на 5-й секунде наблюдения — от неё и отсчитывается задержка.
+
+(A) переходит ГОСТЬ
+       0 ms   HOST | Guest GUEST | &lt;участник&gt; | IN SIDE ROOMS: &lt;co-host&gt; Room
+   46687 ms   HOST | &lt;участник&gt; | IN SIDE ROOMS: &lt;co-host&gt; Room, Guest GUEST Room
+   задержка ~41,7 с   (повтор прогона: 46638 ms — те же ~42 с)
+
+(B) переходит ОБЫЧНЫЙ УЧАСТНИК — контроль
+       0 ms   HOST | Guest GUEST | &lt;участник&gt; | IN SIDE ROOMS: &lt;co-host&gt; Room
+    5516 ms   HOST | Guest GUEST | IN SIDE ROOMS: &lt;co-host&gt; Room, &lt;участник&gt; Room
+   задержка ~0,5 с
+
+Последствие, пока панель устаревшая — меню ведущего над этим гостем
+(перечислены все текстовые узлы меню):
+   Pin for me | Pin … for everyone | Stop watching | Device permissions… |
+   Remove from call | Ban | Ask … to unmute | Ask … to turn on camera |
+   MOVE TO SIDE ROOM | Move to &lt;комната, в которой гость уже находится&gt;
+
+   действия "Ask to return to main room" в меню нет
+
+После reload у ведущего панель сразу верная — сервер знает правильное размещение.
+
+Это периодическое перечитывание состава, а не фиксированная задержка: в отдельном
+прогоне гость уже сидел в комнате больше минуты, ведущий ничего не делал, и панель
+исправилась сама на 36618 ms наблюдения.</pre>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Переход гостя между главным звонком и Side Room приходит ведущему событием и
+        отражается так же быстро, как переход обычного участника, а меню над гостем сразу
+        предлагает подходящие действия.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Заход гостя в Side Room виден в панели ведущего в те же доли секунды, что и заход
+          обычного участника.</li>
+        <li>Выход гостя из комнаты обратно в главный звонок отражается так же быстро.</li>
+        <li>Меню ведущего над гостем в комнате предлагает возврат в главную комнату и не
+          предлагает перевод в его текущую комнату.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>[FE-WEB][CALLS][SIDE ROOMS] Реакция, отправленная внутри Side Room, показывается всем в главном звонке</h2>
+
+    <div class="block">
+      <h3>Проблема</h3>
+      <p>Side Room подаётся как закрытое пространство: панель его чата прямо подписана
+        «Only visible to participants of this room». Изолированы и чат, и демонстрация
+        экрана, и звук, и видео с камеры — все четыре канала проверены отдельно. Живые
+        реакции из этого правила выпадают, и они единственные. Реакция,
+        отправленная человеком изнутри комнаты, всплывает на его плитке в главном звонке
+        и видна тем, кто в комнату не заходил. В обратную сторону изоляция при этом
+        соблюдается: реакции из главного звонка внутри комнаты не показываются, и в другую
+        комнату они тоже не попадают.</p>
+    </div>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>В звонке с тремя участниками открыть Side Room и войти в неё одним из них.</li>
+        <li>Из комнаты нажать <code>Send reaction</code> и выбрать любую реакцию.</li>
+        <li>Смотреть на стенд тех, кто остался в главном звонке.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Фактический результат</h3>
+      <p>Реакция появляется у участников главного звонка. Ниже — полная матрица,
+        снятая одним и тем же способом (поиск эмодзи по всему видимому тексту страницы,
+        шаг 300 мс), с контролем: сначала показано, что реакции в принципе доходят.</p>
+      <pre>Наблюдение начинается за ~5 с до отправки, поэтому отметки ниже — время от начала
+наблюдения, а не задержка доставки; сравниваются они между собой.
+
+отправитель В ГЛАВНОМ ЗВОНКЕ
+   наблюдатель в главном звонке ....... видит на 6991 ms     &lt;- КОНТРОЛЬ
+   наблюдатель внутри Side Room ....... не видит             &lt;- изоляция соблюдается
+
+отправитель ВНУТРИ Side Room
+   наблюдатель в главном звонке ....... видит на 7861 ms
+   второй наблюдатель в главном ....... видит на 7867 ms
+   (ещё три прогона с другими реакциями: 6841 ms, 7254 ms, 7571 ms)
+
+отправитель ВНУТРИ Side Room, наблюдатель В ДРУГОЙ Side Room
+   не видит                                                  &lt;- в другие комнаты не уходит
+
+где именно рисуется у постороннего, по цепочке data-testid:
+   элемент 72x56 — participant-reaction-burst -> participant-tile -> live-stats-tile
+   у второго     — то же самое внутри spotlight-slider
+
+то есть это штатный всплеск реакции на плитке участника в главной сетке
+
+граница уточнена: реакция на СООБЩЕНИЕ в чате комнаты изолирована правильно —
+   участник комнаты ставит эмодзи на сообщение соседа: у обоих в комнате "&lt;эмодзи&gt; 1",
+   у двоих в главном звонке за 32 с наблюдения не появилось ничего
+   утекает только живая реакция, отправленная кнопкой Send reaction
+
+повторено на полностью свежих клиентах (все окна перед этим перезагружены):
+   контроль, отправитель в главном ... наблюдатель в главном видит на 6954 ms,
+                                      наблюдатель в комнате не видит
+   тест, отправитель в комнате ....... оба наблюдателя в главном видят,
+                                      на 6944 ms и 6959 ms
+
+и ещё раз с наблюдателем, у которого права прочитаны прямо перед прогоном
+(role: participant, can_manage_breakout_rooms: false — обычный участник):
+   контроль, отправитель в главном ... видит на 7273 ms
+   тест, отправитель в комнате ....... видит на 6950 ms</pre>
+    </div>
+
+    <div class="block">
+      <h3>Подтверждённая причина</h3>
+      <p>Реакции передаются бинарными кадрами по сигнальному сокету LiveKit
+        (<code>wss://…/rtc/v1</code>). Участник, находящийся в Side Room, держит два таких
+        сокета — главного звонка и комнаты, — и реакцию клиент публикует в <b>главный</b>,
+        независимо от того, в какой комнате пользователь находится. Снято перехватчиком,
+        который нумерует сокеты и рендерит бинарные кадры:</p>
+      <pre>сокеты отправителя, пока он внутри Side Room:
+   sock 2  rtc  token …JCTA2Ozw…    &lt;- ГЛАВНЫЙ звонок (открыт первым)
+   sock 3  rtc  token …-O3BfwEE…    &lt;- SIDE ROOM (открыт при входе в комнату)
+
+он нажимает реакцию, находясь в комнате:
+   dir out  sock 2 (ГЛАВНЫЙ)  len  76  '…&lt;user id&gt;…reaction…:58ec0923-…'
+   dir in   sock 2 (ГЛАВНЫЙ)  len 155
+   dir in   sock 2 (ГЛАВНЫЙ)  len  81
+   на sock 3 (комната) про reaction нет ничего,
+   при этом сам сокет комнаты живой: 40 входящих / 27 исходящих кадров за то же время</pre>
+      <p>Это объясняет и остальную матрицу: в другую комнату реакция не попадает, потому что
+        туда её не публиковали, а соседи по своей комнате видят её через собственное
+        соединение с главным звонком, которое они держат постоянно.</p>
+    </div>
+
+    <div class="block">
+      <h3>Ожидаемый результат</h3>
+      <p>Реакция, отправленная внутри Side Room, видна только участникам этой комнаты —
+        так же, как её чат и демонстрация экрана.</p>
+    </div>
+
+    <div class="block">
+      <h3>Проверка</h3>
+      <ul>
+        <li>Реакция из Side Room видна внутри комнаты и не появляется у участников главного
+          звонка.</li>
+        <li>Реакции в главном звонке продолжают работать между его участниками.</li>
+        <li>Реакции по-прежнему не пересекают границу между двумя разными комнатами.</li>
+      </ul>
+    </div>
+  </article>
+
+  <footer>Тестирование чёрным ящиком в браузере, сборка стенда v0.61.0-rc.5.
+    Проверены: медиа и контролы (выбор микрофона, динамика и камеры, качество видео, сетка,
+    spotlight, закрепление, полноэкранный режим, picture-in-picture), горячие клавиши,
+    push-to-talk и микс громкости, панель участников и права ведущего, чат звонка с тредами,
+    личными сообщениями и счётчиком непрочитанных, демонстрация экрана, запись, Side Rooms.
+    Ссылки на исходный код даны по коммиту, который развёрнут на стенде.
+    Не вошло в отчёт по результатам перепроверки: восемь гипотез сняты собственным
+    измерением как невоспроизводимые, ещё несколько наблюдений совпали с уже открытыми
+    задачами. Отдельно установлено, что бэкенд на стенде старше фронтенда на несколько дней,
+    из-за чего часть свежих изменений в Side Rooms там не работает — это дрейф стенда,
+    а не дефект кода.</footer>
+</div>

@@ -1,0 +1,461 @@
+<title>Находки релиза v0.60.0</title>
+<!-- published: https://claude.ai/code/artifact/60b41ecb-35f0-4fe9-9587-d94aceca7989 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#f6f8f7; --surface:#ffffff; --ink:#16201f; --muted:#5c6a68;
+    --accent:#1f5f5b; --rule:#dbe3e1; --chip:#eef3f2;
+    --sev:#9a6412; --sev-bg:#fbf2e2; --sev-rule:#e8d2a8;
+    --area:#2b5578; --area-bg:#e9f0f6;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+      --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+      --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+      --area:#8fb6d8; --area-bg:#16232e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0e1413; --surface:#161f1e; --ink:#e4ebe9; --muted:#93a29f;
+    --accent:#63c0b6; --rule:#26332f; --chip:#1c2726;
+    --sev:#dfa94e; --sev-bg:#2a2015; --sev-rule:#4a3820;
+    --area:#8fb6d8; --area-bg:#16232e;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.65; margin:0;
+    padding:clamp(28px,5vw,64px) clamp(18px,5vw,40px);
+  }
+  .wrap{max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:36px}
+  header{display:flex; flex-direction:column; gap:10px; border-bottom:2px solid var(--rule); padding-bottom:22px}
+  .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  h1{font-family:Spectral,Georgia,serif; font-weight:600; font-size:clamp(28px,4.4vw,40px);
+     line-height:1.18; margin:0; text-wrap:balance; letter-spacing:-.01em}
+  .lede{color:var(--muted); max-width:62ch; margin:0}
+  .summary{border-collapse:collapse; width:100%; font-size:14.5px}
+  .summary th{text-align:left; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+              color:var(--muted); font-weight:600; padding:0 12px 8px 0; border-bottom:1px solid var(--rule)}
+  .summary td{padding:11px 12px 11px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  .summary tr:last-child td{border-bottom:none}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{font-size:11.5px; font-weight:600; letter-spacing:.04em; padding:2.5px 8px; border-radius:3px;
+        white-space:nowrap; font-family:"IBM Plex Mono",monospace}
+  .sev{background:var(--sev-bg); color:var(--sev); border:1px solid var(--sev-rule)}
+  .area{background:var(--area-bg); color:var(--area); border:1px solid transparent}
+  article{background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+          padding:clamp(20px,3.2vw,30px); display:flex; flex-direction:column; gap:16px}
+  article h2{font-family:Spectral,Georgia,serif; font-weight:600; font-size:21px; line-height:1.32;
+             margin:0; text-wrap:balance}
+  article p{margin:0; max-width:64ch}
+  h3{font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--muted);
+     font-weight:600; margin:0}
+  .block{display:flex; flex-direction:column; gap:8px}
+  pre{margin:0; background:var(--chip); border:1px solid var(--rule); border-radius:4px;
+      padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace;
+      font-size:13px; line-height:1.62; font-variant-numeric:tabular-nums}
+  ol,ul{margin:0; padding-left:20px; max-width:64ch}
+  li{margin-bottom:5px}
+  li::marker{color:var(--accent)}
+  kbd{font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--chip);
+      border:1px solid var(--rule); border-radius:3px; padding:1px 5px}
+  code{font-family:"IBM Plex Mono",monospace; font-size:13.5px; background:var(--chip);
+       border-radius:3px; padding:1px 4px}
+  .expect{border-left:3px solid var(--accent); padding:2px 0 2px 16px; display:flex;
+          flex-direction:column; gap:7px}
+  footer{color:var(--muted); font-size:13.5px; border-top:1px solid var(--rule); padding-top:18px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">QA · Релиз v0.60.0 · 25 августа 2026</div>
+    <h1>Присутствие, несохранённые черновики, очередь отправки, список участников и роль приглашения</h1>
+    <p class="lede">Проход по изменениям релиза v0.60.0. Пять находок: приватный переключатель
+      <code>Active status</code>, который не скрывает пользователя от тех, у кого приложение уже открыто;
+      несохранённые правки в <code>Settings</code>, пропадающие без предупреждения; очередь отправки,
+      которая после одной неудачи молча перестаёт отправлять и потом путает порядок сообщений;
+      участник встречи, которому не показывают, кто ещё приглашён; и ссылка-приглашение без роли, которую таблица объявляет сломанной. Каждая находка подтверждена
+      запросами и измерениями DOM и воспроизведена не менее двух раз.</p>
+  </header>
+
+  <table class="summary">
+    <thead><tr><th style="width:56%">Находка</th><th>Важность</th><th>Область</th></tr></thead>
+    <tbody>
+      <tr><td>Выключение <code>Active status</code> не скрывает пользователя от тех, у кого приложение уже открыто</td>
+          <td><span class="chip sev">High</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>Несохранённые изменения в <code>Settings</code> пропадают молча — предупреждения нет</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>После одной неудачной отправки следующие сообщения выглядят отправленными, но не уходят</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
+      <tr><td>Приглашённый на встречу не видит список участников — «Participant list unavailable»</td>
+          <td><span class="chip sev">Medium</span></td><td><span class="chip area">backend</span></td></tr>
+      <tr><td>Ссылка-приглашение, созданная с выбором «No role», числится как «Role unavailable»</td>
+          <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
+    </tbody>
+  </table>
+
+  <article>
+    <div class="chips"><span class="chip sev">High</span><span class="chip area">backend</span></div>
+    <h2>1. Выключение <code>Active status</code> не скрывает присутствие от тех, у кого приложение уже открыто</h2>
+    <p>Переключатель <code>Active status</code> на экране <code>Settings</code> →
+      <code>Profile</code> подписан «Show your online status to members of your workspace.».
+      Пользователь выключает его, получает <code>Saved</code>, и настройка действительно сохраняется:
+      тот, кто откроет приложение уже после этого, увидит его офлайн. Но все, у кого вкладка была
+      открыта в момент выключения, продолжают видеть его в сети — и будут видеть до тех пор,
+      пока не перезагрузят страницу. Для чат-приложения, где вкладку держат открытой часами,
+      это означает, что приватная настройка не срабатывает для большинства коллег.</p>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Войти двумя разными пользователями одного workspace в двух отдельных браузерах.
+          Второй пользователь оставляет приложение открытым; в его боковой панели
+          <code>Direct messages</code> у первого пользователя горит зелёная точка присутствия.</li>
+        <li>Первый пользователь: <code>Settings</code> → <code>Profile</code> → блок
+          <code>Availability</code> → выключить <code>Active status</code> → <code>Save profile</code>.
+          Появляется подтверждение <code>Saved</code>.</li>
+        <li>Смотреть на окно второго пользователя, ничего в нём не трогая и не перезагружая.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Что происходит</h3>
+      <p>Точка у первого пользователя остаётся зелёной. Она становится серой только после
+        перезагрузки страницы у второго пользователя.</p>
+      <pre>сохранение:  PUT /api/v1/users/me/presence-settings/update
+             {"hide_presence": true}                        → 200 {"ok":true}
+
+что приходит второму пользователю по WebSocket, двумя кадрами подряд:
+  {"type":"presence.update","user_id":"&lt;первый&gt;","online":false,"last_seen_at":"…"}
+  {"type":"presence.update","user_id":"&lt;первый&gt;","online":true}
+
+цвет точки в DOM:   rgb(19, 122, 58)   — зелёный, «в сети»
+после перезагрузки: rgb(138, 149, 163) — серый, «скрыт»</pre>
+      <p>Первый кадр правильный, второй тут же его отменяет. Интерфейс показывает то,
+        что пришло последним, поэтому пользователь снова становится зелёным. Во втором кадре
+        нет поля <code>last_seen_at</code>, то есть он приходит не из того же места, что первый.</p>
+    </div>
+
+    <div class="block">
+      <h3>Это не задержка доставки</h3>
+      <p>После этой пары кадров окно второго пользователя наблюдалось <strong>75 секунд</strong>
+        без каких-либо действий: новых <code>presence</code>-кадров не пришло вообще
+        (только <code>pong</code>), точка всё это время оставалась зелёной.
+        Обратное действие — включение <code>Active status</code> — не рассылает открытым
+        сессиям ничего: за 60 секунд наблюдения не пришло ни одного кадра, статус там
+        обновился тоже только после перезагрузки.</p>
+      <table class="summary">
+        <thead><tr><th>Действие</th><th>Что приходит открытой сессии</th><th>Что она показывает</th><th>После перезагрузки</th></tr></thead>
+        <tbody>
+          <tr><td>выключить <code>Active status</code></td><td><code>online:false</code>, сразу за ним <code>online:true</code></td><td>зелёный — неверно</td><td>серый — верно</td></tr>
+          <tr><td>включить <code>Active status</code></td><td>ничего</td><td>не меняется</td><td>зелёный — верно</td></tr>
+        </tbody>
+      </table>
+      <p>Проверено на двух выключениях и одном включении. Вкладка наблюдателя всё время была
+        <code>document.visibilityState === "visible"</code>, то есть без троттлинга таймеров.</p>
+    </div>
+
+    <div class="block">
+      <h3>Что работает правильно</h3>
+      <p>Сама настройка сохраняется и читается корректно: запрос уходит, значение переживает
+        перезагрузку, а парный переключатель <code>Show online status</code> на экране
+        <code>Settings</code> → <code>Privacy &amp; security</code> показывает то же состояние.
+        Не работает только рассылка изменения тем, кто уже в приложении.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Как должно быть</h3>
+      <p>Когда пользователь выключает «Show your online status», все, кто на него сейчас смотрит,
+        должны увидеть его офлайн сразу, без перезагрузки, и ни одно последующее событие не должно
+        возвращать его в сеть, пока настройка выключена. Включение настройки должно так же сразу
+        показывать его в сети.</p>
+    </div>
+
+    <div class="block">
+      <h3>Связанные тикеты</h3>
+      <p>Изменение релиза: <strong>PR #2485</strong> (<code>fix(settings): make Active status hide presence</code>),
+        тикет <strong>ALK-2964</strong>. Это ровно тот сценарий, который там описан. Первая половина
+        дефекта оттуда исправлена: переключатель больше не пишет в неиспользуемый blob настроек,
+        а действительно вызывает <code>presence-settings/update</code>, и оба переключателя
+        показывают одно состояние. Но пункт приёмки «выключение <code>Active status</code> делает
+        пользователя offline для второго участника workspace» по-прежнему не выполняется — для
+        участника, у которого приложение уже открыто.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>2. Несохранённые изменения в <code>Settings</code> пропадают молча</h2>
+    <p>Приложение показывает панель <code>2 unsaved changes</code> — то есть оно знает,
+      что у пользователя есть несохранённые правки, и прямо ему об этом сообщает.
+      Но если после этого уйти со страницы любым способом, правки просто исчезают:
+      ни вопроса, ни предупреждения, ни сохранённого черновика.</p>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings</code> → <code>Account</code>, блок <code>Contact details</code>.</li>
+        <li>Ввести что-нибудь в поле <code>Phone</code> (оно пустое). Внизу появляется
+          закреплённая панель с текстом <code>2 unsaved changes</code> и кнопками
+          <code>Discard</code> и <code>Save changes</code>.</li>
+        <li>Не нажимая <code>Save changes</code>, уйти со страницы — любым из трёх способов ниже.</li>
+        <li>Вернуться на <code>Settings</code> → <code>Account</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Что происходит</h3>
+      <table class="summary">
+        <thead><tr><th>Как уходим</th><th>Спрашивают ли</th><th>Значение поля при возврате</th></tr></thead>
+        <tbody>
+          <tr><td>клик по другому разделу <code>Settings</code> (<code>Profile</code>, <code>Appearance</code>)</td><td>нет</td><td>пустое</td></tr>
+          <tr><td>клик по разделу вне <code>Settings</code> (чат)</td><td>нет</td><td>пустое</td></tr>
+          <tr><td>перезагрузка страницы</td><td>нет, браузерного предупреждения тоже нет</td><td>пустое</td></tr>
+        </tbody>
+      </table>
+      <p>Воспроизведено дважды, каждый раз с чистой загрузки страницы. Во всех трёх случаях
+        видимых диалогов на странице не появлялось.</p>
+    </div>
+
+    <div class="block">
+      <h3>Что работает правильно</h3>
+      <p>Сама панель сохранения работает: она появляется с первого же введённого символа,
+        закреплена внизу окна, правильно считает число изменений, а <code>Save changes</code>
+        сохраняет значение, показывает <code>Saved</code> и переживает перезагрузку.
+        Проверка полей тоже корректна: если ввести в <code>LinkedIn</code> строку, не похожую
+        на ссылку, поле помечается как ошибочное, под ним появляется понятное сообщение
+        «Enter a LinkedIn profile URL.», кнопка <code>Save changes</code> блокируется
+        и запрос на сервер не уходит.</p>
+    </div>
+
+    <div class="block">
+      <h3>Связанные тикеты</h3>
+      <p>Изменение релиза: <strong>PR #2530</strong>
+        (<code>fix(settings): preserve dirty drafts and honest save states</code>). Проверка полей —
+        <strong>PR #2538</strong>, закреплённая панель сохранения — <strong>PR #2639</strong> (ALK-3214);
+        обе части работают корректно.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Как должно быть</h3>
+      <p>Либо сохранять введённые значения и показывать их при возврате в раздел, либо
+        предупреждать перед уходом («у вас есть несохранённые изменения»). Показать панель
+        «2 unsaved changes» и затем выбросить эти изменения без единого слова — худший
+        из вариантов: пользователь уже получил подтверждение, что приложение о его правках знает.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
+    <h2>3. После одной неудачной отправки следующие сообщения выглядят отправленными, но не уходят</h2>
+    <p>Если одна отправка не удалась, приложение честно помечает её как неотправленную.
+      Но следующее сообщение, написанное уже при работающей сети, отрисовывается в ленте
+      как обычное отправленное — без пометки «отправляется» или «не отправлено», — и при этом
+      на сервер не уходит вообще. Примерно минуту пользователь смотрит на сообщение, которого
+      в канале ни у кого нет.</p>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть канал и написать сообщение <strong>A</strong> в момент, когда отправка
+          сообщений не проходит (например, при обрыве сети). Оно правильно помечается
+          «Could not send the message. Try again.».</li>
+        <li>Дождаться восстановления сети.</li>
+        <li>Написать в том же канале сообщение <strong>B</strong> и нажать <kbd>Enter</kbd>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Что происходит</h3>
+      <p>Сообщение <strong>B</strong> появляется в ленте как обычное — без каких-либо пометок
+        о состоянии. При этом запрос на отправку не выполняется вовсе, и на сервере сообщения нет.</p>
+      <pre>сразу после отправки B:
+  запросов на POST /api/v1/messaging/messages   — ни одного (наблюдение 8 с)
+  пометок об ошибке или ожидании у сообщения B  — нет
+  GET …/messages?limit=100                      — сообщения B нет
+
+через 60 с простоя:
+  один запрос → 200, сообщение B появляется на сервере
+
+после перезагрузки страницы:
+  на сервере и A, и B
+
+новое сообщение, написанное после перезагрузки:
+  уходит сразу, 200, сразу на сервере</pre>
+      <p>Воспроизведено дважды. Данные в итоге не теряются — но около минуты состояние
+        сообщения показано неверно.</p>
+    </div>
+
+    <div class="block">
+      <h3>Порядок сообщений после этого нарушается</h3>
+      <p>Сообщение <strong>A</strong> написано <em>раньше</em> <strong>B</strong>, но доставляется
+        <em>позже</em> и получает время не написания, а повторной отправки. В канале
+        у всех участников остаётся такой порядок:</p>
+      <pre>12:57   B  — написано вторым
+12:58   A  — написано первым, доставлено последним</pre>
+      <p>Это сохранённый порядок, а не локальная особенность одного окна.</p>
+    </div>
+
+    <div class="block">
+      <h3>Связанные тикеты</h3>
+      <p>Изменение релиза: <strong>PR #2482</strong>
+        (<code>fix(chat): prevent failed sends from wedging queue</code>), тикет <strong>ALK-2958</strong>.
+        Сообщения действительно перестали теряться — но очередь по-прежнему встаёт, и её состояние
+        не показано пользователю.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Как должно быть</h3>
+      <p>Пока сообщение ждёт отправки, оно должно быть помечено как отправляющееся, а не выглядеть
+        доставленным. После восстановления связи очередь должна возобновлять отправку сразу,
+        а не спустя примерно минуту. И сообщения должны попадать в канал в том порядке,
+        в котором их написали.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Medium</span><span class="chip area">backend</span></div>
+    <h2>4. Приглашённый на встречу не видит, кто ещё на неё приглашён</h2>
+    <p>Организатор встречи видит список приглашённых и их ответы. Любой другой участник —
+      даже тот, кого пригласили и кто уже принял приглашение, — вместо списка видит надпись
+      <code>Participant list unavailable</code>. Формулировка описывает сбой, хотя на самом деле
+      сервер просто не отдаёт этот список никому, кроме организатора.</p>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Пользователь A: <code>Calendar</code> → <code>New meeting</code>, задать название,
+          в поле <code>Search members</code> выбрать пользователя B, оставить доступ
+          <code>Public</code> («Anyone in the workspace can join»), нажать
+          <code>Schedule meeting</code>.</li>
+        <li>Пользователь B: открыть <code>Calendar</code>, нажать на карточку этой встречи
+          и ответить <code>Yes</code>.</li>
+        <li>Сравнить карточку встречи у A и у B.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Что происходит</h3>
+      <table class="summary">
+        <thead><tr><th></th><th>организатор</th><th>приглашённый, ответивший «Yes»</th></tr></thead>
+        <tbody>
+          <tr><td>карточка встречи</td><td><code>Scheduled by You</code> + строка участника с его ответом и временем ответа</td><td><code>Scheduled by &lt;имя&gt;</code> + <code>Participant list unavailable</code></td></tr>
+          <tr><td><code>GET /api/v1/calendar/meetings/&lt;id&gt;</code></td><td><code>200</code></td><td><code>200</code></td></tr>
+          <tr><td>ключи верхнего уровня в ответе</td><td><code>["meeting","attendees"]</code></td><td><code>["meeting"]</code></td></tr>
+          <tr><td><code>attendees</code></td><td>массив из 1 элемента</td><td>ключа нет</td></tr>
+        </tbody>
+      </table>
+      <p>При открытии карточки оба клиента делают ровно один и тот же запрос и оба получают
+        <code>200</code>; ошибок <code>4xx</code>/<code>5xx</code> нет ни одной. Разница только
+        в содержимом ответа: не организатору поле <code>attendees</code> не отдаётся,
+        и интерфейс честно сообщает, что списка нет.</p>
+    </div>
+
+    <div class="block">
+      <h3>Той же надписью показывается и пустой список</h3>
+      <p>Организатор встречи, на которую ещё никого не позвали, видит ровно ту же строку
+        <code>Participant list unavailable</code> — хотя ничего не сломано и скрывать нечего.
+        Сервер не отдаёт поле <code>attendees</code> в обоих случаях: и когда список смотреть не положено,
+        и когда он пуст, — а интерфейс рисует для обоих одну надпись.</p>
+      <table class="summary">
+        <thead><tr><th>встреча (во всех случаях смотрит её организатор)</th><th><code>attendees</code> в ответе</th><th>что видно</th></tr></thead>
+        <tbody>
+          <tr><td>без приглашённых</td><td>поля нет</td><td><code>Participant list unavailable</code></td></tr>
+          <tr><td>один приглашённый</td><td>массив из 1 элемента</td><td>список участников</td></tr>
+          <tr><td>без приглашённых (создана только что, будущая)</td><td>поля нет</td><td><code>Participant list unavailable</code></td></tr>
+        </tbody>
+      </table>
+      <p>То есть одна и та же надпись описывает три разные ситуации, и в двух из них она вводит
+        в заблуждение: приглашённому — что список сломался, хотя его просто не показывают;
+        организатору пустой встречи — что список недоступен, хотя он пуст.</p>
+    </div>
+
+    <div class="block">
+      <h3>Почему это похоже на дефект, а не на намеренное ограничение</h3>
+      <p>Встреча создана с доступом <code>Public</code>, пользователь приглашён лично и уже
+        подтвердил участие. Формулировка <code>Participant list unavailable</code> описывает
+        техническую недоступность, а не запрет: если список действительно не положено показывать,
+        надпись должна об этом и говорить.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Как должно быть</h3>
+      <p>Приглашённый на встречу должен видеть, кого ещё пригласили и кто уже согласился.
+        Если часть этих данных закрывается намеренно, панель должна прямо сообщать об ограничении,
+        а не выдавать список за недоступный. Пустая встреча должна показывать пустое состояние
+        («пока никого не пригласили»), а не ту же надпись о недоступности.</p>
+    </div>
+
+    <div class="block">
+      <h3>Связанные тикеты</h3>
+      <p>Изменение релиза: <strong>PR #2296</strong>
+        (<code>fix(calendar): make participant truth authoritative</code>), тикеты
+        <strong>ALK-2759 / ALK-2777 / ALK-2842</strong>.</p>
+      <p>В том же ответе счётчик <code>participant_count</code> равен нулю при наличии
+        подтвердившего участника, из-за чего встречи показываются как «0 participants».
+        Это отдельно и раньше описано в <strong>ALK-2522</strong> — здесь не дублируется.</p>
+    </div>
+  </article>
+
+  <article>
+    <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
+    <h2>5. Ссылка-приглашение, созданная с явным выбором «No role», показывается как <code>Role unavailable</code></h2>
+    <p>При создании ссылки-приглашения роль выбирается из списка, и первым пунктом там идёт
+      явный вариант <code>No role</code> — то есть «пригласить без роли» это осознанный выбор,
+      а не пустое значение по умолчанию. Но в таблице готовых ссылок такая ссылка числится
+      с ролью <code>Role unavailable</code>: сделанный выбор описан так, будто роль не удалось прочитать.</p>
+
+    <div class="block">
+      <h3>Как воспроизвести</h3>
+      <ol>
+        <li>Открыть <code>Settings</code> → <code>Admin</code> → <code>Invites</code>,
+          блок <code>Shareable invites</code>.</li>
+        <li>Раскрыть <code>ROLE</code>. Список предлагает: <code>No role</code>,
+          <code>Member · Workspace role</code>, <code>Member · Company role</code>,
+          <code>Admin · Company role</code>, <code>Guest · Company role</code>.</li>
+        <li>Выбрать <code>No role</code> и нажать <code>Create invite link</code>.</li>
+        <li>Посмотреть колонку <code>ROLES</code> у новой строки в таблице <code>Invite links</code>.</li>
+      </ol>
+    </div>
+
+    <div class="block">
+      <h3>Что происходит</h3>
+      <p>Две ссылки, созданные подряд, в одной и той же таблице (значения перечитаны после
+        полной перезагрузки страницы):</p>
+      <table class="summary">
+        <thead><tr><th>что выбрали при создании</th><th>что ушло на сервер</th><th>колонка <code>ROLES</code></th></tr></thead>
+        <tbody>
+          <tr><td><code>Member · Workspace role</code></td><td><code>"role_ids": ["…"]</code> → <code>200</code></td><td><code>Member</code></td></tr>
+          <tr><td><code>No role</code></td><td><code>"role_ids": []</code> → <code>200</code></td><td><code>Role unavailable</code></td></tr>
+        </tbody>
+      </table>
+      <p>Обе ссылки рабочие и обе в статусе <code>Pending</code>; отличаются они только тем,
+        задана роль или нет. Надпись <code>Role unavailable</code> появляется именно во втором случае.</p>
+    </div>
+
+    <div class="block">
+      <h3>Почему это важнее, чем просто формулировка</h3>
+      <p>Администратор, который сам выбрал «без роли», видит, что роль «недоступна», — это читается
+        как поломанная ссылка и подталкивает нажать <code>Revoke invite</code> и создать её заново.</p>
+      <p>Это тот же приём, что и в находке 4: пустое значение показано словом
+        <code>unavailable</code>, которое описывает сбой. «Без роли» и «пока никого не пригласили» —
+        нормальные состояния, а не ошибки; их стоит починить заодно.</p>
+    </div>
+
+    <div class="block expect">
+      <h3>Как должно быть</h3>
+      <p>Ссылка, созданная без роли, так и должна называться — например <code>No role</code>,
+        тем же словом, каким этот вариант назван при создании. Формулировку про недоступность
+        стоит оставить для случая, когда роль действительно не удалось прочитать.</p>
+    </div>
+  </article>
+
+  <footer>
+    <p>Проверено на текущей сборке staging. Все находки воспроизведены не менее двух раз,
+      каждая — с чистой загрузки страницы. Косметика и мелкие расхождения в отчёт не включены.</p>
+  </footer>
+</div>
