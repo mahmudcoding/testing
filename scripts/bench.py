@@ -19,7 +19,7 @@ A finding is reproducible when its report carries a repro block:
 Findings without one still open positioned; the bench says what is left to do.
 """
 import os, sys, re, json, html, subprocess, datetime, threading, webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -53,7 +53,25 @@ def repro_blocks(path):
         out.append(attrs or None)
     return out
 
+_CACHE = {"items": None, "stamp": None}
+
+def _stamp():
+    out = []
+    for _, _, rel in REPORTS:
+        p = os.path.join(REPO, rel)
+        out.append(os.path.getmtime(p) if os.path.exists(p) else 0)
+    return tuple(out)
+
 def load():
+    """Parsed findings, cached until a report file changes on disk."""
+    st = _stamp()
+    if _CACHE["items"] is not None and _CACHE["stamp"] == st:
+        return _CACHE["items"]
+    items = _load_uncached()
+    _CACHE["items"], _CACHE["stamp"] = items, st
+    return items
+
+def _load_uncached():
     items, n = [], 0
     for lane, name, rel in REPORTS:
         path = os.path.join(REPO, rel)
@@ -70,6 +88,7 @@ def load():
                 "title": f["title"], "sev": f["severity"], "area": f["area"],
                 "surface": surface(f), "roles": roles, "accounts": accts,
                 "steps": f["steps"], "actual": f.get("Фактический результат",""),
+                "measure": f.get("Фактический результат_measure",""),
                 "expected": f.get("Ожидаемый результат",""),
                 "problem": f.get("Проблема",""), "drift": f.get("table_drift"),
                 "notes": notes.get(f["title"][:34], []),
@@ -126,15 +145,20 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def _send(self, code, body, ctype="application/json"):
         b = body.encode() if isinstance(body, str) else body
-        self.send_response(code)
-        self.send_header("Content-Type", ctype + "; charset=utf-8")
-        self.send_header("Content-Length", str(len(b)))
-        self.end_headers(); self.wfile.write(b)
+        try:
+            self.send_response(code)
+            self.send_header("Content-Type", ctype + "; charset=utf-8")
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers(); self.wfile.write(b)
+        except (BrokenPipeError, ConnectionResetError):
+            pass          # the client gave up mid-response; not our problem
 
     def do_GET(self):
         u = urlparse(self.path)
         if u.path in ("/", "/index.html"):
             return self._send(200, open(UI, encoding="utf-8").read(), "text/html")
+        if u.path == "/api/ping":
+            return self._send(200, json.dumps({"ok": True, "n": len(load())}))
         if u.path == "/api/findings":
             return self._send(200, json.dumps(load(), ensure_ascii=False))
         self._send(404, "{}")
@@ -156,11 +180,15 @@ class H(BaseHTTPRequestHandler):
         self._send(404, "{}")
 
 if __name__ == "__main__":
-    n = len(load())
-    print(f"\n  Verification bench — {n} findings")
+    # Bind and start serving straight away, and parse the reports on a
+    # background thread. Parsing five reports takes seconds; if we did it first
+    # the port would not exist yet and anything waiting on us would conclude we
+    # had died. /api/ping blocks until the parse finishes, which is the signal.
+    threading.Thread(target=load, daemon=True).start()
+    print(f"\n  Verification bench")
     print(f"  http://127.0.0.1:{PORT}\n")
     print("  Reproduce launches real browsers on your machine. Ctrl-C to stop.\n")
     if not os.environ.get("BENCH_NO_BROWSER"):      # the .app hosts its own window
         threading.Timer(0.8, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
-    try: HTTPServer(("127.0.0.1", PORT), H).serve_forever()
+    try: ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
     except KeyboardInterrupt: print("\n  stopped\n")

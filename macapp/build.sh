@@ -27,6 +27,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
+  <!-- The bench server is plain HTTP on 127.0.0.1. Without this, App Transport
+       Security blocks both the readiness poll and the WKWebView load, and the
+       app reports "did not come up" while the server is running fine. -->
+  <key>NSAppTransportSecurity</key><dict>
+    <key>NSAllowsLocalNetworking</key><true/>
+  </dict>
   <key>BenchRepoPath</key><string>$REPO</string>
 </dict></plist>
 PLIST

@@ -210,6 +210,16 @@ details.raw pre{margin:0;padding:0 16px 14px;font:400 12px/1.6 "IBM Plex Mono",m
 .norep{background:var(--surface-2);color:var(--ink-2)}
 .norep b{color:var(--ink-3)}
 </style>
+<style>
+details.more summary{cursor:pointer;list-style:none;font:600 11px/1 "IBM Plex Mono",monospace;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary:before{content:"▸ "}
+details.more[open] summary:before{content:"▾ "}
+pre.meas{margin:12px 0 0;padding:14px;background:var(--surface-2);border-radius:8px;
+  font:400 12px/1.6 "IBM Plex Mono",monospace;color:var(--ink-2);white-space:pre-wrap;
+  word-break:break-word;max-height:340px;overflow:auto}
+</style>
 <div class="top">
   <div class="top-in">
     <div class="brand">Verification bench <span>· local</span></div>
@@ -311,13 +321,17 @@ function render(){
       <details class="raw"><summary>rig output</summary><pre>${esc(res.log)}</pre></details>
     </div>`:''}
 
-    ${f.actual?`<div class="sect"><h2>What the report says you'll see</h2>
-      <div class="claim">${rich(f.actual)}</div></div>`:''}
     ${warns.map(w=>`<div class="warn"><b>${esc(w[0])}</b>${rich(w[1])}</div>`).join('')}
-    ${f.steps.length?`<div class="sect"><h2>Steps</h2><ol class="steps">${
+    ${f.steps.length?`<div class="sect"><h2>Do this</h2><ol class="steps">${
       f.steps.map(s=>`<li><span class="st">${rich(s)}</span></li>`).join('')}</ol></div>`:''}
-    ${f.expected?`<div class="sect"><h2>What should happen instead</h2>
-      <div class="body">${rich(f.expected)}</div></div>`:''}
+    ${f.actual?`<div class="sect"><h2>You should see</h2>
+      <div class="claim">${rich(f.actual)}</div></div>`:''}
+    ${f.expected?`<div class="sect"><h2>Should be instead</h2>
+      <div class="claim">${rich(f.expected)}</div></div>`:''}
+    ${(f.problem||f.measure)?`<div class="sect"><details class="more"><summary>Background</summary>
+      ${f.problem?`<div class="body" style="margin-top:12px">${rich(f.problem)}</div>`:''}
+      ${f.measure?`<pre class="meas">${esc(f.measure)}</pre>`:''}
+    </details></div>`:''}
   </div>`;
 
   document.querySelectorAll('ol.steps li').forEach(li=>li.onclick=()=>li.classList.toggle('done'));

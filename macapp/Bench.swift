@@ -59,7 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         window.contentView = web
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        showStatus("Starting the bench…", detail: "")
+        showStatus("Starting the bench…", detail: "Reading the reports — this takes a few seconds.")
     }
 
     func startServer() {
@@ -86,20 +86,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     }
 
     func waitForServer(attempt: Int) {
-        guard attempt < 60 else {
+        guard attempt < 45 else {
             showStatus("The bench server did not come up.",
                        detail: log.isEmpty ? "No output from scripts/bench.py." : log)
             return
         }
-        var rq = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/api/findings")!)
-        rq.timeoutInterval = 1.2
+        // /api/ping is cheap and, on first call, blocks until the reports are
+        // parsed — so a reply means genuinely ready, not merely listening.
+        var rq = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/api/ping")!)
+        rq.timeoutInterval = 20
         URLSession.shared.dataTask(with: rq) { [weak self] data, _, _ in
             guard let self else { return }
             DispatchQueue.main.async {
                 if data != nil {
                     self.web.load(URLRequest(url: URL(string: "http://127.0.0.1:\(self.port)/")!))
                 } else {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                         self.waitForServer(attempt: attempt + 1)
                     }
                 }

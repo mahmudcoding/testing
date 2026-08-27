@@ -59,7 +59,15 @@ def parse(path):
                 f["steps"] = [strip(li) for li in re.findall(r'<li>(.*?)</li>', blk, re.S)]
             elif name in SECTIONS:
                 body = re.sub(r'<h3[^>]*>.*?</h3>', '', blk, flags=re.S)
-                f[name] = strip(body)
+                # Keep prose and measurement apart: <p> is what a person reads,
+                # <pre> is the proof. Flattening both into one blob is what made
+                # the bench show a wall of КОНТРОЛЬ lines instead of a sentence.
+                pres = re.findall(r'<pre[^>]*>(.*?)</pre>', body, re.S)
+                prose = re.sub(r'<pre[^>]*>.*?</pre>', '', body, flags=re.S)
+                f[name] = strip(prose)
+                if pres:
+                    f[name + "_measure"] = "\n\n".join(
+                        html.unescape(re.sub(r'<[^>]+>', '', x)).strip() for x in pres)
         out.append(f)
     return out
 
