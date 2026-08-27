@@ -41,6 +41,18 @@ def blocks(lane):
     return out
 
 
+def _all_accounts(lane):
+    """{snippet: [every account its block names]} — a finding's other windows
+    have to be reset too, not just the one the snippet drives."""
+    src = open(REPORT[lane], encoding="utf-8").read()
+    out = {}
+    for attrs in re.findall(r'<div class="block repro"([^>]*)>', src, re.S):
+        d = dict(re.findall(r'data-([a-z]+)="([^"]*)"', attrs))
+        if d.get("snippet"):
+            out[d["snippet"]] = [a.strip() for a in d.get("accounts", "").split(",") if a.strip()]
+    return out
+
+
 def sh(cmd, **kw):
     return subprocess.run(cmd, cwd=REPO, text=True, capture_output=True,
                           stdin=subprocess.DEVNULL, **kw)
@@ -48,6 +60,7 @@ def sh(cmd, **kw):
 
 def verify(lane):
     rows = blocks(lane)
+    block_accts = {s: a for s, a in _all_accounts(lane).items()}
     if not rows:
         print(f"lane {lane}: no blocks yet")
         return []
@@ -63,8 +76,14 @@ def verify(lane):
         # Mirror what the bench does before every run. Without this the harness
         # measures something the app never does: each call finding hands over
         # with its meeting live, and the next one cannot start a second call.
-        for pre in ("_lang-en.mjs", "_end-call.mjs"):
-            sh(["./scripts/callrig/d", f"{lane.lower()}:{acct}", f"snip/{pre}"], env=env)
+        procs = [subprocess.Popen(
+                     ["./scripts/callrig/d", f"{lane.lower()}:{a}", "snip/_reset.mjs"],
+                     cwd=REPO, text=True, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+                 for a in block_accts.get(snip, [acct])]
+        for q in procs:
+            try: q.wait(timeout=90)
+            except subprocess.TimeoutExpired: q.kill()
         p = sh(["./scripts/callrig/d", f"{lane.lower()}:{acct}", f"snip/{snip}"], env=env)
         out = p.stdout + p.stderr
         m = re.search(r'"ready"\s*:\s*(true|false)', out)

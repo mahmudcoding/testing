@@ -145,6 +145,24 @@ def run_stream(cmd, key, timeout=420, slow=False):
         killer.cancel()
     return p.returncode, "".join(out)
 
+def reset(lane, accts):
+    """Reset each browser to neutral, all at once. Sequentially this cost about a
+    minute per finding on a four-account lane and dominated the wait."""
+    procs = []
+    env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT)
+    for a in accts:
+        try:
+            procs.append(subprocess.Popen(
+                ["./scripts/callrig/d", f"{lane}:{a}", "snip/_reset.mjs"],
+                cwd=REPO, text=True, stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env))
+        except OSError:
+            pass
+    for p in procs:
+        try: p.wait(timeout=90)
+        except subprocess.TimeoutExpired: p.kill()
+
+
 def run(cmd, timeout=420, slow=False):
     """slow=True paces the run so a person can watch it. Only the repro snippet
     is watched -- pacing sign-in and window placement just wastes the wait."""
@@ -185,13 +203,12 @@ def reproduce(item):
     # A locale finding has to leave the app in that locale, so it cannot restore
     # anything itself -- and every other snippet matches English strings. Without
     # this, judging one non-English finding breaks every finding judged after it.
-    run(["./scripts/callrig/d", f"{lane}:{driver0}", "snip/_lang-en.mjs"], timeout=90)
-    # A call finding hands over with its meeting still live, because that is the
-    # state being judged. Reproducing a second one without closing the browser
-    # then starts inside a call that already has a co-host promoted -- and a host
-    # cannot moderate a co-host, so the menu the next snippet needs comes back
-    # empty and it refuses. No-op when the window is not in a call.
-    run(["./scripts/callrig/d", f"{lane}:{driver0}", "snip/_end-call.mjs"], timeout=90)
+    # Put every browser the finding uses back to neutral: language to English, any
+    # meeting still running ended. Not just the driver -- ending a meeting leaves
+    # the OTHER windows parked on "Call has ended", and a snippet needing a second
+    # participant then cannot get one. Run together, because sequentially this was
+    # the dominant cost of a reproduce.
+    reset(lane, accts)
 
     rep = item.get("repro")
     if not rep or not rep.get("snippet"):
