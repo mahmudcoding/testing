@@ -149,7 +149,6 @@ def _runnable_only(items):
 # runs are unaffected: drive.mjs treats an unset QA_SLOW_MS as no delay.
 SLOW_MS = os.environ.get("BENCH_SLOW_MS", "800")
 TILE_LEFT = os.environ.get("BENCH_TILE_LEFT", "480")
-ZOOM = os.environ.get("BENCH_ZOOM", "0.8")
 
 PROGRESS = {}          # finding id -> steps the running snippet has reported
 
@@ -192,27 +191,6 @@ def reset(lane, accts):
             pass
     for p in procs:
         try: p.wait(timeout=90)
-        except subprocess.TimeoutExpired: p.kill()
-
-
-def zoom_all(lane, accts):
-    """Zoom every window the finding uses, after its snippet has finished.
-
-    Never before: CSS zoom relayouts, and every snippet was verified at 1.0, so
-    doing this during a run would move each rect out from under the measurement
-    that depends on it."""
-    procs = []
-    env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT, QA_ZOOM=ZOOM)
-    for a in accts:
-        try:
-            procs.append(subprocess.Popen(
-                ["./scripts/callrig/d", f"{lane}:{a}", "snip/_zoom.mjs"],
-                cwd=REPO, text=True, stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env))
-        except OSError:
-            pass
-    for p in procs:
-        try: p.wait(timeout=45)
         except subprocess.TimeoutExpired: p.kill()
 
 
@@ -292,10 +270,6 @@ def reproduce(item):
     rc, out = run_stream(["./scripts/callrig/d", f"{lane}:{driver}", f"snip/{name}"],
                          item["id"], slow=True)
     log.append(out.strip() or "(no output)")
-
-    # the person is about to read these windows, so give them the whole screen's
-    # worth of app in the strip beside the report
-    zoom_all(lane, accts)
 
     res = _snippet_result(out)
     left = res.get("leftToDo") or "Snippet finished. Compare what you see against the claim above."
