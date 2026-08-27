@@ -134,6 +134,12 @@
   <article>
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Право приглашать в workspace открывает страницу, на которой неактивны все элементы управления</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner,carol"
+       data-snippet="d-invite-perm.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-invite-perm.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -215,6 +221,12 @@ apps/web/src/features/admin/AdminDirectInvitesPanel.tsx:92
   <article>
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Право «View the company audit log» не открывает журнал аудита</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner,carol"
+       data-snippet="d-audit-perm.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-audit-perm.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -319,6 +331,12 @@ GET /api/v1/workspaces/&lt;WS&gt;/admin/audit-log?limit=5  -> 403 {"code":403,"k
   <article>
     <div class="chips"><span class="chip sev">High</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Право создавать роли выдано, но экран, на котором роли создаются, не открывается</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner,carol"
+       data-snippet="d-roles-perm.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-roles-perm.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -439,6 +457,12 @@ packages/features/admin/model/capabilities.ts:111
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Участнику с правом исключать предлагают удалить владельца компании</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner,carol"
+       data-snippet="d-kick-owner.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-kick-owner.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -509,6 +533,12 @@ packages/features/admin/model/capabilities.ts:111
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS] Два элемента видимости присутствия противоречат друг другу, а подпись секции неверна</h2>
+  <div class="block repro" data-lane="D" data-accounts="carol,owner"
+       data-snippet="d-presence-split.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:carol snip/d-presence-split.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -583,6 +613,12 @@ Show online status = off  (обратное направление, отдель
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS] Семь полей профиля и переключатель <code>Show timezone</code> обещают показать вас коллегам и ничего не показывают</h2>
+  <div class="block repro" data-lane="D" data-accounts="alice,owner"
+       data-snippet="d-profile-fields.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:alice snip/d-profile-fields.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -667,6 +703,12 @@ GET /api/v1/workspaces/&lt;ws&gt;/members  -&gt; 200; ключи участни�
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS] <code>Sidebar position &rarr; Right</code> отмечается и сохраняется, но панель остаётся слева</h2>
+  <div class="block repro" data-lane="D" data-accounts="alice"
+       data-snippet="d-sidebar-right.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:alice snip/d-sidebar-right.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -720,6 +762,12 @@ GET /api/v1/workspaces/&lt;ws&gt;/members  -&gt; 200; ключи участни�
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS] Пять настроек Appearance после перезагрузки возвращаются к значению по умолчанию, сохранив выбор пользователя</h2>
+  <div class="block repro" data-lane="D" data-accounts="alice"
+       data-snippet="d-appear-revert.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:alice snip/d-appear-revert.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -791,6 +839,12 @@ GET /api/v1/workspaces/&lt;ws&gt;/members  -&gt; 200; ключи участни�
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][COMPANY] Логотип компании заменяется в момент выбора файла — без кадрирования, подтверждения и возможности вернуть прежний</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner"
+       data-snippet="d-company-logo.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-company-logo.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -851,6 +905,12 @@ Settings → Account, тот же шаг:
   <article>
     <div class="chips"><span class="chip sev">Medium</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Журнал аудита выводит служебные ключи событий и сырой JSON вместо описания произошедшего</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner"
+       data-snippet="d-audit-raw.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-audit-raw.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -920,6 +980,12 @@ Settings → Account, тот же шаг:
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Блок хранилища подписан «My storage», хотя строкой ниже сказано, что хранилище общее</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner"
+       data-snippet="d-storage-label.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-storage-label.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -983,6 +1049,12 @@ Settings → Account, тот же шаг:
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS] Несохранённые изменения пропадают при переходе между разделами настроек, без предупреждения</h2>
+  <div class="block repro" data-lane="D" data-accounts="alice"
+       data-snippet="d-unsaved-lost.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:alice snip/d-unsaved-lost.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1117,6 +1189,12 @@ Settings → Account, тот же шаг:
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Приглашение, отправленное без роли, выводится как Role unavailable</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner"
+       data-snippet="d-invite-norole.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-invite-norole.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1175,6 +1253,12 @@ packages/core/src/i18n/dictionaries/en.ts:4864
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ADMIN] Подпись обещает, что приглашение можно принять в приложении — принять его там нельзя</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner,outsider"
+       data-snippet="d-invite-inbox.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-invite-inbox.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1237,6 +1321,12 @@ GET /api/v1/notifications     -> 200, NOTIF_TITLE_WORKSPACE_INVITE_RECEIVED
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS] Сообщение об ошибке в <code>Notifications</code> называет условие и способ его снять неверно</h2>
+  <div class="block repro" data-lane="D" data-accounts="alice"
+       data-snippet="d-notif-message.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:alice snip/d-notif-message.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1321,6 +1411,12 @@ PATCH /api/v1/notifications/settings {"in_app_enabled":false,"mute_all_channels"
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SECURITY] При единственной сессии экран Sessions не предлагает ни одного действия</h2>
+  <div class="block repro" data-lane="D" data-accounts="carol"
+       data-snippet="d-sessions-single.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:carol snip/d-sessions-single.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1374,6 +1470,12 @@ PATCH /api/v1/notifications/settings {"in_app_enabled":false,"mute_all_channels"
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][ONBOARDING] Страница создания компании не содержит ни одного способа с неё уйти</h2>
+  <div class="block repro" data-lane="D" data-accounts="alice"
+       data-snippet="d-company-create-exit.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:alice snip/d-company-create-exit.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1430,6 +1532,12 @@ PATCH /api/v1/notifications/settings {"in_app_enabled":false,"mute_all_channels"
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS] Четыре подзаголовка описывают содержимое, которого на странице нет</h2>
+  <div class="block repro" data-lane="D" data-accounts="owner"
+       data-snippet="d-admin-subtitles.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-admin-subtitles.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
@@ -1504,6 +1612,12 @@ Security
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
     <h2>[FE-WEB][SETTINGS][I18N] В узбекской локали месяц во всех датах выводится кодом <code>M08</code></h2>
+  <div class="block repro" data-lane="D" data-accounts="owner"
+       data-snippet="d-uz-month.mjs">
+    <h3>Воспроизведение</h3>
+    <p><code>./d d:owner snip/d-uz-month.mjs</code></p>
+  </div>
+
 
     <div class="block">
       <h3>Проблема</h3>
