@@ -142,6 +142,67 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
     }
 }
 
+/// A progress bar drawn on layers, because NSProgressIndicator animates toward
+/// its value on its own schedule and fights anything that drives it — which is
+/// what made the launch bar creep and stop short. One Core Animation run from
+/// where it is to where it is going is smooth by construction.
+final class BarView: NSView {
+    private let track = CALayer()
+    private let fill = CALayer()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.addSublayer(track)
+        track.addSublayer(fill)
+        fill.anchorPoint = CGPoint(x: 0, y: 0.5)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layout() {
+        super.layout()
+        let h = bounds.height
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        track.frame = bounds
+        track.cornerRadius = h / 2
+        track.backgroundColor = NSColor.quaternaryLabelColor.cgColor
+        fill.cornerRadius = h / 2
+        fill.backgroundColor = NSColor.controlAccentColor.cgColor
+        fill.position = CGPoint(x: 0, y: h / 2)
+        fill.bounds.size.height = h
+        CATransaction.commit()
+    }
+
+    /// Fraction of the track currently painted, read from what is on screen.
+    var shown: CGFloat {
+        guard bounds.width > 0 else { return 0 }
+        return ((fill.presentation() ?? fill).bounds.width) / bounds.width
+    }
+
+    func animate(to target: CGFloat, over seconds: CFTimeInterval,
+                 timing: CAMediaTimingFunctionName = .easeOut) {
+        let from = (fill.presentation() ?? fill).bounds.width
+        let to = bounds.width * max(0, min(1, target))
+        fill.removeAllAnimations()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        fill.bounds.size.width = to
+        CATransaction.commit()
+        let a = CABasicAnimation(keyPath: "bounds.size.width")
+        a.fromValue = from
+        a.toValue = to
+        a.duration = seconds
+        a.timingFunction = CAMediaTimingFunction(name: timing)
+        fill.add(a, forKey: "grow")
+    }
+
+    func reset() {
+        fill.removeAllAnimations()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        fill.bounds.size.width = 0
+        CATransaction.commit()
+    }
+}
+
 /// Root view: the detail pane fills the window and the sidebar slides in over
 /// it. A split view would take its width out of the content, which on a window
 /// tiled to half the screen leaves the finding unreadable — so the list is an
@@ -245,7 +306,7 @@ final class DetailVC: NSViewController {
     let web: WKWebView
     private let overlay = NSView()
     private let phase = NSTextField(labelWithString: "")
-    private let bar = NSProgressIndicator()
+    private let bar = BarView()
     private let detail = NSTextField(wrappingLabelWithString: "")
     private let detailScroll = NSScrollView()
     private var easer: Timer?
@@ -274,9 +335,6 @@ final class DetailVC: NSViewController {
         phase.font = .systemFont(ofSize: 12)
         phase.textColor = .secondaryLabelColor
         phase.alignment = .center
-        bar.isIndeterminate = false
-        bar.minValue = 0; bar.maxValue = 1; bar.doubleValue = 0
-        bar.controlSize = .small
 
         detail.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
         detail.textColor = .secondaryLabelColor
@@ -296,6 +354,7 @@ final class DetailVC: NSViewController {
             stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
             stack.widthAnchor.constraint(lessThanOrEqualTo: overlay.widthAnchor, constant: -80),
             bar.widthAnchor.constraint(equalToConstant: 220),
+            bar.heightAnchor.constraint(equalToConstant: 6),
             detailScroll.widthAnchor.constraint(equalToConstant: 420),
             detailScroll.heightAnchor.constraint(lessThanOrEqualToConstant: 150),
         ])
@@ -317,17 +376,17 @@ final class DetailVC: NSViewController {
         phase.stringValue = text
         phase.textColor = .secondaryLabelColor
         bar.isHidden = false
-        bar.doubleValue = 0.04
         detailScroll.isHidden = true
+        bar.reset()
+        bar.layoutSubtreeIfNeeded()
+        // one decelerating run to 0.92: fast early, always moving, never arrives
+        bar.animate(to: 0.92, over: 16)
         easer?.invalidate()
         var ticks = 0
-        let t = Timer(timeInterval: 0.08, repeats: true) { [weak self] _ in
-            guard let self else { return }
+        let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             ticks += 1
-            // asymptotic: always moving, never arrives before the app does
-            self.bar.doubleValue += (0.93 - self.bar.doubleValue) * 0.02
-            if ticks == 120 { self.phase.stringValue = "Still reading the reports…" }
-            if ticks == 400 { self.phase.stringValue = "Taking longer than usual…" }
+            if ticks == 10 { self?.phase.stringValue = "Still reading the reports…" }
+            if ticks == 32 { self?.phase.stringValue = "Taking longer than usual…" }
         }
         RunLoop.main.add(t, forMode: .common)
         easer = t
@@ -345,23 +404,18 @@ final class DetailVC: NSViewController {
         detailScroll.isHidden = log.isEmpty
     }
 
-    /// Finish visibly. Two earlier attempts failed for the same reason: the bar
-    /// was still being driven while the panel went away, so it read as a load
-    /// that stopped at 85% rather than one that completed. Stop the easer, set
-    /// full, and hold long enough to actually be seen before fading.
+    /// Carry the bar from wherever it is to full in one run, hold it there long
+    /// enough to be read as finished, then fade the panel.
     func done() {
         guard !finished else { return }
         finished = true
         easer?.invalidate(); easer = nil
         phase.stringValue = "Ready"
-        // the control glides to its value over roughly half a second of its
-        // own accord, so the hold has to outlast the glide, not just the set
-        bar.doubleValue = 1
-        bar.needsDisplay = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) { [weak self] in
+        bar.animate(to: 1, over: 0.34, timing: .easeInEaseOut)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.62) { [weak self] in
             guard let self else { return }
             NSAnimationContext.runAnimationGroup({ ctx in
-                ctx.duration = 0.22
+                ctx.duration = 0.24
                 self.overlay.animator().alphaValue = 0
             }, completionHandler: { self.overlay.isHidden = true })
         }
