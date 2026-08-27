@@ -11,8 +11,9 @@ account its own block names, and reports:
 
     ready     did it get there and say so
     steps     stepsDone it claims
-    marks     @@STEP markers it emitted -- the app ticks steps off these, so a
-              snippet claiming steps while emitting none shows an inert list
+    marks     highest @@STEP value emitted -- the app ticks steps off this, so
+              a snippet claiming steps while emitting none shows an inert list,
+              and one whose final count is lower makes a ticked step un-tick
 
 A ready:false is not automatically a bug in the snippet. Refusing when the state
 is wrong is the contract working; the fault is only real if it refuses when
@@ -64,7 +65,10 @@ def verify(lane):
         m = re.search(r'"ready"\s*:\s*(true|false)', out)
         ready = m.group(1) if m else "no-json"
         st = re.search(r'"stepsDone"\s*:\s*(\d+)', out)
-        marks = out.count("@@STEP")
+        # the highest value emitted, not the number of lines: progress(2) is one
+        # line and still ticks two steps, so counting lines mis-reports it
+        vals = [int(v) for v in re.findall(r"@@STEP (\d+)", out)]
+        marks = max(vals) if vals else 0
         results.append((snip, acct, ready, st.group(1) if st else "?", marks))
         flag = "   " if ready == "true" else "!! "
         print(f"  {flag}{snip:<30} {acct:<9} ready={ready:<7} steps={st.group(1) if st else '?':<3} marks={marks}")

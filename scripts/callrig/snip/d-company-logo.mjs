@@ -40,10 +40,11 @@ export default async ({ page, progress }) => {
                  + 'open it by hand with an account that administers the company.';
     return out;
   }
-  progress(1);   // step 1 up to the file dialog: on Settings → Company with Upload image ready
-
+  // No progress(1) here: step 1 only finishes with the file choice, which is the
+  // human's action. Ticking it and then reporting stepsDone 0 made the step tick
+  // during the run and un-tick the moment it ended.
   out.ready = true;
-  out.stepsDone = 0;   // step 1 finishes with the file choice, and that is the human's action
+  out.stepsDone = 0;
   out.leftToDo = 'Press "Upload image" and pick any picture. Then, WITHOUT pressing anything else, '
                + 'look at the company avatar and at the network tab. Note the page has no Save / '
                + 'Discard panel (buttons now: none of Save/Discard/Apply) and no remove control — '
