@@ -92,7 +92,6 @@ final class RowCell: NSTableCellView {
         switch r.verdict {
         case "y": dot.layer?.backgroundColor = NSColor.systemGreen.cgColor
         case "n": dot.layer?.backgroundColor = NSColor.systemRed.cgColor
-        case "s": dot.layer?.backgroundColor = NSColor.tertiaryLabelColor.cgColor
         default:  dot.layer?.backgroundColor = NSColor.quaternaryLabelColor.cgColor
         }
     }
@@ -446,10 +445,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
     var log = ""
 
     var reproItem: NSToolbarItem!
+    var current = ""            // verdict recorded for the finding on screen
     var verdictItem: NSToolbarItem!
     let reproButton = HandButton()
-    let verdict = HandSegmented(labels: ["Confirmed", "Not a bug", "Skip"],
-                                trackingMode: .selectOne, target: nil, action: nil)
+    // .selectAny, not .selectOne: AppKit sends no action when a click does not
+    // change the selection, so with selectOne there is no way to clear a verdict
+    let verdict = HandSegmented(labels: ["Confirmed", "Not a bug"],
+                                trackingMode: .selectAny, target: nil, action: nil)
 
     func applicationDidFinishLaunching(_ n: Notification) {
         port = freePort()
@@ -549,7 +551,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
             reproItem = it
             return it
         case AppDelegate.idVerdict:
-            verdict.segmentStyle = .texturedRounded
+            // .texturedRounded ignores selectedSegmentBezelColor
+            verdict.segmentStyle = .rounded
             verdict.selectedSegment = -1
             verdict.target = self
             verdict.action = #selector(hitVerdict)
@@ -572,11 +575,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
 
     @objc func hitRepro() { web.evaluateJavaScript("window.__repro && __repro()") }
 
+    /// Clicking the verdict already recorded clears it. A segmented control has
+    /// no other way back from a mis-click, and the only alternative — picking
+    /// the opposite verdict — puts a wrong judgement on record to undo a wrong
+    /// judgement.
     @objc func hitVerdict() {
-        let v = ["y", "n", "s"]
-        let i = verdict.selectedSegment
-        guard i >= 0, i < v.count else { return }
-        web.evaluateJavaScript("window.__verdict && __verdict('\(v[i])')")
+        let v = ["y", "n"]
+        let on = (0 ..< verdict.segmentCount).filter { verdict.isSelected(forSegment: $0) }
+        // selectAny permits both; the one that is not the recorded verdict is
+        // the segment just clicked. None on means the verdict was cleared.
+        let picked = on.count == 1 ? v[on[0]]
+                   : on.map { v[$0] }.first { $0 != current } ?? ""
+        web.evaluateJavaScript("window.__verdict && __verdict('\(picked)')")
     }
 
     @objc func reloadPage() { web.reload() }
@@ -635,7 +645,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
                                        : "Drive the browser to this defect (R)"
         verdict.isEnabled = !rows.isEmpty && beat != "running"
         let v = d["verdict"] as? String ?? ""
-        verdict.selectedSegment = ["y": 0, "n": 1, "s": 2][v] ?? -1
+        current = v
+        for (i, key) in ["y", "n"].enumerated() {
+            verdict.setSelected(v == key, forSegment: i)
+        }
+        // green for a confirmed bug, red for a rejected one: the verdict is the
+        // output of the whole session, so it should be readable at a glance
+        verdict.selectedSegmentBezelColor =
+            v == "y" ? .systemGreen : (v == "n" ? .systemRed : nil)
     }
 
     // MARK: server

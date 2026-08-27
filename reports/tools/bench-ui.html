@@ -226,9 +226,11 @@ async function doRepro(){
 
 function verdict(v){
   const f=Q[cur]; if(!f)return;
-  const n=document.getElementById('note');
-  V[f.id]={v,note:n?n.value.trim():'',at:new Date().toISOString()};
-  store(); if(cur<Q.length-1)cur++; render();
+  if(!v){ delete V[f.id]; store(); render(); return; }   // cleared, not judged
+  // no auto-advance: paired with clear-on-reclick it meant a stray double click
+  // judged the next finding too, and that one was never looked at
+  V[f.id]={v,at:new Date().toISOString()};
+  store(); render();
 }
 
 let CLOSING=false;
@@ -252,7 +254,7 @@ async function saveRecord(){
   L.forEach(x=>{const rs=F.filter(f=>f.lane===x&&V[f.id]&&V[f.id].v); if(!rs.length)return;
     out.push(`## Lane ${x} — ${rs[0].laneName}`,'');
     rs.forEach(f=>{const r=V[f.id];
-      out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG',s:'SKIPPED'})[r.v]}** · [${f.sev}] ${f.title}`);
+      out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG'})[r.v]}** · [${f.sev}] ${f.title}`);
       if(r.note)out.push(`  - ${r.note}`);}); out.push('');});
   const res=await fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({md:out.join('\n')})});
@@ -275,7 +277,7 @@ addEventListener('keydown',e=>{
     if(e.key==='Escape')e.target.blur(); return;}
   const k=e.key.toLowerCase();
   if(k==='r'){doRepro();e.preventDefault();}
-  else if('yns'.includes(k)){verdict(k);e.preventDefault();}
+  else if('yn'.includes(k)){verdict(k);e.preventDefault();}
 });
 
 fetch('/api/findings').then(r=>r.json()).then(d=>{
