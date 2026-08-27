@@ -229,13 +229,13 @@ function render(){
     ${warns.map(w=>`<div class="note-box"><b>${esc(w[0])}</b>${rich(w[1])}</div>`).join('')}
     ${b==='failed'?`<div class="note-box"><b>Setup failed</b>${
       rich((R[f.id]||{}).left||'The script did not finish.')}</div>`:''}
-    ${f.actual?`<div class="sec bad"><div class="cap">Reported</div>
-      <p>${rich(f.actual)}</p></div>`:''}
+    ${(f.actual||f.problem)?`<div class="sec bad"><div class="cap">Reported</div>
+      <p>${rich(f.actual||f.problem)}</p></div>`:''}
     ${f.steps.length?`<div class="sec"><div class="cap">Steps</div>
       <div class="donelist live">${stepRows(f)}</div></div>`:''}
-    ${f.expected?`<div class="sec"><div class="cap">Should be</div>
+    <div class="sec"><div class="cap">Should be</div>
       <p class="ed" id="exp" contenteditable="plaintext-only"
-         spellcheck="false">${esc(expectedOf(f))}</p></div>`:''}
+         spellcheck="false">${esc(expectedOf(f))}</p></div>
 
 `;
 

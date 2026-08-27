@@ -51,7 +51,11 @@ def parse(path):
              "table_drift": drift, "steps": []}
         tm = re.match(r'\[([A-Z-]+)\]\[([A-Z0-9 -]+)\]', title)
         f["area"] = tm.group(2) if tm else "?"
-        for blk in re.findall(r'<div class="block">(.*?)</div>', p, re.S):
+        # class="block expect" / "block repro" / "block triage" — reports carry
+        # modifier classes, and matching only the bare class made every section
+        # in one invisible. Whole reports came through with no Проблема, no
+        # Фактический результат and no Ожидаемый результат at all.
+        for blk in re.findall(r'<div class="block[^"]*"[^>]*>(.*?)</div>', p, re.S):
             h = re.search(r'<h3[^>]*>(.*?)</h3>', blk, re.S)
             if not h: continue
             name = strip(h.group(1))
