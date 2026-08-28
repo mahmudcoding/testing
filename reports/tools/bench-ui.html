@@ -232,7 +232,8 @@ function render(){
     +'to a report and it shows up here.</div>';sync();return;}
   cur=Math.max(0,Math.min(cur,Q.length-1));
   const f=Q[cur], rec=V[f.id]||{}, b=beat(f), r=R[f.id]||{};
-  const warns=[...(f.notes||[]).map(n=>['Check the fixture first',n]),
+  const warns=[...(f.notes||[]).map(n=>[n.startsWith('WITHDRAWN')?'Possibly withdrawn'
+                                                                :'Check the fixture first',n]),
     ...(f.drift?[['The report contradicts itself','Its own summary row reads: “'+f.drift+'”']]:[])];
   if(f.sev==='?')warns.unshift(['No severity in the summary table',
     'The row wording drifted too far to match this title — pick a Priority here before judging.']);

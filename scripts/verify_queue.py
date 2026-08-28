@@ -187,11 +187,21 @@ def preflight(findings, repo):
         key = f["title"]
         frag = re.sub(r'\s+', ' ', f["untagged"]).strip().lower()[:32]
         if len(frag) >= 20:
-            where = [rel for rel, tx in texts if frag in tx]
+            # the withdrawal word must sit NEAR the title mention — every
+            # session log says "ложн"/"false positive" somewhere, so file-level
+            # co-occurrence flagged 58 of 94 findings and drowned the signal
+            where = []
+            for rel, tx in texts:
+                i, hit = tx.find(frag), False
+                while i != -1 and not hit:
+                    win = tx[max(0, i - 600):i + 600]
+                    hit = 'ложн' in win or 'отозв' in win or 'false positive' in win
+                    i = tx.find(frag, i + 1)
+                if hit:
+                    where.append(rel)
             if where:
                 notes[key].append(
-                    "WITHDRAWN? this finding is quoted in a log that also mentions "
-                    "withdrawn/false-positive findings — read "
+                    "WITHDRAWN? a log mentions withdrawal right next to this finding — read "
                     + ", ".join(where[:3]) + " before judging")
         # 2. rests on seeded data that is never indexed
         if re.search(r'глобальн\w+ поиск|global search', f["title"], re.I):
