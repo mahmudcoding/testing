@@ -90,7 +90,7 @@
   <table class="summary">
     <thead><tr><th style="width:52%">Находка</th><th>Важность</th><th>Область</th></tr></thead>
     <tbody>
-      <tr><td>Ведущий вышел из звонка с одобрением входа — впустить стучащегося некому, и ведущему нигде об этом не сообщают</td>
+      <tr><td>Ведущий вышел из звонка с одобрением входа — впустить стучащегося больше некому, и ведущему нигде об этом не сообщают</td>
           <td><span class="chip sev">High</span></td><td><span class="chip area">backend</span></td></tr>
       <tr><td>Гость, потерявший связь из side room, навсегда занимает место в звонке — и живого человека туда уже не пускают</td>
           <td><span class="chip sev">High</span></td><td><span class="chip area">backend</span></td></tr>
@@ -98,7 +98,7 @@
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">backend</span></td></tr>
       <tr><td>После неотвеченного приглашения строка участника навсегда остаётся «Ringing…» — позвать его снова нельзя</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
-      <tr><td>Ведущий убрал пароль — стоящий у парольного барьера остаётся перед ним, войти нечем</td>
+      <tr><td>Ведущий убрал пароль со звонка — стоящий у парольного барьера остаётся перед ним, и войти ему нечем</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
       <tr><td>На гостевом экране поле пароля подписано «private meetings only», хотя без него в публичный звонок не пустят</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
@@ -112,7 +112,7 @@
           <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
       <tr><td>Журнал звонка пишет «Meeting ended for everyone», хотя звонок никто не завершал</td>
           <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
-      <tr><td>Журнал звонка никогда не отмечает, что запись остановлена — заготовленная строка не может появиться</td>
+      <tr><td>Остановка записи никогда не отмечается в журнале звонка</td>
           <td><span class="chip sev">Low</span></td><td><span class="chip area">frontend</span></td></tr>
     </tbody>
   </table>
@@ -980,7 +980,7 @@ GET /api/v1/meeting/&lt;id&gt;/events?limit=100    200
   </article>
   <article>
     <div class="chips"><span class="chip sev">Low</span><span class="chip area">frontend</span></div>
-    <h2>[FE-WEB][CALLS] Журнал звонка никогда не отмечает, что запись остановлена</h2>
+    <h2>[FE-WEB][CALLS] Остановка записи никогда не отмечается в журнале звонка</h2>
 
     <div class="block repro" data-lane="B" data-accounts="alice"
          data-snippet="b-rec-log.mjs">

@@ -89,19 +89,19 @@
   <table class="summary">
     <thead><tr><th style="width:52%">Находка</th><th>Важность</th><th>Область</th></tr></thead>
     <tbody>
-      <tr><td>Назначение администратора встречи выдаёт право Manage meeting settings, которое не выбирали и нельзя снять</td>
+      <tr><td>Назначение администратора встречи выдаёт право «Manage meeting settings», которого не выбирали и которое нельзя снять</td>
           <td><span class="chip sev">High</span></td><td><span class="chip area">backend</span></td></tr>
-      <tr><td>Список заблокированных не обновляется у второго модератора: бан и разбан видит только тот, кто их сделал</td>
+      <tr><td>Список заблокированных участников не обновляется у второго модератора: бан и разбан видит только тот, кто их сделал</td>
           <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
-      <tr><td>Выбор микрофона в звонке не переключает микрофон: звук уходит на системный по умолчанию</td>
+      <tr><td>Выбор микрофона в звонке не переключает микрофон: звук уходит на системный по умолчанию, а в списке отмеченным остаётся прежний</td>
           <td><span class="chip sev">High</span></td><td><span class="chip area">frontend</span></td></tr>
-      <tr><td>Ask to return to main room не работает ни для кого: участнику ничего не показывают, для гостя запрос падает с 403</td>
+      <tr><td>Действие «Ask to return to main room» не работает ни для кого: залогиненному участнику ничего не показывают, для гостя запрос падает с 403</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
-      <tr><td>Ведущий может пригласить в звонок того, кого сам заблокировал: приглашение уходит, принять его нельзя</td>
+      <tr><td>Ведущий может пригласить в звонок того, кого сам заблокировал: приглашение уходит, звонит и всегда падает</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
       <tr><td>Отзыв демонстрации экрана не сопровождается видимым сообщением тому, кто показывал</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
-      <tr><td>Только что созданная пустая Side Room недоступна как назначение в Move to Side Room</td>
+      <tr><td>Только что созданная пустая Side Room недоступна как назначение в «Move to Side Room»</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
       <tr><td>Переход гостя в Side Room не доходит до ведущего событием: панель исправляется сама, до минуты спустя</td>
           <td><span class="chip sev">Medium</span></td><td><span class="chip area">frontend</span></td></tr>
@@ -473,7 +473,7 @@ participant_joined_breakout, ping, pong — кадра return_to_main_requested 
         (<code>packages/core/src/realtime/events.ts:210</code>) находится в
         <code>apps/web/src/features/guest-meeting/hooks/useGuestBreakoutRealtime.ts:723</code>,
         а строки диалога <code>calls.breakout.returnRequest.title/.stay/.return</code>
-        читаются только в <code>useGuestBreakoutReturnPrompt.ts:44-46</code> — обе точки
+        читаются только в <code>apps/web/src/features/guest-meeting/hooks/useGuestBreakoutReturnPrompt.ts:44-46</code> — обе точки
         внутри фичи guest-meeting. У обычного, залогиненного участника обработчика этого
         кадра нет — поэтому пришедший кадр ничего не рисует. У гостя обработчик как раз есть,
         но до него не доходит сам кадр: запрос отклоняется на 403 ещё у ведущего.</p>
