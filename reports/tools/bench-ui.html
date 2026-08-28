@@ -137,16 +137,16 @@ details.more pre{margin:6px 0 0;background:var(--raised);border-radius:8px;paddi
 let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={};
 let TILE_LEFT=480, META={};   // both from /api/meta — the server owns BENCH_TILE_LEFT
 let RUNNING=null;             // id of the finding whose repro is in flight, else null
-// V: verdicts. X: should-be rewrites. NOTE: free-text notes for the record.
+// V: verdicts. X: should-be rewrites. P: re-rated priorities.
 // All live on the server, not in localStorage: the bench takes a free port on
 // every launch and localStorage is keyed by origin, port included, so
 // browser-side state died with every restart.
-let V={}, X={}, P={}, NOTE={}, saveTimer=null;
+let V={}, X={}, P={}, saveTimer=null;
 const push=()=>{
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({verdicts:V,expected:X,priority:P,notes:NOTE})}).catch(()=>{});
+      body:JSON.stringify({verdicts:V,expected:X,priority:P})}).catch(()=>{});
   },250);
 };
 const store=push, storeX=push;
@@ -266,9 +266,8 @@ function render(){
       rich(r.left||'The script did not finish.')}${
       r.log?`<details class="more"><summary>Details</summary><pre>${esc(r.log)}</pre></details>
       <button class="mini" id="copylog">Copy details</button>`:''}</div>`:''}
-    ${(f.actual||f.problem||f.measure)?`<div class="sec bad"><div class="cap">Reported</div>
-      ${(f.actual||f.problem)?`<p>${rich(f.actual||f.problem)}</p>`:''}${
-      f.measure?`<pre class="meas">${esc(f.measure)}</pre>`:''}</div>`:''}
+    ${f.problem?`<div class="sec"><div class="cap">Problem</div>
+      <p>${rich(f.problem)}</p></div>`:''}
     ${f.steps.length?`<div class="sec"><div class="cap">Steps${
       b==='ready'?` · the app did ${Math.min(r.stepsDone||0,f.steps.length)} of ${f.steps.length}`:''
     }</div>
@@ -277,12 +276,12 @@ function render(){
       <p>${rich(r.left)}</p></div>`:''}
     ${b==='ready'&&r.asserted?`<details class="more"><summary>What the script proved</summary>
       <pre>${esc(JSON.stringify(r.asserted,null,1))}</pre></details>`:''}
+    ${(f.actual||f.measure)?`<div class="sec bad"><div class="cap">Reported</div>
+      ${f.actual?`<p>${rich(f.actual)}</p>`:''}${
+      f.measure?`<pre class="meas">${esc(f.measure)}</pre>`:''}</div>`:''}
     <div class="sec"><div class="cap">Should be</div>
       <p class="ed" id="exp" contenteditable="plaintext-only"
          spellcheck="false">${esc(expectedOf(f))}</p></div>
-    <div class="sec"><div class="cap">Note</div>
-      <p class="ed" id="note" contenteditable="plaintext-only"
-         spellcheck="false">${esc(NOTE[f.id]||'')}</p></div>
 
 `;
 
@@ -309,15 +308,6 @@ function render(){
       if(!ex.innerText.trim()){ delete X[f.id]; storeX(); }
       render();          // put the "edited" marker up, or take it down
     };
-  }
-  const nt=document.getElementById('note');
-  if(nt){
-    nt.oninput=()=>{
-      const t=nt.innerText.replace(/\s+$/,'');
-      if(t)NOTE[f.id]=t; else delete NOTE[f.id];
-      push();
-    };
-    nt.onblur=()=>{ if(!nt.innerText.trim()){ delete NOTE[f.id]; push(); } };
   }
   document.documentElement.scrollTop=0;
   sync();
@@ -406,7 +396,7 @@ async function saveRecord(){
                              :' — report said '+f.sev):''}] · ${
         f.side==='backend'?'BE':'FE'} · ${f.title}`);
       if(X[f.id]!==undefined) out.push(`  - Should be (rewritten): ${X[f.id]}`);
-      if(NOTE[f.id])out.push(`  - ${NOTE[f.id]}`);}); out.push('');});
+    }); out.push('');});
   const res=await fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({md:out.join('\n')})});
   const j=await res.json();
@@ -445,7 +435,7 @@ Promise.all([
   fetch('/api/state').then(r=>r.json()).catch(()=>({})),
   fetch('/api/meta').then(r=>r.json()).catch(()=>({})),
 ]).then(([d,st,meta])=>{
-  V=st.verdicts||{}; X=st.expected||{}; P=st.priority||{}; NOTE=st.notes||{};
+  V=st.verdicts||{}; X=st.expected||{}; P=st.priority||{};
   META=meta||{}; TILE_LEFT=Number(META.tileLeft)||480;
   F=d; Q=allFindings(); render();
 }).catch(e=>{document.getElementById('main').innerHTML=
