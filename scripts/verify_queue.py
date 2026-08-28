@@ -8,16 +8,40 @@ Usage:  scripts/verify_queue.py reports/<file>.html [--json out.json]
 
 Judgment stays human. This only removes setup and ordering work.
 """
-import sys, re, json, html, subprocess, os
+import sys, re, json, html, subprocess, os, difflib
 from collections import defaultdict
 
 SECTIONS = ["Проблема", "Как воспроизвести", "Фактический результат",
             "Подтверждённая причина", "Ожидаемый результат", "Проверка"]
 
+# roles inferred from scrubbed report prose -> fixture accounts. One copy for
+# every consumer (bench.py, verify_run.py) — two drifting copies is how the
+# bench and the CLI walk end up launching different browsers for one finding.
+ACCOUNT = {
+    'company owner':          'owner',
+    'workspace owner':        'owner',
+    'company admin':          'admin',
+    'plain member':           'bob',
+    'second account':         'carol',
+    'second browser':         'carol',
+    'guest':                  'guest',
+    'member in no channel':   'dave',
+    'outside the workspace':  'outsider',
+    'invitee':                'bob',
+    'any signed-in account':  'alice',
+}
+
 def strip(t):
     t = re.sub(r'<br\s*/?>', ' ', t)
     t = re.sub(r'<[^>]+>', '', t)
     return html.unescape(re.sub(r'\s+', ' ', t)).strip()
+
+def _norm(t):
+    """Fold away what summary rows habitually change: «» and other quoting,
+    dashes, brackets, case. Prefix comparison over the raw strings lost the
+    severity of two High findings to a dropped «» pair."""
+    t = re.sub(r'[«»"“”\'’`()\[\]{}—–…:;,.!?]', ' ', t.lower())
+    return re.sub(r'\s+', ' ', t).strip()
 
 def parse(path):
     s = open(path, encoding='utf-8').read()
@@ -37,16 +61,34 @@ def parse(path):
         title = strip(m.group(1))
         untagged = re.sub(r'^(\[[^\]]+\])+\s*', '', title)
         # Reports differ: some summary tables keep the [TAG][MODULE] prefix and
-        # some drop it, so try both forms before giving up.
+        # some drop it, so try both forms before giving up. Comparison runs on
+        # normalised text (see _norm), because rows reword titles and a raw
+        # prefix compare silently drops the severity — the app then showed two
+        # High findings as Medium.
         sev, drift = "?", None
         for rt, rs in rows:
+            n_rt = _norm(rt)
             for cand in (untagged, title):
-                k = min(45, len(rt), len(cand))
-                if k > 20 and rt[:k].lower() == cand[:k].lower():
+                n_c = _norm(cand)
+                k = min(45, len(n_rt), len(n_c))
+                if k > 20 and n_rt[:k] == n_c[:k]:
                     sev = rs
-                    if rt.strip() != cand.strip(): drift = rt
+                    if rt.strip() not in (untagged.strip(), title.strip()): drift = rt
                     break
             if sev != "?": break
+        # Fuzzy fallback for rows that drop or reorder words mid-prefix. The
+        # margin over the runner-up is what keeps a near-duplicate pair of
+        # rows from attaching the wrong severity; an ambiguous best stays "?"
+        # and the app shows that honestly instead of guessing.
+        if sev == "?" and rows:
+            n_u = _norm(untagged)
+            scored = sorted(
+                ((difflib.SequenceMatcher(None, _norm(rt), n_u).ratio(), i)
+                 for i, (rt, _) in enumerate(rows)), reverse=True)
+            best, runner = scored[0], (scored[1] if len(scored) > 1 else (0.0, -1))
+            if best[0] >= 0.60 and best[0] - runner[0] >= 0.05:
+                rt, rs = rows[best[1]]
+                sev, drift = rs, rt
         f = {"title": title, "untagged": untagged, "severity": sev,
              "table_drift": drift, "steps": []}
         tm = re.match(r'\[([A-Z-]+)\]\[([A-Z0-9 -]+)\]', title)
@@ -114,17 +156,43 @@ def surface(f):
     return f["area"]
 
 def preflight(findings, repo):
-    """Kill or flag findings a human should not have to judge."""
+    """Flag findings a human should double-check before judging.
+
+    Notes are keyed by the finding's full title — a 34-char prefix key merged
+    the notes of findings that shared an opening."""
     notes = defaultdict(list)
-    # 1. withdrawn / false-positive mentions anywhere in the logs
+    # 1. withdrawn / false-positive mentions: find the session logs that talk
+    #    about withdrawals, then check whether this finding's own title appears
+    #    in one of them. A hit is a reason to open that log, not a verdict.
+    #    Scoped to logs/ and the report index — the repo root holds thousands
+    #    of snippets and snapshots that can never carry a withdrawal.
+    texts = []
     try:
-        hits = subprocess.run(["grep", "-ril", "-e", "ложн", "-e", "отозв", "-e", "false positive"],
-                              cwd=repo, capture_output=True, text=True, timeout=30)
-        wd = hits.stdout
+        hits = subprocess.run(
+            ["grep", "-ril", "-e", "ложн", "-e", "отозв", "-e", "false positive",
+             "--include=*.md", "logs", "reports/README.md"],
+            cwd=repo, capture_output=True, text=True, timeout=15)
+        for rel in hits.stdout.splitlines():
+            rel = rel.strip()
+            if not rel:
+                continue
+            try:
+                with open(os.path.join(repo, rel), encoding="utf-8", errors="ignore") as fh:
+                    texts.append((rel, fh.read().lower()))
+            except OSError:
+                pass
     except Exception:
-        wd = ""
+        texts = []
     for f in findings:
-        key = f["title"][:34]
+        key = f["title"]
+        frag = re.sub(r'\s+', ' ', f["untagged"]).strip().lower()[:32]
+        if len(frag) >= 20:
+            where = [rel for rel, tx in texts if frag in tx]
+            if where:
+                notes[key].append(
+                    "WITHDRAWN? this finding is quoted in a log that also mentions "
+                    "withdrawn/false-positive findings — read "
+                    + ", ".join(where[:3]) + " before judging")
         # 2. rests on seeded data that is never indexed
         if re.search(r'глобальн\w+ поиск|global search', f["title"], re.I):
             notes[key].append("FIXTURE RISK: seeded channels/accounts never reach the search index "
@@ -159,7 +227,7 @@ def main():
         for f in items:
             n += 1
             print(f"     {n:2}. [{f['severity']}] {f['title'][:88]}")
-            for w in notes.get(f["title"][:34], []):
+            for w in notes.get(f["title"], []):
                 print(f"         ⚠ {w}")
             if f.get("table_drift"):
                 print(f"         ⚠ TABLE/TITLE DRIFT — row: {f['table_drift'][:66]}")
@@ -169,7 +237,7 @@ def main():
 
     if "--json" in sys.argv:
         out = sys.argv[sys.argv.index("--json")+1]
-        json.dump([{**f, "notes": notes.get(f["title"][:34], [])} for f in findings],
+        json.dump([{**f, "notes": notes.get(f["title"], [])} for f in findings],
                   open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(f"  queue written to {out}\n")
 
