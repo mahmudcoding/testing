@@ -18,14 +18,14 @@ A finding is reproducible when its report carries a repro block:
 
 Findings without one still open positioned; the bench says what is left to do.
 """
-import os, sys, re, json, glob, html, shutil, subprocess, datetime, threading, time, webbrowser
+import os, sys, re, json, glob, html, hashlib, shutil, subprocess, datetime, threading, time, webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from verify_queue import parse, roles_needed, surface, preflight
+from verify_queue import parse, roles_needed, surface, preflight, ACCOUNT
 
 def _repair_path():
     """Put node back on PATH.
@@ -116,10 +116,6 @@ def _pick_reports(log=print):
 
 
 REPORTS = _pick_reports(log=lambda *_: None)
-ACCOUNT = {'company owner':'owner','workspace owner':'owner','company admin':'admin',
-           'plain member':'bob','second account':'carol','second browser':'carol',
-           'guest':'guest','member in no channel':'dave','outside the workspace':'outsider',
-           'invitee':'bob','any signed-in account':'alice'}
 
 def repro_blocks(path):
     """Pull the machine-readable repro block that follows each <h2>."""
@@ -133,52 +129,133 @@ def repro_blocks(path):
         out.append(attrs or None)
     return out
 
-_CACHE = {"items": None, "stamp": None}
+_CACHE = {"items": None, "stamp": None, "meta": None}
+_LOAD_LOCK = threading.RLock()
 
-def _stamp():
+def _stamp(reports):
     out = []
-    for _, _, rel in REPORTS:
+    for _, _, rel in reports:
         p = os.path.join(REPO, rel)
-        out.append(os.path.getmtime(p) if os.path.exists(p) else 0)
+        out.append((rel, os.path.getmtime(p) if os.path.exists(p) else 0))
     return tuple(out)
 
 def load():
-    """Parsed findings, cached until a report file changes on disk."""
-    st = _stamp()
-    if _CACHE["items"] is not None and _CACHE["stamp"] == st:
-        return _CACHE["items"]
-    items = _load_uncached()
-    _CACHE["items"], _CACHE["stamp"] = items, st
-    return items
+    """Parsed findings, cached until the report set or a report file changes.
 
-def _load_uncached():
+    Re-picks the reports on every call — a glob over reports/, cheap — so a
+    report published while the server runs is discovered without a restart.
+    The lock matters: the app's first ping and the boot thread used to parse
+    the same five reports concurrently, each with its own repo-wide grep."""
+    global REPORTS
+    with _LOAD_LOCK:
+        reports = _pick_reports(log=lambda *_: None)
+        st = _stamp(reports)
+        if _CACHE["items"] is not None and _CACHE["stamp"] == st:
+            return _CACHE["items"]
+        REPORTS = reports
+        items, meta, legacy = _load_uncached(reports)
+        _CACHE.update(items=items, stamp=st, meta=meta)
+        _migrate_state(legacy)
+        return items
+
+def load_meta():
+    load()
+    return _CACHE["meta"] or {}
+
+def _fid(lane, title):
+    """Content id, stable across republishes while the title is stable.
+
+    The old positional id ("D:9") meant a republished report re-attached every
+    recorded verdict, priority and rewrite to whatever finding sat at that
+    index in the new file — silently, and the newest report is auto-picked."""
+    h = hashlib.sha1(re.sub(r"\s+", " ", title).strip().encode()).hexdigest()[:10]
+    return f"{lane}:{h}"
+
+def _load_uncached(reports):
     items, n = [], 0
-    for lane, name, rel in REPORTS:
+    meta = {"tileLeft": int(TILE_LEFT), "reports": [], "warnings": []}
+    legacy = {}                     # old positional id -> content id
+    for lane, name, rel in reports:
         path = os.path.join(REPO, rel)
         if not os.path.exists(path): continue
-        fs = parse(path); notes = preflight(fs, REPO); rb = repro_blocks(path)
+        try:
+            src = open(path, encoding="utf-8").read()
+            fs = parse(path); notes = preflight(fs, REPO); rb = repro_blocks(path)
+        except Exception as e:
+            # one unreadable report must not take the whole app down with a
+            # misleading "is bench.py running?" — skip the lane and say so
+            meta["warnings"].append(f"lane {lane}: {os.path.basename(rel)} could not be parsed "
+                                    f"({e.__class__.__name__}: {e}) — lane skipped")
+            continue
+        if not fs:
+            # a truncated or emptied file parses to zero findings and the lane
+            # would otherwise just vanish from the queue with no trace
+            meta["warnings"].append(f"lane {lane}: {os.path.basename(rel)} parsed to zero findings "
+                                    "— truncated or emptied file?")
+        unmatched = sum(1 for f in fs if f["severity"] == "?")
+        if unmatched:
+            meta["warnings"].append(f"lane {lane}: {unmatched} finding(s) have no matching summary-table "
+                                    "row — severity shows as ? in the app; fix the report's row wording")
+        meta["reports"].append({
+            "lane": lane, "laneName": name, "file": os.path.basename(rel),
+            "count": len(fs),
+            "sha1": hashlib.sha1(src.encode()).hexdigest()[:10],
+            "mtime": datetime.datetime.fromtimestamp(os.path.getmtime(path)).isoformat(timespec="seconds"),
+        })
         for i, f in enumerate(fs):
-            roles = roles_needed(f); accts = []
+            fid = _fid(lane, f["title"])
+            legacy[f"{lane}:{i}"] = fid
+            roles = roles_needed(f); guessed = []
             for r in roles:
                 a = ACCOUNT.get(r, 'alice')
-                if a not in accts: accts.append(a)
+                if a not in guessed: guessed.append(a)
             rep = rb[i] if i < len(rb) else None
+            # the block's data-accounts is authoritative — whoever wrote the
+            # snippet named the browsers it drives; the roles-derived guess is
+            # the fallback for findings with no block
+            block_accts = [a.strip() for a in (rep or {}).get("accounts", "").split(",") if a.strip()]
             items.append({
-                "id": f"{lane}:{i}", "n": n, "lane": lane, "laneName": name,
+                "id": fid, "n": n, "lane": lane, "laneName": name,
                 "title": f["title"], "sev": f["severity"], "area": f["area"],
                 # reports tag the title [BE] or [FE-WEB]; that is where the
                 # finding says which side it lives on
                 "side": "backend" if "[BE]" in f["title"].split("]")[0] + "]"
                         else "frontend",
-                "surface": surface(f), "roles": roles, "accounts": accts,
+                "surface": surface(f), "roles": roles,
+                "accounts": block_accts or guessed,
                 "steps": f["steps"], "actual": f.get("Фактический результат",""),
                 "measure": f.get("Фактический результат_measure",""),
                 "expected": f.get("Ожидаемый результат",""),
                 "problem": f.get("Проблема",""), "drift": f.get("table_drift"),
-                "notes": notes.get(f["title"][:34], []),
+                "notes": notes.get(f["title"], []),
                 "repro": rep,
             }); n += 1
-    return _runnable_only(items)
+    return _runnable_only(items), meta, legacy
+
+def _migrate_state(legacy):
+    """Rewrite positional state keys ("D:9") to content ids, once, in place.
+
+    Runs under the load lock. Without this, verdicts recorded before the id
+    change would dangle while the same findings sat unjudged under new ids."""
+    if not legacy:
+        return
+    try:
+        st = json.loads(read_state() or "{}")
+    except ValueError:
+        return
+    changed = 0
+    for section in ("verdicts", "expected", "priority", "notes"):
+        m = st.get(section)
+        if not isinstance(m, dict):
+            continue
+        for old in list(m):
+            new = legacy.get(old)
+            if new and new != old and new not in m:
+                m[new] = m.pop(old)
+                changed += 1
+    if changed:
+        write_state(json.dumps(st, ensure_ascii=False))
+        print(f"  migrated {changed} state entries to content ids")
 
 def _runnable_only(items):
     """Only findings whose repro script is actually on disk.
@@ -205,19 +282,54 @@ TILE_LEFT = os.environ.get("BENCH_TILE_LEFT", "480")
 
 PROGRESS = {}          # finding id -> steps the running snippet has reported
 
+def _browsers_needed():
+    """Distinct (lane, account) pairs the runnable findings' blocks name."""
+    pairs = set()
+    for it in (_CACHE["items"] or []):
+        for a in it.get("accounts") or []:
+            pairs.add((it["lane"], a))
+    return len(pairs)
+
+def _rig_env(slow=False):
+    env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT)
+    # The bench is deliberately cross-lane. A QA_LANE inherited from the shell
+    # it was started in — every QA session exports one — makes rigmap refuse
+    # four of five lanes, and that surfaces as "The rig did not come up".
+    env.pop("QA_LANE", None)
+    # A full judging pass accumulates browsers across lanes (the bench never
+    # closes a lane's browsers when the queue moves on), and the blocks can
+    # name more distinct accounts than launch.sh's global default cap — the
+    # last browser is then refused mid-Reproduce. Raise the cap to what the
+    # queue actually needs; an explicit QA_MAX_BROWSERS still wins.
+    if "QA_MAX_BROWSERS" not in os.environ:
+        env["QA_MAX_BROWSERS"] = str(max(16, _browsers_needed()))
+    if slow:
+        env["QA_SLOW_MS"] = SLOW_MS
+    return env
+
 def run_stream(cmd, key, timeout=420, slow=False):
     """Like run(), but reads stdout as it arrives so @@STEP markers land in
     PROGRESS while the snippet is still going. Without this the app can only
     tick the steps off once the whole run has finished, which is the moment
-    they stop being useful."""
-    env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT)
-    if slow: env["QA_SLOW_MS"] = SLOW_MS
+    they stop being useful.
+
+    slow pacing adds QA_SLOW_MS to every Playwright operation, which can more
+    than double a long snippet's wall clock — the timeout scales with it, so a
+    snippet that passes verify_snippets.py unpaced does not die only in the
+    app. A timeout kill leaves a marker in the log instead of a bare rc."""
+    if slow:
+        timeout = max(timeout, 840)
     try:
         p = subprocess.Popen(cmd, cwd=REPO, text=True, bufsize=1,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             env=_rig_env(slow))
     except FileNotFoundError as e:
         return 127, str(e)
-    killer = threading.Timer(timeout, p.kill); killer.start()
+    timed = {"out": False}
+    def _kill():
+        timed["out"] = True
+        p.kill()
+    killer = threading.Timer(timeout, _kill); killer.start()
     out = []
     try:
         for line in p.stdout:
@@ -227,34 +339,42 @@ def run_stream(cmd, key, timeout=420, slow=False):
         p.wait()
     finally:
         killer.cancel()
+    if timed["out"]:
+        out.append(f"\n[bench] snippet timed out after {timeout}s and was killed\n")
     return p.returncode, "".join(out)
 
-def reset(lane, accts):
+def reset(lane, accts, log=None):
     """Reset each browser to neutral, all at once. Sequentially this cost about a
-    minute per finding on a four-account lane and dominated the wait."""
-    procs = []
-    env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT)
+    minute per finding on a four-account lane and dominated the wait.
+
+    Each reset's last output line goes into the repro log: a reset that fails
+    silently (language dialog changed shape, meeting-end refused) leaves state
+    the next snippet inherits, and that reads as a broken snippet."""
+    procs, env = [], _rig_env()
     for a in accts:
         try:
-            procs.append(subprocess.Popen(
+            procs.append((a, subprocess.Popen(
                 ["./scripts/callrig/d", f"{lane}:{a}", "snip/_reset.mjs"],
                 cwd=REPO, text=True, stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env))
-        except OSError:
-            pass
-    for p in procs:
-        try: p.wait(timeout=90)
-        except subprocess.TimeoutExpired: p.kill()
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)))
+        except OSError as e:
+            if log is not None: log.append(f"reset {a}: {e}")
+    for a, p in procs:
+        try:
+            out, _ = p.communicate(timeout=90)
+        except subprocess.TimeoutExpired:
+            p.kill(); out = "(timed out after 90s)"
+        if log is not None:
+            tail = (out or "").strip().splitlines()
+            log.append(f"reset {a}: {tail[-1] if tail else '(no output)'}")
 
 
 def run(cmd, timeout=420, slow=False):
     """slow=True paces the run so a person can watch it. Only the repro snippet
     is watched -- pacing sign-in and window placement just wastes the wait."""
     try:
-        env = dict(os.environ, QA_TILE_LEFT=TILE_LEFT)
-        if slow: env["QA_SLOW_MS"] = SLOW_MS
         p = subprocess.run(cmd, cwd=REPO, text=True, capture_output=True,
-                           timeout=timeout, env=env)
+                           timeout=timeout, env=_rig_env(slow))
         return p.returncode, (p.stdout or "") + (p.stderr or "")
     except subprocess.TimeoutExpired:
         return 124, f"timed out after {timeout}s"
@@ -304,7 +424,7 @@ def reproduce(item):
     # the OTHER windows parked on "Call has ended", and a snippet needing a second
     # participant then cannot get one. Run together, because sequentially this was
     # the dominant cost of a reproduce.
-    reset(lane, accts)
+    reset(lane, accts, log)
 
     rep = item.get("repro")
     if not rep or not rep.get("snippet"):
@@ -318,7 +438,7 @@ def reproduce(item):
                 "left": f"Repro snippet {html.escape(name)} is named in the report but not in "
                         f"scripts/callrig/snip/. Follow the steps manually."}
 
-    driver = rep.get("accounts", ",".join(accts)).split(",")[0].strip()
+    driver = rep.get("accounts", ",".join(accts)).split(",")[0].strip() or accts[0]
     log.append(f"\n$ ./scripts/callrig/d {lane}:{driver} snip/{name}")
     rc, out = run_stream(["./scripts/callrig/d", f"{lane}:{driver}", f"snip/{name}"],
                          item["id"], slow=True)
@@ -377,6 +497,11 @@ def write_state(body):
 
 UI = os.path.join(REPO, "reports", "tools", "bench-ui.html")
 
+# One reproduce at a time, server-side. The page has its own gate, but the
+# keyboard and a navigated-away toolbar both used to reach here concurrently,
+# and two interleaved ensure/reset/snippet runs wreck each other's state.
+REPRO_LOCK = threading.Lock()
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def _send(self, code, body, ctype="application/json"):
@@ -389,7 +514,17 @@ class H(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass          # the client gave up mid-response; not our problem
 
+    def _local(self):
+        """Refuse requests whose Host is not this machine. A DNS-rebinding
+        page could otherwise read findings or, worse, POST at the state."""
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
+        if host in ("127.0.0.1", "localhost", "[::1]"):
+            return True
+        self._send(403, json.dumps({"ok": False, "error": "bad host"}))
+        return False
+
     def do_GET(self):
+        if not self._local(): return
         u = urlparse(self.path)
         if u.path in ("/", "/index.html"):
             return self._send(200, open(UI, encoding="utf-8").read(), "text/html")
@@ -400,19 +535,39 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, json.dumps({"steps": PROGRESS.get(fid, 0)}))
         if u.path == "/api/ping":
             return self._send(200, json.dumps({"ok": True, "n": len(load())}))
+        if u.path == "/api/meta":
+            return self._send(200, json.dumps(load_meta(), ensure_ascii=False))
         if u.path == "/api/findings":
             return self._send(200, json.dumps(load(), ensure_ascii=False))
         self._send(404, "{}")
 
     def do_POST(self):
+        if not self._local(): return
+        # Any web page can fire a cross-origin text/plain POST at localhost
+        # without a preflight — and these endpoints overwrite the verdict
+        # state, the day's record, and launch browsers. Requiring the JSON
+        # content type (which forces a preflight nothing answers) closes that;
+        # the page already sends it.
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            return self._send(415, json.dumps({"ok": False, "error": "application/json only"}))
         u = urlparse(self.path)
         ln = int(self.headers.get("Content-Length", 0))
-        payload = json.loads(self.rfile.read(ln) or "{}")
+        try:
+            payload = json.loads(self.rfile.read(ln) or "{}")
+        except ValueError:
+            return self._send(400, json.dumps({"ok": False, "error": "bad json"}))
         if u.path == "/api/repro":
             items = {i["id"]: i for i in load()}
             it = items.get(payload.get("id"))
             if not it: return self._send(404, json.dumps({"ok": False, "left": "unknown finding"}))
-            return self._send(200, json.dumps(reproduce(it), ensure_ascii=False))
+            if not REPRO_LOCK.acquire(blocking=False):
+                return self._send(409, json.dumps({
+                    "ok": False, "stage": "busy",
+                    "left": "A reproduce is already running. Let it finish first."}))
+            try:
+                return self._send(200, json.dumps(reproduce(it), ensure_ascii=False))
+            finally:
+                REPRO_LOCK.release()
         if u.path == "/api/state":
             write_state(json.dumps(payload, ensure_ascii=False))
             return self._send(200, json.dumps({"ok": True}))
@@ -459,7 +614,16 @@ if __name__ == "__main__":
     # background thread. Parsing five reports takes seconds; if we did it first
     # the port would not exist yet and anything waiting on us would conclude we
     # had died. /api/ping blocks until the parse finishes, which is the signal.
-    threading.Thread(target=load, daemon=True).start()
+    def _boot():
+        load()
+        m = _CACHE["meta"] or {}
+        # Per-lane counts, because a truncated report parses to zero findings
+        # and the lane silently vanishes from the queue otherwise.
+        for r in m.get("reports", []):
+            print(f"  lane {r['lane']}: {r['count']} findings parsed")
+        for w in m.get("warnings", []):
+            print(f"  WARNING: {w}")
+    threading.Thread(target=_boot, daemon=True).start()
     print(f"\n  Review")
     print(f"  http://127.0.0.1:{PORT}\n")
     # Say which five it chose. An auto-pick that goes unannounced is
