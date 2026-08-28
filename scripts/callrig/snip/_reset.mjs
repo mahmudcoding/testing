@@ -29,7 +29,11 @@ export default async ({ page }) => {
                   { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1600);
 
-  // 3. English, chosen by position because the picker's own labels are localized
+  // 3. English — matched by its own name first: the option list shows each
+  // language in its own tongue, so /english/i survives whatever locale the
+  // browser is stuck in. Position (first of exactly four) stays as the
+  // fallback; the old position-only rule silently no-opped the moment the
+  // dialog stopped having exactly four leaves.
   const before = await page.evaluate(() => document.documentElement.lang);
   if (before !== 'en') {
     await page.evaluate(() => {
@@ -43,12 +47,19 @@ export default async ({ page }) => {
       if (!el) return;
       const leaves = [...el.querySelectorAll('*')]
         .filter(e => e.children.length === 0 && e.innerText && e.innerText.trim());
-      if (leaves.length !== 4) return;
-      const t = leaves[0];
+      const t = leaves.find(e => /english/i.test(e.innerText))
+             || (leaves.length === 4 ? leaves[0] : null);
+      if (!t) return;
       (t.closest('[role="option"],[role="menuitem"],[role="menuitemradio"],button,li') || t).click();
     });
     await page.waitForTimeout(2200);
   }
   const after = await page.evaluate(() => document.documentElement.lang);
-  return { ok: true, endedMeetings: ended.length, lang: { before, after } };
+  // ok means "this browser is actually neutral now": English, and every
+  // meeting-end attempt accepted. An unconditional ok hid resets that failed
+  // silently (403 on ending someone else's meeting, a reshaped language
+  // dialog), and the next snippet inherited the state.
+  const endedOk = ended.filter(s => s < 400).length;
+  return { ok: after === 'en' && endedOk === ended.length,
+           endedMeetings: endedOk, endStatuses: ended, lang: { before, after } };
 };

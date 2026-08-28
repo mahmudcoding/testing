@@ -16,12 +16,18 @@
  * human doing the setup by hand — that failure produced three wrong findings in
  * a single night, and none of them looked wrong at the time.
  */
-export default async ({ page, pages, ctx, browser }) => {
+export default async ({ page, pages, ctx, browser, progress }) => {
   // stepsDone: how many of the report's numbered steps this script performs,
   // counting from the first. The bench ticks those off for the human and
   // highlights the next one as theirs, so nobody re-does setup by hand.
   // Count the steps in the finding, not the actions here — one step is often
   // several clicks. Leave it 0 until the setup has actually succeeded.
+  //
+  // progress(n): call it the moment the finding's step n completes, so the
+  // list ticks live while the run is still going — check_repro.py refuses a
+  // snippet that never calls it, because the steps then sit inert for the
+  // whole run and only fill in at the end. The final stepsDone must agree
+  // with the highest progress(n) emitted.
   const out = { ready: false, asserted: {}, stepsDone: 0, leftToDo: '' };
 
   // ── 1. GET THERE ────────────────────────────────────────────────────────
@@ -29,6 +35,7 @@ export default async ({ page, pages, ctx, browser }) => {
   // send the message, archive the thing, grant the permission. Use the other
   // browsers via `pages` when a second account has to act first.
   await page.goto('https://airion-cargo.store/w/<ws>/<route>', { waitUntil: 'networkidle' });
+  progress(1);   // step 1 of the finding is done
 
   // ── 2. PROVE IT ─────────────────────────────────────────────────────────
   // Record what makes this the right screen in the right state. The bench shows
@@ -51,6 +58,7 @@ export default async ({ page, pages, ctx, browser }) => {
   // Either stop here and name the single action the human performs, or perform
   // it and say what they should be looking at. Naming one concrete control beats
   // restating the repro steps.
+  progress(2);         // step 2 of the finding is done
   out.ready = true;
   out.stepsDone = 2;   // steps 1-2 of the finding are done; step 3 is the human's
   out.leftToDo = 'Open the message menu on the pinned message and click Edit. '

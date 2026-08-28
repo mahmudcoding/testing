@@ -72,8 +72,18 @@ def verify(lane):
     env = dict(os.environ, QA_LANE=lane)
     print(f"lane {lane}: {len(rows)} snippets, accounts {' '.join(accts)}", flush=True)
     for a in accts:                       # launch is a no-op if it is already up
-        sh(["./scripts/callrig/launch.sh", lane, a], env=env)
-    sh(["./scripts/callrig/ensure.sh", lane] + accts, env=env)
+        p = sh(["./scripts/callrig/launch.sh", lane, a], env=env)
+        # a swallowed refusal (usually the browser cap) surfaces later as
+        # connect errors that read exactly like broken snippets — say it now
+        if p.returncode != 0:
+            tail = (p.stdout + p.stderr).strip().splitlines()[-3:]
+            print(f"  !! launch refused for {a}:", flush=True)
+            for t in tail: print(f"     {t}", flush=True)
+    p = sh(["./scripts/callrig/ensure.sh", lane] + accts, env=env)
+    if p.returncode != 0:
+        print("  !! ensure.sh failed — results below may be the rig, not the snippets:", flush=True)
+        for t in (p.stdout + p.stderr).strip().splitlines()[-6:]:
+            print(f"     {t}", flush=True)
 
     results = []
     for snip, acct in rows:
@@ -104,9 +114,23 @@ def verify(lane):
 
 
 def main(lanes):
+    lanes = [l.upper() for l in lanes]
+    # Browsers accumulate across lanes — nothing stops them between lanes —
+    # and the blocks can name more distinct accounts than launch.sh's global
+    # default cap, which then refuses the last launches. Raise the cap to what
+    # this run actually needs; an explicit QA_MAX_BROWSERS from outside wins.
+    if "QA_MAX_BROWSERS" not in os.environ:
+        need = set()
+        for lane in lanes:
+            if lane not in REPORT:
+                continue
+            for accs in _all_accounts(lane).values():
+                need.update((lane, a) for a in accs)
+            need.update((lane, a) for _, a in blocks(lane))
+        os.environ["QA_MAX_BROWSERS"] = str(max(16, len(need)))
     allr = []
     for lane in lanes:
-        allr += verify(lane.upper())
+        allr += verify(lane)
     ok = [r for r in allr if r[2] == "true"]
     bad = [r for r in allr if r[2] != "true"]
     # a snippet that claims steps but emits no markers leaves the list inert
@@ -125,7 +149,9 @@ def main(lanes):
         print("did NOT reach their screen:")
         for r in bad:
             print(f"  {r[0]}  (as {r[1]})  -> {r[2]}")
-    return 1 if bad else 0
+    # inert steps and a stepsDone/marker mismatch are contract violations the
+    # app renders wrongly — they fail the run, not just print
+    return 1 if (bad or inert or mismatch) else 0
 
 
 if __name__ == "__main__":

@@ -45,8 +45,11 @@ def check_snippet(name):
     bad = []
     if "export default" not in src:
         bad.append("no default export")
-    if not re.search(r"\bready\s*[:=]\s*true", src) and "out.ready = true" not in src:
-        bad.append("never sets ready:true — the bench cannot tell it arrived")
+    # any ready assignment that is not literally `false` counts: snippets
+    # legitimately compute it (`ready: ok`), and demanding the literal `true`
+    # flagged contract-correct scripts
+    if not re.search(r"\bready\b\s*[:=]\s*(?!false\b)\S", src):
+        bad.append("never assigns ready anything but false — the bench cannot tell it arrived")
     if "leftToDo" not in src:
         bad.append("no leftToDo — nothing tells the person what to do")
     if "asserted" not in src:

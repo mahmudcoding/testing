@@ -10,25 +10,11 @@ Verdicts are written to verifications/verification-<lane>-<date>.md as a signed 
 """
 import sys, os, json, subprocess, datetime, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from verify_queue import parse, roles_needed, surface, preflight
+from verify_queue import parse, roles_needed, surface, preflight, ACCOUNT
 from collections import defaultdict
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# roles inferred from scrubbed report prose -> fixture accounts
-ACCOUNT = {
-    'company owner':          'owner',
-    'workspace owner':        'owner',
-    'company admin':          'admin',
-    'plain member':           'bob',
-    'second account':         'carol',
-    'second browser':         'carol',
-    'guest':                  'guest',
-    'member in no channel':   'dave',
-    'outside the workspace':  'outsider',
-    'invitee':                'bob',
-    'any signed-in account':  'alice',
-}
 ROUTE = {
     'Admin settings': '/settings/admin/members',
     'Roles':          '/settings/roles',
@@ -72,9 +58,18 @@ def main():
     outd = os.path.join(REPO, "verifications")
     os.makedirs(outd, exist_ok=True)
     outp = os.path.join(outd, f"verification-{lane}-{date}.md")
-    log  = open(outp, 'a', encoding='utf-8')
-    log.write(f"\n# Human verification — {os.path.basename(path)}, lane {lane}\n"
-              f"_started {datetime.datetime.now():%Y-%m-%d %H:%M}_\n\n")
+    # The file appends one session block per run — but only once there is a
+    # verdict to record. Opening it eagerly littered the record with empty
+    # started/ended headers from runs that quit immediately.
+    logf = None
+    def rec(text):
+        nonlocal logf
+        if logf is None:
+            logf = open(outp, 'a', encoding='utf-8')
+            logf.write(f"\n# Human verification — {os.path.basename(path)}, lane {lane}\n"
+                       f"_started {datetime.datetime.now():%Y-%m-%d %H:%M}_\n\n")
+        logf.write(text)
+        logf.flush()
 
     print(f"\n  {len(findings)} findings · {len(order)} setups · lane {lane}")
     print(f"  verdicts → {os.path.basename(outp)}\n")
@@ -109,7 +104,7 @@ def main():
         for f in items:
             n += 1
             print(f"  ── {n}. [{f['severity']}] {f['title']}")
-            for w in notes.get(f['title'][:34], []):  print(f"     ⚠ {w}")
+            for w in notes.get(f['title'], []):       print(f"     ⚠ {w}")
             if f.get('table_drift'):                  print(f"     ⚠ summary row wording differs from this title")
             print(f"\n     Claim: {f.get('Фактический результат','')[:400]}\n")
             print("     Steps:")
@@ -119,19 +114,21 @@ def main():
             if v == 'q': break
             note = input("     note (enter to skip): ").strip() if v in ('y','n') else ''
             verdict = {'y':'CONFIRMED','n':'NOT A BUG','s':'skipped'}.get(v, v)
-            log.write(f"## {n}. {f['title']}\n\n"
-                      f"- severity as reported: **{f['severity']}**\n"
-                      f"- verdict: **{verdict}**\n"
-                      + (f"- note: {note}\n" if note else "") + "\n")
-            log.flush()
+            rec(f"## {n}. {f['title']}\n\n"
+                f"- severity as reported: **{f['severity']}**\n"
+                f"- verdict: **{verdict}**\n"
+                + (f"- note: {note}\n" if note else "") + "\n")
             print()
         else:
             continue
         break
 
-    log.write(f"\n_ended {datetime.datetime.now():%Y-%m-%d %H:%M}_\n")
-    log.close()
-    print(f"\n  record written to {outp}\n")
+    if logf is not None:
+        logf.write(f"\n_ended {datetime.datetime.now():%Y-%m-%d %H:%M}_\n")
+        logf.close()
+        print(f"\n  record written to {outp}\n")
+    else:
+        print("\n  no verdicts recorded — nothing written\n")
 
 if __name__ == '__main__':
     main()
