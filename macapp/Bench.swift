@@ -35,7 +35,7 @@ struct Row {
     var id: String
     var title: String
     var area: String
-    var verdict: String     // "", "y", "n", "s"
+    var verdict: String     // "", "y", "n"
 }
 
 /// What a sidebar line is. Findings arrive grouped by module, and a header is
@@ -818,9 +818,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
                                  verdict: $0["verdict"] as? String ?? "") }
         let cur = d["cur"] as? Int ?? 0
         detailVC.done()
-        let beat = d["beat"] as? String ?? "idle"
+        // busy is global: a run on ANY finding keeps these controls off. The
+        // per-finding beat let a second run start after stepping to the next
+        // finding, and two concurrent runs wreck each other's rig state.
+        let busy = d["busy"] as? Bool ?? false
         sidebar.set(rows, cur: cur)
-        reproButton.isEnabled = !rows.isEmpty && beat != "running"
+        reproButton.isEnabled = !rows.isEmpty && !busy
         // Judging before looking stays possible, but the control is only live
         // once this finding has actually been run.
         // one control: it offers to run the finding, or to put away the browser
@@ -834,7 +837,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         reproButton.action = canClose ? #selector(hitClose) : #selector(hitRepro)
         reproButton.toolTip = canClose ? "Close the browser this run opened"
                                        : "Drive the browser to this defect (R)"
-        let live = !rows.isEmpty && beat != "running"
+        let live = !rows.isEmpty && !busy
         yesButton.isEnabled = live
         noButton.isEnabled = live
         let v = d["verdict"] as? String ?? ""

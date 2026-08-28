@@ -114,29 +114,48 @@ h1{margin:0 0 20px;font:600 22px/1.24 inherit;letter-spacing:-.014em;text-wrap:b
 
 code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
   background:var(--raised);padding:.1em .35em;border-radius:4px}
+
+/* re-rated here: a quiet ring, so a changed priority is visible at a glance */
+.pri.moved{box-shadow:0 0 0 1.5px var(--accent-fill)}
+/* measurement and log blocks are evidence: selectable, scrollable, monospace */
+pre.meas{margin:8px 0 0;background:var(--raised);border-radius:8px;padding:12px 14px;
+  font:11.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--label);
+  max-height:300px;overflow:auto;-webkit-user-select:text;user-select:text}
+details.more{margin-top:8px;font-size:12px;color:var(--label-2)}
+details.more summary{cursor:pointer;outline:none}
+details.more pre{margin:6px 0 0;background:var(--raised);border-radius:8px;padding:10px 12px;
+  font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--label);
+  max-height:260px;overflow:auto;white-space:pre-wrap;
+  -webkit-user-select:text;user-select:text}
+.mini{font-size:11px;border:1px solid var(--btn-line);background:var(--btn);
+  border-radius:5px;padding:2px 8px;margin-top:8px;cursor:pointer}
 </style>
 
 <div class="pane" id="main"><div class="empty">Loading…</div></div>
 
 <script>
 let F=[], lane=null, cur=0, Q=[], R={}, RUN={}, LIVE={};
-const TILE_LEFT=480;          // points this window keeps; the rig takes the rest
-// V: verdicts. X: should-be rewrites. Both live on the server, not in
-// localStorage: the bench takes a free port on every launch and localStorage is
-// keyed by origin, port included, so browser-side state died with every restart.
-let V={}, X={}, P={}, saveTimer=null;
+let TILE_LEFT=480, META={};   // both from /api/meta — the server owns BENCH_TILE_LEFT
+let RUNNING=null;             // id of the finding whose repro is in flight, else null
+// V: verdicts. X: should-be rewrites. NOTE: free-text notes for the record.
+// All live on the server, not in localStorage: the bench takes a free port on
+// every launch and localStorage is keyed by origin, port included, so
+// browser-side state died with every restart.
+let V={}, X={}, P={}, NOTE={}, saveTimer=null;
 const push=()=>{
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({verdicts:V,expected:X,priority:P})}).catch(()=>{});
+      body:JSON.stringify({verdicts:V,expected:X,priority:P,notes:NOTE})}).catch(()=>{});
   },250);
 };
 const store=push, storeX=push;
 const expectedOf=f=>(X[f.id]!==undefined ? X[f.id] : (f.expected||''));
 const LEVELS=['Critical','High','Medium','Low'];
-// what the report said, unless it has been re-rated here
-const sevOf=f=>(P[f.id]||(f.sev==='?'?'Medium':f.sev));
+// what the report said, unless it has been re-rated here. "?" means the parser
+// found no severity row for this title — shown honestly, never defaulted: a
+// silent Medium put two High findings on record as Medium.
+const sevOf=f=>(P[f.id]||f.sev);
 const moved=f=>!!P[f.id]&&P[f.id]!==f.sev;
 const esc=s=>(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 const rich=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
@@ -170,15 +189,16 @@ function beat(f){
   return V[f.id]&&V[f.id].v ? 'judged' : 'idle';
 }
 
-/* Everything AppKit needs to keep the sidebar and toolbar in step. */
+/* Everything AppKit needs to keep the sidebar and toolbar in step. busy is
+   global — a run on ANY finding disables Reproduce and the verdicts, because
+   the per-finding beat let a second run start after navigating away. */
 function sync(){
   const f=Q[cur];
   window.webkit?.messageHandlers?.app?.postMessage({
     rows:Q.map(x=>({id:x.id,title:short(x.title),area:sentence(x.area||'—'),
                     verdict:(V[x.id]||{}).v||''})),
-    cur, beat:beat(f), verdict:f?((V[f.id]||{}).v||''):'',
-    canClose: !!(f && R[f.id] && !RUN[f.id] && !CLOSING),
-    lane:f?f.laneName:''
+    cur, beat:beat(f), busy:!!RUNNING, verdict:f?((V[f.id]||{}).v||''):'',
+    canClose: !!(f && R[f.id] && !RUN[f.id] && !CLOSING && !RUNNING)
   });
 }
 
@@ -211,16 +231,21 @@ function render(){
     +'<code>scripts/callrig/snip/</code>. Add a <code>data-snippet</code> repro block '
     +'to a report and it shows up here.</div>';sync();return;}
   cur=Math.max(0,Math.min(cur,Q.length-1));
-  const f=Q[cur], rec=V[f.id]||{}, b=beat(f);
+  const f=Q[cur], rec=V[f.id]||{}, b=beat(f), r=R[f.id]||{};
   const warns=[...(f.notes||[]).map(n=>['Check the fixture first',n]),
     ...(f.drift?[['The report contradicts itself','Its own summary row reads: “'+f.drift+'”']]:[])];
+  if(f.sev==='?')warns.unshift(['No severity in the summary table',
+    'The row wording drifted too far to match this title — pick a Priority here before judging.']);
+  const sv=sevOf(f);
 
   el.innerHTML=`
+    ${(META.warnings||[]).map(w=>`<div class="note-box"><b>Report loading</b>${esc(w)}</div>`).join('')}
     <div class="crumb">
-      <select class="pri ${sevOf(f)}${moved(f)?' moved':''}" id="pri"
-              title="${moved(f)?'Re-rated here — the report said '+esc(f.sev):'Priority'}"
-              aria-label="Priority">${LEVELS.map(l=>
-        `<option${l===sevOf(f)?' selected':''}>${l}</option>`).join('')}</select>
+      <select class="pri ${sv==='?'?'':sv}${moved(f)?' moved':''}" id="pri"
+              title="${moved(f)?(f.sev==='?'?'Set here — the summary table had no severity'
+                                           :'Re-rated here — the report said '+esc(f.sev)):'Priority'}"
+              aria-label="Priority">${sv==='?'?'<option selected disabled>—</option>':''}${LEVELS.map(l=>
+        `<option${l===sv?' selected':''}>${l}</option>`).join('')}</select>
       <span class="tag">${esc(sentence(f.area))}</span>
       <span class="tag">${f.side==='backend'?'Backend':'Frontend'}</span>
       <span class="n">${cur+1} of ${Q.length}</span>
@@ -228,16 +253,26 @@ function render(){
     <h1>${rich(short(f.title))}</h1>
     ${warns.map(w=>`<div class="note-box"><b>${esc(w[0])}</b>${rich(w[1])}</div>`).join('')}
     ${b==='failed'?`<div class="note-box"><b>Setup failed</b>${
-      rich((R[f.id]||{}).left||'The script did not finish.')}</div>`:''}
-    ${(f.actual||f.problem)?`<div class="sec bad"><div class="cap">Reported</div>
-      <p>${rich(f.actual||f.problem)}</p></div>`:''}
+      rich(r.left||'The script did not finish.')}${
+      r.log?`<details class="more"><summary>Details</summary><pre>${esc(r.log)}</pre></details>
+      <button class="mini" id="copylog">Copy details</button>`:''}</div>`:''}
+    ${(f.actual||f.problem||f.measure)?`<div class="sec bad"><div class="cap">Reported</div>
+      ${(f.actual||f.problem)?`<p>${rich(f.actual||f.problem)}</p>`:''}${
+      f.measure?`<pre class="meas">${esc(f.measure)}</pre>`:''}</div>`:''}
     ${f.steps.length?`<div class="sec"><div class="cap">Steps${
-      b==='ready'?` · the app did ${Math.min((R[f.id]||{}).stepsDone||0,f.steps.length)} of ${f.steps.length}`:''
+      b==='ready'?` · the app did ${Math.min(r.stepsDone||0,f.steps.length)} of ${f.steps.length}`:''
     }</div>
       <div class="donelist live">${stepRows(f)}</div></div>`:''}
+    ${b==='ready'&&r.left?`<div class="sec"><div class="cap">Your move</div>
+      <p>${rich(r.left)}</p></div>`:''}
+    ${b==='ready'&&r.asserted?`<details class="more"><summary>What the script proved</summary>
+      <pre>${esc(JSON.stringify(r.asserted,null,1))}</pre></details>`:''}
     <div class="sec"><div class="cap">Should be</div>
       <p class="ed" id="exp" contenteditable="plaintext-only"
          spellcheck="false">${esc(expectedOf(f))}</p></div>
+    <div class="sec"><div class="cap">Note</div>
+      <p class="ed" id="note" contenteditable="plaintext-only"
+         spellcheck="false">${esc(NOTE[f.id]||'')}</p></div>
 
 `;
 
@@ -265,6 +300,15 @@ function render(){
       render();          // put the "edited" marker up, or take it down
     };
   }
+  const nt=document.getElementById('note');
+  if(nt){
+    nt.oninput=()=>{
+      const t=nt.innerText.replace(/\s+$/,'');
+      if(t)NOTE[f.id]=t; else delete NOTE[f.id];
+      push();
+    };
+    nt.onblur=()=>{ if(!nt.innerText.trim()){ delete NOTE[f.id]; push(); } };
+  }
   document.documentElement.scrollTop=0;
   sync();
 }
@@ -281,8 +325,12 @@ async function watchProgress(f){
 }
 
 async function doRepro(){
-  const f=Q[cur]; if(!f||RUN[f.id])return;
-  RUN[f.id]=true; LIVE[f.id]=0; delete R[f.id]; render();
+  // RUNNING is the global gate: navigating to another finding mid-run used to
+  // re-enable Reproduce (its own beat was idle) and start a second concurrent
+  // ensure/reset/snippet pass on the same rig. The server refuses too (409),
+  // but the refusal should never be reachable from here.
+  const f=Q[cur]; if(!f||RUNNING)return;
+  RUNNING=f.id; RUN[f.id]=true; LIVE[f.id]=0; delete R[f.id]; render();
   // clear the screen for the run: this window left, the rig window right
   window.webkit?.messageHandlers?.app?.postMessage({cmd:'tile', width:TILE_LEFT});
   watchProgress(f);
@@ -292,14 +340,14 @@ async function doRepro(){
     R[f.id]=await r.json();
   }catch(e){ R[f.id]={ok:false,stage:'failed',log:String(e),
     left:'Could not reach the rig. Is scripts/bench.py still running?'}; }
-  delete RUN[f.id]; render();
+  delete RUN[f.id]; RUNNING=null; render();
   // let the script's final tick be seen on its own before the row becomes the
   // person's to act on -- both changing in one frame reads as a glitch
 }
 
 let lastVerdictAt=0;
 function verdict(v){
-  const f=Q[cur]; if(!f)return;
+  const f=Q[cur]; if(!f||RUNNING)return;   // no judging while a run arranges the screen
   if(!v){ delete V[f.id]; store(); render(); return; }   // cleared: stay put
   // Judging moves to the next finding, so a second click lands on a different
   // one. Swallow it: a double press should not record a verdict on something
@@ -323,9 +371,9 @@ async function closeBrowser(f){
     const r=await fetch('/api/close',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({lane:f.lane})});
     const j=await r.json();
-    // the run is over and its browser is gone, so the card goes back to
-    // offering the only thing that makes sense now: running it again
-    if(j.ok){ delete R[f.id]; delete LIVE[f.id]; }
+    // stop.sh closes the whole lane, so every finding of this lane loses its
+    // run state — leaving the others "ready" claimed browsers that are gone
+    if(j.ok){ F.forEach(x=>{ if(x.lane===f.lane){ delete R[x.id]; delete LIVE[x.id]; } }); }
   }catch(e){}
   CLOSING=false; render();
 }
@@ -333,13 +381,22 @@ async function closeBrowser(f){
 async function saveRecord(){
   const L=[...new Set(F.map(f=>f.lane))], out=['# Human verification record','',
     `_${new Date().toLocaleString()}_`,''];
+  // pin what was judged: the report files and their content hashes — without
+  // this a record is ambiguous the moment a newer revision is published
+  if((META.reports||[]).length){
+    out.push('Judged against:');
+    META.reports.forEach(r=>out.push(`- lane ${r.lane}: ${r.file} (sha1 ${r.sha1})`));
+    out.push('');
+  }
   L.forEach(x=>{const rs=F.filter(f=>f.lane===x&&V[f.id]&&V[f.id].v); if(!rs.length)return;
     out.push(`## Lane ${x} — ${rs[0].laneName}`,'');
     rs.forEach(f=>{const r=V[f.id];
       out.push(`- **${({y:'CONFIRMED',n:'NOT A BUG'})[r.v]}** · [${sevOf(f)}${
-        moved(f)?' — report said '+f.sev:''}] · ${f.side==='backend'?'BE':'FE'} · ${f.title}`);
+        moved(f)?(f.sev==='?'?' — set here, no severity in the report table'
+                             :' — report said '+f.sev):''}] · ${
+        f.side==='backend'?'BE':'FE'} · ${f.title}`);
       if(X[f.id]!==undefined) out.push(`  - Should be (rewritten): ${X[f.id]}`);
-      if(r.note)out.push(`  - ${r.note}`);}); out.push('');});
+      if(NOTE[f.id])out.push(`  - ${NOTE[f.id]}`);}); out.push('');});
   const res=await fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({md:out.join('\n')})});
   const j=await res.json();
@@ -365,16 +422,21 @@ addEventListener('keydown',e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.target.tagName==='INPUT'||e.target.isContentEditable){
     if(e.key==='Escape')e.target.blur(); return;}
+  // the toolbar disables itself while a run is in flight; the keys must too,
+  // or Y/N records a verdict on a screen the run is still arranging
+  if(RUNNING)return;
   const k=e.key.toLowerCase();
   if(k==='r'){doRepro();e.preventDefault();}
-  else if('yn'.includes(k)){verdict(k);e.preventDefault();}
+  else if(k==='y'||k==='n'){verdict(k);e.preventDefault();}
 });
 
 Promise.all([
   fetch('/api/findings').then(r=>r.json()),
   fetch('/api/state').then(r=>r.json()).catch(()=>({})),
-]).then(([d,st])=>{
-  V=st.verdicts||{}; X=st.expected||{}; P=st.priority||{};
+  fetch('/api/meta').then(r=>r.json()).catch(()=>({})),
+]).then(([d,st,meta])=>{
+  V=st.verdicts||{}; X=st.expected||{}; P=st.priority||{}; NOTE=st.notes||{};
+  META=meta||{}; TILE_LEFT=Number(META.tileLeft)||480;
   F=d; Q=allFindings(); render();
 }).catch(e=>{document.getElementById('main').innerHTML=
   '<div class="empty">Could not load findings — is scripts/bench.py running?</div>';});
