@@ -166,17 +166,26 @@ const sentence=t=>(t||'').replace(/[A-Za-z][A-Za-z-]*/g,
 const key=f=>f.accounts.join('+')+'|'+f.surface;
 
 /* Every finding, all lanes, grouped by module — that is how a person thinks
-   about them, and the sidebar draws a header per module. Lane is the second
-   key, so findings that share browsers still sit together inside a module and
-   a run does not bounce between lanes more than the grouping forces. */
+   about them, and the sidebar draws a header per module — and inside a module
+   by priority, Critical first, an unrated "?" last; the sidebar draws a small
+   sub-header per band. Lane comes after severity, so findings that share
+   browsers still sit together inside a band and a run does not bounce between
+   lanes more than the grouping forces. Ranks come from sevOf, so a priority
+   re-rated here counts — requeue() moves the finding to its new band. */
+const RANK={Critical:0,High:1,Medium:2,Low:3};
+const rank=f=>{const s=sevOf(f);return s in RANK?RANK[s]:4;};
 const allFindings=()=>{
   const g={};
   F.forEach(f=>{
-    const k=(f.area||'—')+'|'+f.lane+'|'+key(f);
+    const k=(f.area||'—')+'|'+rank(f)+'|'+f.lane+'|'+key(f);
     (g[k]=g[k]||[]).push(f);
   });
   return Object.keys(g).sort().map(k=>g[k]).flat();
 };
+/* Re-sort and keep the selection on the same finding. Under priority grouping
+   a re-rated finding has to move, or it sits under a heading that is no
+   longer true of it. */
+function requeue(f){ Q=allFindings(); const i=f?Q.indexOf(f):-1; if(i>=0)cur=i; }
 
 /* Which beat of arm -> look -> judge this finding is on. The pane and the
    native toolbar are both a function of this, so the live step is unambiguous. */
@@ -196,7 +205,7 @@ function sync(){
   const f=Q[cur];
   window.webkit?.messageHandlers?.app?.postMessage({
     rows:Q.map(x=>({id:x.id,title:short(x.title),area:sentence(x.area||'—'),
-                    verdict:(V[x.id]||{}).v||''})),
+                    sev:sevOf(x), verdict:(V[x.id]||{}).v||''})),
     cur, beat:beat(f), busy:!!RUNNING, verdict:f?((V[f.id]||{}).v||''):'',
     canClose: !!(f && R[f.id] && !RUN[f.id] && !CLOSING && !RUNNING)
   });
@@ -285,7 +294,7 @@ function render(){
   if(pr)pr.onchange=()=>{
     // choosing the report's own rating is not an override, it is a reset
     if(pr.value===f.sev) delete P[f.id]; else P[f.id]=pr.value;
-    push(); render();
+    push(); requeue(f); render();
   };
   const ex=document.getElementById('exp');
   if(ex){

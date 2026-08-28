@@ -35,14 +35,18 @@ struct Row {
     var id: String
     var title: String
     var area: String
+    var sev: String         // "Critical", "High", "Medium", "Low", "?"
     var verdict: String     // "", "y", "n"
 }
 
-/// What a sidebar line is. Findings arrive grouped by module, and a header is
-/// inserted wherever the module changes — so the table's own indices no longer
-/// match the finding indices, and every lookup has to go through `display`.
+/// What a sidebar line is. Findings arrive grouped by module and, inside a
+/// module, by priority: a header is inserted wherever the module changes and a
+/// smaller sub-header wherever the priority band changes — so the table's own
+/// indices no longer match the finding indices, and every lookup has to go
+/// through `display`.
 enum Line {
     case header(String)
+    case sub(String)        // priority band inside a module
     case finding(Int)       // index into rows
 }
 
@@ -129,9 +133,14 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
 
     private func rebuild() {
         display = []
-        var last = ""
+        var lastArea = "", lastSev = ""
         for (i, r) in rows.enumerated() {
-            if r.area != last { display.append(.header(r.area)); last = r.area }
+            if r.area != lastArea {
+                display.append(.header(r.area))
+                lastArea = r.area
+                lastSev = ""            // a new module always restates its first band
+            }
+            if r.sev != lastSev { display.append(.sub(r.sev)); lastSev = r.sev }
             display.append(.finding(i))
         }
     }
@@ -179,18 +188,25 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
 
     func numberOfRows(in tableView: NSTableView) -> Int { display.count }
 
+    // only module headers are group rows, so only they float while scrolling —
+    // a floating "Medium" with no module in sight says nothing
     func tableView(_ t: NSTableView, isGroupRow row: Int) -> Bool {
         if case .header = display[row] { return true }
         return false
     }
 
-    // a header is a label, not a destination
+    // headers and band labels are labels, not destinations
     func tableView(_ t: NSTableView, shouldSelectRow row: Int) -> Bool {
-        !tableView(t, isGroupRow: row)
+        if case .finding = display[row] { return true }
+        return false
     }
 
     func tableView(_ t: NSTableView, heightOfRow row: Int) -> CGFloat {
-        tableView(t, isGroupRow: row) ? 28 : 44
+        switch display[row] {
+        case .header:  return 28
+        case .sub:     return 20
+        case .finding: return 44
+        }
     }
 
     func tableView(_ t: NSTableView, viewFor col: NSTableColumn?, row: Int) -> NSView? {
@@ -211,6 +227,32 @@ final class SidebarVC: NSViewController, NSTableViewDataSource, NSTableViewDeleg
                 return c
             }()
             v.textField?.stringValue = title
+            return v
+        case .sub(let sev):
+            let id = NSUserInterfaceItemIdentifier("sub")
+            let v = (t.makeView(withIdentifier: id, owner: self) as? NSTableCellView) ?? {
+                let c = NSTableCellView(); c.identifier = id
+                let l = NSTextField(labelWithString: "")
+                l.translatesAutoresizingMaskIntoConstraints = false
+                l.font = .systemFont(ofSize: 10, weight: .semibold)
+                c.addSubview(l); c.textField = l
+                NSLayoutConstraint.activate([
+                    // indented to the finding titles, so the band reads as
+                    // nested under its module header
+                    l.leadingAnchor.constraint(equalTo: c.leadingAnchor, constant: 16),
+                    l.bottomAnchor.constraint(equalTo: c.bottomAnchor, constant: -2),
+                ])
+                return c
+            }()
+            v.textField?.stringValue = sev == "?" ? "No severity" : sev
+            // the same reading as the detail pane's chips: the urgent bands in
+            // red, the rest receding
+            switch sev {
+            case "Critical", "High": v.textField?.textColor = .systemRed
+            case "?":                v.textField?.textColor = .systemOrange
+            case "Low":              v.textField?.textColor = .tertiaryLabelColor
+            default:                 v.textField?.textColor = .secondaryLabelColor
+            }
             return v
         case .finding(let i):
             let id = NSUserInterfaceItemIdentifier("cell")
@@ -815,6 +857,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSToolbarDelegate,
         let rows = raw.map { Row(id: $0["id"] as? String ?? "",
                                  title: $0["title"] as? String ?? "",
                                  area: $0["area"] as? String ?? "—",
+                                 sev: $0["sev"] as? String ?? "?",
                                  verdict: $0["verdict"] as? String ?? "") }
         let cur = d["cur"] as? Int ?? 0
         detailVC.done()
