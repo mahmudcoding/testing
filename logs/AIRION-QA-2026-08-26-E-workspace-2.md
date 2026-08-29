@@ -14174,3 +14174,259 @@ banner      correct and visible on all six sector-E surfaces during an outage   
 Residue: public channel `e-dirprobe` in lane E, description says "safe to delete". Left rather than
 archived on purpose — archiving would add it to the archived-channel set that findings 13 and 14 use
 as evidence.
+
+
+### 17:12 — FILED ALK-3768 on the user's explicit instruction. First and only Jira write of the pass.
+
+The user asked for finding 1 to be added to Jira. **The dedup pass found the defect already tracked
+three times**, so I stopped and put the decision to them rather than filing:
+
+```
+ALK-2882  Bug/TESTING  resolution None  updated 2026-08-11
+          "Open full search молча сужает глобальную выдачу до текущего канала"
+          -> my finding almost verbatim: same cause (channel_ids taken from the route),
+             same expected result, near-identical Проверка lines
+ALK-2799  Bug/TESTING  resolution None  updated 2026-08-10
+          "Full search скрывает ограничение поиска текущим каналом"
+          -> the other half of my finding: the page hides the constraint while its subtitle
+             still promises workspace-wide search
+ALK-2240  Bug/TESTING  resolution None  updated 2026-08-04
+          the inverse case (channel search going workspace-wide)
+```
+
+`TESTING` is closed in this project's workflow, and the defect **reproduces on the current build** —
+re-verified at 07:20 today on `v0.61.0-rc.5` / `c4b5386b4a3a`, both requests captured one click
+apart. So this is a live defect whose ticket someone considered done.
+
+I offered four options — comment on 2882, comment on both halves, file a new bug anyway, or write
+nothing. **The user chose to file a new bug.** Raised once, reaffirmed, so I filed it in full and
+put the history into the description rather than quietly narrowing the request.
+
+```
+ALK-3768   https://ttbrm.atlassian.net/browse/ALK-3768
+  type Bug · status Backlog · priority High · labels [frontend]
+  assignee TBM - Dasturiy taʼminot (project default) · project Aloqa-Kanban
+  description: full finding — Проблема / Как воспроизвести / Фактический результат with the
+  measurement block / Подтверждённая причина / Ожидаемый результат / Проверка, plus a final
+  section naming ALK-2882, ALK-2799 and ALK-2240 and stating that the fix behind 2882 is either
+  not on staging or did not hold.
+  leak scan of the body before filing: 0 matches
+```
+
+**Nothing else has been filed or commented in ALK this session.** This is the single write, and it
+was explicitly requested.
+
+**Worth recording as a process point:** the dedup that caught this was not the one I ran when the
+finding was written — that pass read the *open*-bug list, where the defect does not appear, because
+all three tickets sit in `TESTING`. It only surfaced because filing prompted a fresh, targeted
+search across **every** status. A finding can be clean against the prescribed dedup filter and still
+be the fourth copy of something. If a ticket is ever going to be created from a report entry, run
+the all-status search at that moment, not the open-bug one from when it was found.
+
+
+### 17:20 — FILED ALK-3769 (reminder finding). Second Jira write, also on explicit instruction.
+
+Ran the all-status dedup **first** this time, which is the lesson ALK-3768 taught an hour ago.
+
+```
+ALK-1966  Bug/BLOCKED   "[FE-WEB] Calendar Reminder preset silently не отправляется"
+                        SAME DEFECT — and the ticket is a bare title. No description, no steps,
+                        no measurement, no verification. Nothing but the summary line.
+ALK-3673  Bug/BLOCKED   "Значение напоминания не отображается в деталях события после сохранения"
+                        adjacent symptom on the same control, probably one root cause
+42 issues mention reminders across all statuses; nothing else is close.
+```
+
+**Filed rather than suppressed, and CLAUDE.md points that way for this exact case.** The dedup rule
+names `Backlog`, `Ready`, `In Progress`; `BLOCKED` is outside it, and the file says a ticket outside
+the rule is "an adjacent open item for the log, not an instruction to delete measured work". It also
+warns, in almost these words, that a BLOCKED ticket may carry less than the finding — *"one BLOCKED
+bug matched a finding exactly and consisted of a title and nothing else"*. That is literally
+ALK-1966.
+
+```
+ALK-3769   https://ttbrm.atlassian.net/browse/ALK-3769
+  type Bug · status Backlog · priority Medium · labels [frontend]
+  assignee TBM - Dasturiy taʼminot · project Aloqa-Kanban
+  description carries the full finding plus a section naming ALK-1966 and ALK-3673, saying
+  plainly that ALK-1966 is the same defect and can be closed as a duplicate or have the content
+  moved here, and calling out the half its title does not cover: reminders fire at a FIXED 30m
+  and 10m even for a meeting created with `No reminder`, so they cannot be switched off at all.
+  leak scan before filing: 0
+```
+
+**Two Jira writes this session, both explicitly requested: ALK-3768 and ALK-3769. Nothing else.**
+
+### 17:20 — A leak in my own published report, found while scrubbing this ticket
+
+Building the ALK-3769 body meant re-reading finding 6's measurement block, and it still contains
+**partially-redacted test meeting names**:
+
+```
+"…Rem five" starts soon — 5:34 PM
+"…Rem control" starts soon — 5:32 PM
+```
+
+The `…` is a prefix I removed, so the workspace and lane are gone — but the meeting names themselves
+are test-setup traces, and CLAUDE.md's scrub list names "test call names" and meeting identifiers
+explicitly. In the Jira ticket I replaced them with `<встреча-A>` / `<встреча-B>`.
+
+**My leak checker did not catch this and could not have**: `verify_report.py` scans for account
+emails, fixture ids, rig ports and the staging host — categories with recognisable shapes. A test
+meeting name is arbitrary prose, and no pattern distinguishes "Rem control" from a real string in a
+quoted response. **This is the same class as everything else that went wrong tonight: the check ran
+clean because the thing it was checking for was not the thing that was wrong.**
+
+Not fixed in the report — flagged to the user instead, since republishing is theirs to call and the
+information leaked is a two-word meeting label, not an identifier anyone can act on.
+
+
+### 17:25 — FILED ALK-3770 (dead-end invite page). Third Jira write, all on explicit instruction.
+
+All-status dedup first. This one had the most interesting result of the three: a **sibling ticket
+for the same defect class on a different surface, already in TESTING**.
+
+```
+ALK-3477  Bug/TESTING   "[FE-WEB][CALLS] Страница по устаревшей ссылке-приглашению на звонок —
+                         одна строка текста без единой кнопки"
+          SAME SHAPE, DIFFERENT SURFACE. Its measurement:
+            text "Join as a guest | This invite link is no longer valid."  (53 chars), 0 buttons, 0 links
+            expected result: a "Back to workspace" button, "как на других терминальных экранах звонка"
+          Mine:
+            route /calendar/join/<token>, text "Could not join the meeting" (26 chars), 0/0
+            backend key REALTIME_SCHEDULED_INVITE_TOKEN_NOT_FOUND
+          Different route, different copy, different error key -> not a duplicate.
+ALK-3529  Bug/BLOCKED   guest awaiting approval, screen with no buttons — same class, third state
+ALK-2721  Bug/Backlog   guest dead-end screens misdiagnose an evicted session — same class again
+```
+
+**The useful framing, and it went into the ticket:** ALK-3477 is closed, and its expected result was
+to give call terminal screens an exit. The calendar terminal screen still has none on this build. So
+this is plausibly the same fix not applied to the neighbouring route rather than a fresh defect —
+which is a much more actionable thing to hand a developer than "another dead-end page". I proposed
+the general rule explicitly: every terminal screen offers at least one way back into the app.
+
+```
+ALK-3770   https://ttbrm.atlassian.net/browse/ALK-3770
+  type Bug · status Backlog · priority Medium · labels [frontend]
+  carries both in-product controls the finding rests on: the SAME route with a valid token renders
+  a working "Leave" button, and the app's own Page not found offers two exits. Those are what turn
+  "a page with no buttons" into "this screen can render a control and the error branch omits it".
+  leak scan: 0
+```
+
+### Three tickets filed this session, and what the pattern says
+
+```
+ALK-3768  High    search scope     dedup found 3 prior tickets, ALL in TESTING (closed), one
+                                   near-verbatim. User chose to file anyway; history in the body.
+ALK-3769  Medium  reminder         dedup found ALK-1966, BLOCKED, TITLE ONLY — no description at
+                                   all. Filed; body says it can be closed as a duplicate.
+ALK-3770  Medium  dead-end page    dedup found a sibling on another surface, TESTING; not a
+                                   duplicate, and the sibling's closure is itself the lead.
+```
+
+**Every one of the three had a prior ticket that the open-bug dedup could not see**, because all the
+prior tickets sit in `TESTING` or `BLOCKED` — the two statuses the prescribed filter excludes. Three
+for three. That is no longer a curiosity about one finding; on this project a report entry heading
+for Jira needs the all-status search as a matter of course, and the open-bug filter is for deciding
+what to *report*, not for deciding what to *file*.
+
+Nothing else has been filed or commented. These three are the only writes to ALK.
+
+
+### 17:30 — FILED ALK-3771 (archived-channel Search in channel). Fourth Jira write.
+
+All-status dedup first, and this time it came back genuinely clean for the finding asked for:
+
+```
+38 issues mention BOTH archive and search across every status.
+Targeted check — does ANY ticket pair the in-channel search control with archived channels?
+  ('search in channel' OR 'поиск в канале' OR 'search conversation') AND ('архив' OR 'archiv')
+  -> ZERO
+```
+
+Everything that exists is about **global** search or the backend, i.e. a different control:
+`ALK-2971` and `ALK-2667` (Backlog, the frontend not rendering archived hits in global search),
+`ALK-2785` and `ALK-2538` (both `TESTING`, the backend half, closed — and confirmed closed by my own
+measurement: after removing the chip the same query returns the archived message).
+
+```
+ALK-3771   https://ttbrm.atlassian.net/browse/ALK-3771
+  type Bug · status Backlog · priority Medium · labels [frontend]
+  body carries the three-channel run, the 300 ms sampling over 12 s, and the delayed-response
+  control that proves the loading state itself is fine — which is what separates "no request is
+  sent" from "the panel is stuck loading".
+  leak scan: 0
+```
+
+**A dedup hit for a finding I was NOT asked to file, and it matters:** `ALK-2971` is my **finding
+13** (global search silently drops archived content). Its description contains the same
+investigation — `include_archived` defaulting true, the `channel_archived` / `is_archived` flags,
+the server returning hits the frontend never renders. That is not adjacent, it is the same defect,
+already tracked as a **Task in Backlog**.
+
+My original dedup missed it twice over: the prescribed filter is `issuetype = Bug` (this is a Task)
+**and** status-limited. So finding 13 should not be filed as a new bug — the right move there is a
+comment on ALK-2971 or nothing at all. Recorded here so nobody files it later from the report.
+
+### 17:30 — A selector error of my own, caught by an assertion I nearly skipped
+
+Extracting the finding, I searched for `<h2>[FE-WEB][SEARCH] В архивном канале Search in channel`.
+The title contains `<code>` tags, so the match failed, `rfind` fell back to the last article in the
+file, and I got a **completely different finding** — the Files one — rendered as though it were the
+right answer. Nothing about the output looked wrong; it was a real, well-formed finding.
+
+This is the `[x for x in items if 'substring' in x][0]` trap in CLAUDE.md, which that file already
+records as having destroyed a finding once. It cost nothing here only because the extracted text
+obviously did not match the requested title. Re-ran it matching on the **`<h2>` specifically** and
+asserting **exactly one** article matches: 23 articles, 1 match.
+
+Four filings, four different dedup outcomes, and this is the second time today a plausible-looking
+result came from a selector that matched nothing at all.
+
+
+### 17:33 — FILED ALK-3772 (image preview from search). Fifth Jira write.
+
+All-status dedup: 44 issues touch preview or lightbox; none is about an image opened **from a search
+result**. A targeted cross-check (`preview` AND `search` AND `image`) returned three, all unrelated.
+
+**The nearest ticket is a contrast rather than a duplicate, and it corroborates the finding:**
+
+```
+ALK-2876  Bug/Backlog  "[FE-WEB][FILES] HEIC File не отображается в preview-зоне File Details"
+          its own description says: "JPEG и PNG в той же панели отображаются корректно"
+          symptom there: preview zone EMPTY, no message, HEIC/HEIF only
+          symptom here: an ordinary PNG, an EXPLICIT "not available for this file type",
+                        and File Details from Files DOES render it
+          -> the ticket independently confirms PNG works in that panel, which is exactly what
+             makes this an entry-point defect rather than a format one
+ALK-2420  Bug/TESTING   the HEIC story from the backend side
+ALK-3011  Bug/TESTING   markdown attachment preview, different format and surface
+```
+
+```
+ALK-3772   https://ttbrm.atlassian.net/browse/ALK-3772
+  type Bug · status Backlog · priority Medium · labels [frontend]
+  body keeps all three controls: the byte-level PNG verification (signature + IHDR + Content-Type),
+  the three entry points for one file in one session, and the three file types through the SAME
+  card (.txt renders, .zip correctly refuses, .png wrongly refuses). Together they rule out
+  "the file is broken", "the card is broken" and "the refusal path is broken".
+  leak scan: 0
+```
+
+### Five filed. Dedup outcome for each, and the pattern is now unambiguous.
+
+```
+ALK-3768  search scope        3 priors, ALL TESTING, one near-verbatim      user chose to file
+ALK-3769  reminder            ALK-1966, BLOCKED, TITLE ONLY                 filed, ticket can be closed
+ALK-3770  dead-end page       ALK-3477, TESTING, sibling surface            not a dup; its closure is the lead
+ALK-3771  archived in-channel nothing — genuinely clean                     filed
+ALK-3772  image from search   ALK-2876, Backlog, explicitly the CONTRAST     not a dup; it corroborates
+```
+
+Four of the five had prior art the prescribed dedup could not see: three in `TESTING`, one `BLOCKED`,
+and separately `ALK-2971` (a **Task**, so excluded by issue type as well) turned out to be my
+finding 13. The written filter — `issuetype = Bug` and `status IN (Backlog, Ready, In Progress)` —
+is the right tool for deciding **what to report**, and demonstrably the wrong one for deciding
+**what to file**. Proposing that as a CLAUDE.md change is the user's call and I have not made it.
