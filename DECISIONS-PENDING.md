@@ -1,23 +1,13 @@
 # Decisions pending — for Mahmud
 
-> **This file was reconstructed from the session transcript at 22:58 on 2026-08-26.**
-> I destroyed the original with a bad edit — a python one-liner that opened the file for
-> writing (truncating it) before reading it, leaving 30 lines of a 1050-line file. It was
-> untracked, so there was no git copy.
->
-> Every write to this file since the session began is recorded in the transcript, and all
-> **16 items** have been recovered from it. Two caveats on what you are reading:
-> **ordering is approximate** (blocks are in the order they were written, not the order they
-> were arranged in), and **some items appear in more than one revision**, because several were
-> edited in place over the day and the reconstruction cannot tell a superseded version from a
-> current one. Where an item repeats, the **later** block is the current one.
->
-> Nothing is known to be lost. Nothing here has been rewritten or summarised — these are the
-> original blocks.
-
----
-
-# Pending decisions
+> **Provenance.** The original was destroyed by a bad edit on 2026-08-26 (a write-before-read
+> truncation of an untracked 1050-line file) and reconstructed from the session transcript the
+> same evening; nothing is known lost. **Groomed on 2026-08-29 with Mahmud's approval:** superseded
+> revisions collapsed to their final state, blocks that belong to and already exist in
+> `PITFALLS.md` / `HANDOFF.md` / `SECTORS.md` / `snip/watch.mjs` removed, resolved items moved to
+> the tail, and the 2026-08-27 section renumbered 26–29 to undo a numbering collision with items
+> 23–25. Every removed byte is in git history (pre-groom state: the parent of the commit that
+> landed this).
 
 Things that need Mahmud, queued because he may be away. **Nothing is dropped from here
 until he has answered it.** Everything else — tooling, helpers, wrong facts in docs,
@@ -27,6 +17,46 @@ instead.
 Append new items at the bottom with the date, what is being asked, why it needs him
 rather than being decided here, and the options with a recommendation. Remove an item
 only when it has been answered, and say what the answer was.
+
+## Index — the walkthrough
+
+**Needs you** (file order):
+
+1. Peer messaging between sessions — advisory-only, or may a finding be dropped on a peer's word?
+2. `/debrief` cadence — recommendation: once mid-run, once near the end.
+3. Sector re-weighting beyond the named D/E halves — recommendation: wait for run evidence.
+4. Two Jira comments: ALK-2559 (re-test first) and ALK-3530 (one-line framing fix).
+5. Group audit of tickets closed against broken fixtures; comment on ALK-2559 with the four-case matrix.
+6. ALK-3536 is fixed on the deployed build and its ticket does not know — comment?
+7. ALK-3016 — comment with the corrected cause (client cache state, not the recipient's session)?
+8. ALK-2876 — comment with the wider trigger and the second component?
+9. ALK-3425 — comment with the three instances outside its title?
+10. ALK-3107 / ALK-3453 — comment that the product already ships the answer?
+11. ALK-3005 — comment with the correct source path?
+12. Seven TESTING tickets closed with the behaviour absent — raise the pattern, comment on the seven?
+13. Dedup filter — final recommendation: widen what you *read* (BLOCKED/REVIEW/Tasks), never let a
+    status decide a withdrawal; board ~44% stale on a 34-ticket sample. Comment on ALK-1966/2131?
+14. Review the accumulated CLAUDE.md method-line diff (now committed — reviewable via git history);
+    decide the PITFALLS consolidation / move-checks-into-tooling option.
+15. Where knowledge lives — prefer symptom-triggered rules with a mechanical discriminator shipped
+    alongside; what, if anything, to build.
+18. Chat backlog verified: 8 close candidates, 10 confirmed with fix-changing detail — act on Jira?
+19. ALK-3538 — withdraw or amend (fixture cause); seeder change vs documented caveat. People half
+    needs an app-registered account (see 24). Companion: the fixture guest is not a guest.
+20. Sector C's drafted self-suppressing-UI rule — accept into CLAUDE.md or reject.
+21. A family of drafted-but-not-written rules (ten sub-entries through the file) — accept/reject each.
+22. Two rig-technique diffs routed for approval: `setOffline` does not close an open WebSocket;
+    `setBlockedURLs` is per-CDP-session and does not close open connections.
+23. Two calendar findings that must be fixed together, or the second reads as a regression.
+24. Settling People-search needs an account registered through the app — your say-so, nobody else's.
+26. Twelve findings right about the bug, wrong in a detail — correct in place (republish five) or at filing time.
+27. Lane D's published report disagrees with itself in one row — fix and republish, or carry it.
+28. Should Review's re-ratings and rewritten «Ожидаемый результат» fold back into published reports?
+29. Real 80% zoom for the rig browsers — wants a snippet re-verification pass behind it.
+
+**Resolved while you were away** (kept at the tail for review, then deletion): 16 — the shared
+files are committed now; 17 — the Artifact cap was a daily quota and reset; 25 — the README table
+is mended.
 
 ---
 
@@ -78,84 +108,12 @@ E instead — done, both now have named halves. The deeper imbalance is untouche
 **Recommendation:** leave it until the halves have been used for a run or two, then decide
 with evidence rather than by share arithmetic.
 
-  requireInitial,            // string | RegExp | fn — assert the starting state before watching
-  startsEmpty = false,       // "I know it starts empty; I am watching for it to appear\
-
-      // A guard people route around is worse than none. Watching for something to
-      // APPEAR — a calendar chip before its meeting exists, a control before a role is
-      // granted — legitimately starts from nothing, and forcing those callers to
-      // construct a requireInitial matcher for a state they know is empty is exactly
-      // how a guard gets skipped. `startsEmpty: true` declares it in one word, and
-      // keeps the flag meaningful for the case it was built for.
-      const suspect = !startsEmpty && !requireInitial && EMPTY_BASELINE.test(baseline);
-
-//   - It samples the WHOLE document. A row can live in a portalled dialog outside
-//     `main`, and a scoped poller reports "nothing happened" for something that did.
-//   - A negative needs a proven starting state. Assert it with `requireInitial`, or say
-//     `startsEmpty: true` when you are waiting for something to appear. Without either,
-//     an empty or not-found baseline comes back flagged `suspectBaseline` — because
-//     `changed:false` about a thing that was never there reads exactly like
-//     `changed:false` about a state that never resolves.
-
 ## Act, or queue — do not sit on it
 
 The user is often away while sessions run, and a proposal that waits blocks work that
 could already be done. **Apply anything that does not genuinely need him.** Queue the rest
 in `DECISIONS-PENDING.md` and present every item when he returns — nothing is dropped from
 that file until he has answered it.
-
-**Act now, no approval:** rig tooling and helpers; bugs in tools you built; wrong or stale
-facts in the docs (a route list that is out of date, a scope line naming a feature that
-does not exist); handoffs and fixture notes; anything reversible and contained to the QA
-workspace. Record what you did in the session log, and tell the sessions.
-
-**Queue for him:** anything that changes how work is allocated or weighted; a trade-off
-that spends his resources; anything touching a published artifact; anything reaching
-outside the workspace; anything hard to undo.
-
-**Two standing rules survive this delegation and are never auto-applied.** No ALK ticket
-or comment without being asked. And nothing that could limit what future sessions may test
-enters `CLAUDE.md` without an explicit yes — quote the exact wording and queue it.
-
-For each queued item write: what is being asked, why it needs him rather than being
-decided here, the options, and a recommendation. Per item also record what it already cost
-— concrete, a lost measurement, a near-Critical — and where the change would go.
-
-Flag separately anything unverified, and anything that is cleanup of damage the
-coordinator itself caused — the user should not have to work that out from the list.
-
-When he returns, walk the whole queue, oldest first. A queue that quietly loses an item is
-worse than one that never existed, because he stops trusting that asking was captured.
-
-**Input:** nothing, or a focus ("ask about the call rig", "ask about reporting").
-**Output:** the tooling and factual fixes already applied and verified, with every session
-told — plus anything that genuinely needs the user appended to `DECISIONS-PENDING.md` and
-walked through with him when he is next around. He is often away while sessions run; a
-proposal that waits on him blocks work that could already be done.
-
-`created_by` set to the guest. Confirmed independently in `org_db`.
-
-**Resolved by D, and it is not a bug.** The guest holds a role that permits it. Verified
-in the seed and in the backend: `WORKSPACE_MEMBERS = [k for k in UID if k != "qa_outsider"]`
-includes `qa_guest`, so the guest gets the workspace `Member` role, which carries
-`workspace.{ws}.channel.create`. The `is_guest` Guest role adds only
-`company.{co}.member.view` — it grants nothing and, more to the point, **restricts
-nothing**. Nothing in `platform/pkg/permissions` references guest status at all (verified
-with a control grep, not an empty one), so `is_guest` is a flag on a role, not a modifier
-on permission resolution.
-
-That also explains why channel creation was the only action breaking C's pattern:
-everything else they listed is gated by **channel-layer** permissions the guest does not
-hold, while `channel.create` is a **workspace-layer** action their member role does carry.
-
-What remains is a product question, not a defect: should an `is_guest` role suppress
-workspace-layer grants its holder gets from an ordinary member role? Two honest fixes if
-so — stop giving guests the workspace Member role (seed/provisioning, and it would apply
-to any real deployment doing the same), or make `is_guest` mask workspace-layer actions
-during resolution (a product rule that does not exist today). Same shape as D's BUG-7 in
-the opposite direction: layers resolved independently, with no cross-layer notion of
-"this person is limited". Measurements in `logs/AIRION-QA-2026-08-26-C-chat-2.md` (UI)
-and the sector D log (role chain).
 
 **Act now, no approval:** rig tooling and helpers; bugs in tools you built; wrong or stale
 facts in the docs (a route list that is out of date, a scope line naming a feature that
@@ -174,43 +132,23 @@ quietly loses an item is worse than one that never existed, because he stops tru
 asking was captured, and an unrecorded change is one he has to find out about the hard
 way.
 
-**Then B tested the DM path on their own lane and it worked, so the entry route is out
-too.** The full picture, every DM-channel meeting on both lanes today, gap between the last
-recorded leave and the room closing:
+**Queue for him:** anything that changes how work is allocated or weighted; a trade-off
+that spends his resources; anything touching a published artifact; anything reaching
+outside the workspace; anything hard to undo.
 
-    lane B  05:59:13 / 11:33:02 / 12:36:01 / 12:37:11 / 12:41:45      gap 0s on all five
-    lane C, all three on the SAME channel C4OVEWOTJW1AA86, same pair:
-      10:43:31 -> 10:46:13   lefts 10:45:23, 10:45:43   gap 30s
-      10:47:32 -> 10:51:50   lefts 10:51:20, 10:51:20   gap 30s   <- the disputed call
-      10:52:59 -> 10:56:12   lefts 10:56:12, 10:56:12   gap  0s
+**Two standing rules survive this delegation and are never auto-applied.** No ALK ticket
+or comment without being asked. And nothing that could limit what future sessions may test
+enters `CLAUDE.md` without an explicit yes — quote the exact wording and queue it.
 
-Two of three on one channel lingered and the third did not, so **lane, channel and entry
-path are all excluded. It is intermittent.** C's is the worst instance — both `left_at`
-identical and four minutes after the observed clicks, which nothing else in either lane
-shows. The 30s matches `departure_timeout: 30` in the raw meeting payload.
+For each queued item write: what is being asked, why it needs him rather than being
+decided here, the options, and a recommendation. Per item also record what it already cost
+— concrete, a lost measurement, a near-Critical — and where the change would go.
 
-**Still unexcluded:** leaving by something other than the button (tab close, navigating
-away) and what that writes to `left_at`. One run would settle whether the 30s gap is the
-departure timer doing its normal job when no explicit leave arrives, or a leave arriving
-and being ignored.
+Flag separately anything unverified, and anything that is cleanup of damage the
+coordinator itself caused — the user should not have to work that out from the list.
 
-**A wrong turn recorded so nobody repeats it:** C reported that the Directories path
-creates a new channel instead of reusing the DM. It does not — their run called **admin,
-not carol**. `C4OWPTXDA90XOMV` is `dm:U4QCADMIN000001:U4QCALICE000001`, a pair with no
-prior DM, and there is exactly one DM channel for alice+carol. That also explains their
-"carol never showed an incoming surface": she was not in the call. Not a finding.
-
-**Timezone:** the database is UTC, the team runs +05. C's 10:47Z is 15:47 local; B's
-"17:41" run is the 12:41 UTC row above.
-
-question moved twice more. B then tested the DM path on their own lane and it worked, and
-my query of every DM-channel meeting on both lanes showed two of three lane-C calls on the
-*same channel and pair* lingering while the third did not — so lane, channel and entry path
-are all excluded and it is intermittent. I also caught a wrong turn: C's Directories
-comparison run called **admin, not carol** (`C4OWPTXDA90XOMV` is `dm:admin:alice`), which
-refutes their "the Directories path creates a new channel" claim and fully explains their
-"carol never showed an incoming surface". They were told before it propagated into their
-published report. Full picture in `HANDOFF.md`.
+When he returns, walk the whole queue, oldest first. A queue that quietly loses an item is
+worse than one that never existed, because he stops trusting that asking was captured.
 
 ---
 
@@ -246,30 +184,6 @@ write-only field) or a dedicated reveal endpoint.
 · leave it and let triage discover it · re-scope the ticket. **Recommendation:** the single
 line. It costs nothing and removes the wrong turn, without asserting which half owns the
 fix.
-
-Sector E has taken the surface. **Proven working:** a personal `@mention` into a seeded
-channel now creates a `mention` notification for a channel member (lane D, rc.5, verified
-by sector D against the exact case that had produced their false finding). **Still
-unestablished:** plain non-mention channel messages, `@all`/`@here`, the ALK-2559 mute
-override, and the realtime toast in a live tab. Details in `CHANGES-APPLIED.md`.
-
-**Also re-verified on rc.5 by sector B, all still reproducing:** ALK-3529 (guest
-waiting-for-approval screen, `interactiveCount: 0` across the whole document), ALK-3530
-(see `DECISIONS-PENDING.md` — its framing is misleading), ALK-3531 (raw
-`GET /meeting/<id>/events` carries no knock, deny or admit event types at all, confirming
-the corrected "absent, not anonymised" framing).
-
-**Proven end to end** by sector D, who re-ran the exact case that had produced their false
-finding — same channel, same sender, same composer path, same recipient, only the seed fix
-in between:
-
-    notification_db.channel_members for the fixture channel: 6   (was 0)
-    recipient's notifications: total 3 -> 4, unread 3 -> 4
-    newest: {"title":"You were mentioned","type":"mention", "created_at":"…T12:53:25Z"}
-
-The type is `mention`, not `channel_message`, so the mention branch specifically is alive.
-Still unestablished: plain (non-mention) channel messages, `@all`/`@here`, the mute
-override, and whether the realtime toast appears in a live tab.
 
 ---
 
@@ -315,63 +229,11 @@ the next verification run pick it up. **Recommendation:** comment with the resul
 much easier thing for the owner to act on than a doubt, it needs no re-test from them, and
 it costs one comment. Still not done — Jira needs your say-so.
 
-**The full contract was then verified** across two sectors: plain channel messages notify
-(`type":1,"title":"New channel message"`), `@all`/`@here` notify, muting suppresses plain
-messages, and a mention overrides the mute — the last being ALK-2559's actual subject.
-**Still unestablished:** whether the realtime toast appears in a live open tab. Only the
-notification row has been tested.
-
-A finding was corrected in the right direction as a result: sector C's `@all`/`@here` entry
-had claimed they reach the recipient nowhere. With a working control it turns out they do
-notify — what survives is narrower and better evidenced, that the notification says "You
-were mentioned" while the page titled "Where you were mentioned" does not contain the
-message, with the divergence visible inside one server response (`mention_ids` present for
-a plain mention, absent for both broadcasts).
-
-- A deep-linked message was recorded as "not highlighted". It is — an accent-tinted flash
-  that fades over about two seconds, read once from the DOM after it had gone. **A single
-  sample is not a measurement of a transient**, which is the time axis of "my probe could
-  not have seen it": the probe was pointed at the right element and was simply late.
-
-**Check:** poll from **before** the trigger, keep the **maximum** opacity over each
-notice's lifetime, and key notices on text plus rounded size
-
-Sector E has taken the surface and **closed it out end to end** — a plain message to
-`#qa-general` produced `category "messaging" / event_type "channel_message"` for a recipient
-parked elsewhere, the panel row rendered, click-through navigated to
-`/c/<channelId>?m=<messageId>` with the target message visible, and the bell decremented
-4 → 3. Verified independently by three sectors.
-
-**Two things that fell out of it, both worth inheriting:**
-
-- **The bell updates live; the sidebar unread badge does not.** The bell read "4 unread"
-  without navigating or reloading, while the same channel's sidebar row never changed across
-  ~333 samples at 300ms with `GET /workspaces/{ws}/unread` returning `unread=1` — only a
-  reload surfaced it. Two counters on one screen, fed by the same event, behaving
-  oppositely. For whoever fixes the badge: the live path exists and works a few pixels away.
-- **The notification actor-name finding is narrower than reported.** `category "messaging"`
-  carries `actor_name "QA Alice"` (display name, correct) while `category "calendar"` carries
-  `actor_name "qa_e_alice"` (username). So it is the calendar producer, not a shared
-  formatter. Nobody could have known before the seed fix, because no messaging notification
-  existed to compare against.
-
-**Proven working:**
-
-Independently confirmed by sector C on the repaired fixture, with the control working in
-both directions inside one run — a plain message to a muted channel produced nothing across
-6 polls over 15.5s, while a mention and an `@all` to the *same muted channel* both notified.
-A silent surface would have given three nothings; this gave a nothing and two somethings.
-
 **But sector C draws the distinction that matters, and it is the reason item 5 exists:**
 the ticket's *conclusion* looks right today; its *verification* was still worthless. It was
 signed off against a fixture that could not deliver a channel notification at all, so the
 sign-off had no evidence behind it either way — it would have "passed" whether the product
 worked or not. Those are two different problems, and **only the second one generalises.**
-
-**Options:** comment with the four results · leave it closed silently · leave it and let
-the next verification run pick it up. **Recommendation:** comment with the results. It is a
-much easier thing for the owner to act on than a doubt, it needs no re-test from them, and
-it costs one comment. Still not done — Jira needs your say-so.
 
 **The argument is sharper than "some closures might be wrong".** A verification run on
 these fixtures would have reported "no notification, as expected" whether the product
@@ -379,18 +241,6 @@ worked or not — the test could not fail. So the problem is not that some concl
 wrong; it is that **none of the conclusions had evidence, and there is no way from the
 outside to tell which ones happened to be right.** ALK-2559 turns out to be correct on
 today's build. That is luck, not validation, and it says nothing about the others.
-
-**Why it needs you:** it is a question about the team's Jira history and how much
-re-verification is worth paying for, not a testing decision. It could be anything from
-"check three tickets" to "re-open a batch".
-
-The mute matrix was then closed by sector C on the repaired fixture: a plain message to a
-muted channel produced nothing over 6 polls in 15.5s, while a mention and an `@all` to the
-same muted channel both notified — mute suppresses ordinary messages and correctly does not
-suppress mentions. Fixture restored afterwards (`DELETE …/mute` → 200).
-
-**Still unestablished:** whether the realtime toast appears in a live open tab. Only the
-notification row has been tested, by any sector.
 
 ---
 
@@ -423,37 +273,6 @@ transfer/ownership control anywhere on that page).
 that belongs to whoever owns the board, but the evidence that it is fixed should be on the
 ticket either way — that is what stops the wasted pickup.
 
-## Your comparison key was not unique
-
-**A comparison key that is not unique is the same class of error as a probe that cannot see
-the thing** — it produces a confident answer from a real measurement, and the direction of
-the error is arbitrary.
-
-- Checking whether company-scope audit events reach the screen, a session matched them
-  against the rendered page **by action name** and concluded they were present. They were
-  not. The session's own probe roles had produced `role.created`/`role.assigned`/
-  `role.deleted` at *workspace* scope too, so the action name could not distinguish the two
-  scopes. Re-done by **entry id**, the answer inverted completely.
-
-**Check:** before comparing two sets, ask what makes a member unique and whether your key
-actually carries it. Ids over names, always, where an id exists. And be especially careful
-when your own test activity has populated the same namespace you are matching against —
-that is how a key stops being unique halfway through a run.
-
-## Your own selector or regex is what returned nothing
-
-## Filed tickets re-verified on v0.61.0-rc.5
-
-The morning sector-D report ran on rc-3 and was verified on rc-4, so none of it had been
-checked against the deployed build until now:
-
-    ALK-3535  audit log omits company-scope events          reproduces
-    ALK-3536  raw key `audit.view` in the permission list    FIXED — see DECISIONS-PENDING
-    ALK-3537  Workspace identity subtitle promises absent fields   reproduces
-    (owner cannot leave the workspace — dead end)            reproduces
-
-## Closed tickets confirmed genuinely fixed on v0.61.0-rc.5
-
 ---
 
 ## 7 · ALK-3016's stated cause is wrong (raised 2026-08-26)
@@ -484,34 +303,6 @@ clean lane, which is how a real bug gets closed as cannot-reproduce.
 **Recommendation:** comment. Not re-file — it is the same defect and sector E deliberately
 did not duplicate it. The comment is cheap and it stops a developer investigating the wrong
 half.
-
-## One client was warm and the other was cold
-
-**In any multi-client test, whether each client already had the thing rendered is a
-variable — and it is invisible from inside a single run.** Two accounts side by side look
-like a controlled comparison; if one had the message on screen before the change and the
-other loads it fresh, they are running different code paths and the difference will be
-attributed to whatever else differs between them, such as their role.
-
-- A filed ticket says that after the owner deletes a shared file, the **sender** sees an
-  explicit `Unavailable file` placeholder while the **recipient** gets an empty rectangle,
-  and pins the cause on "the recipient's session". Four measurements reconcile it
-  differently: a client that had the message rendered before the delete keeps drawing
-  `<img alt="<filename>">` from stale local state — the filename is no longer in the
-  payload at all — and the image 404s, so its opacity never rises and you get an
-  unexplained blank. A client loading fresh sees `"files":[{"id":"F…","status":"deleted"}]`,
-  has no filename, and renders the correct placeholder. **Sender and recipient each show
-  either behaviour depending only on what their client already holds.** The role is not the
-  variable. Whoever wrote the ticket happened to have one client warm and one cold.
-
-**Check:** decide deliberately, per client, whether it should be warm or cold, and say
-which in the write-up. If a difference between two accounts is the finding, run it again
-with their cache states swapped before believing the role explains it. A corrected cause
-that covers every case — *a cached message is never re-evaluated against the deleted
-status* — is worth far more than one that covers a quarter of them and points at
-role-dependent rendering that does not exist.
-
-## The two things you compared were not in the same state
 
 ---
 
@@ -545,7 +336,7 @@ repro is worth as much as the scope note.
 
 ---
 
-## Pattern behind items 4b, 6, 7 and 8
+## Pattern behind items 4b, 6, 7, 8, 9 and 11
 
 Four open Backlog tickets were found today to be misleading in a way that costs whoever
 picks them up, and none was found by looking for them — each surfaced while a session was
@@ -555,6 +346,8 @@ testing something adjacent:
     ALK-3530  framing sends a developer to the wrong half (no password field in the response)
     ALK-3016  stated cause is wrong (client cache state, not the recipient's session)
     ALK-2876  scope narrower than the defect (not HEIC-specific; two components, one named)
+    ALK-3425  systemic across at least four paths; titled as one component
+    ALK-3005  cites a source path that does not exist at the deployed sha
 
 **The decision is not really four comments; it is whether ticket accuracy is worth a pass
 of its own.** Every one of these was filed by this QA process, so the same conditions that
@@ -595,24 +388,6 @@ outside it is the cheapest possible way to widen it before someone starts.
 
 ---
 
-## Pattern behind items 4b, 6, 7, 8 and 9
-
-    ALK-2876  scope narrower than the defect (not HEIC-specific; two components, one named)
-    ALK-3425  systemic across at least four paths; titled as one component
-
-## Positives that bound an open ticket
-
-**ALK-3521** (a blocked user still shows active Call and Message actions, Backlog) — the
-button being there is the defect, but **pressing it fails safely and says why**, which
-bounds the impact. Measured: `POST /api/v1/messaging/dm` returns `400 DM_USER_BLOCKED`
-("cannot create DM: user is blocked"), no outgoing surface appears, no meeting is created,
-and the user is told plainly that one of them has blocked the other. Useful for triage:
-this is a stale-affordance defect, not a blocking-bypass one.
-
-## Open tickets confirmed still live on v0.61.0-rc.5
-
----
-
 ## 10 · Two open tickets where the product already ships the answer (raised 2026-08-26)
 
 Neither is misleading — both are simply missing a pointer that would remove the design work
@@ -648,12 +423,6 @@ will invent a different one, and the inconsistency becomes the next ticket.
 
 ---
 
-## Pattern behind items 4b, 6, 7, 8 and 9
-
-**Design note for ALK-3453** (also queued in `DECISIONS-PENDING.md` item 10)
-
----
-
 ## 11 · ALK-3005 cites a path that does not exist (raised 2026-08-26)
 
 `[FE-WEB][SECURITY] На экране Sessions каждая сессия названа Unknown device` is in
@@ -670,21 +439,6 @@ exists to stop new ones; this is an existing one.
 **Options:** comment with the correct path · leave it. **Recommendation:** comment. It is a
 one-line fix to a ticket that is otherwise sound, and the cost of not doing it is a
 developer concluding the ticket is stale and moving on.
-
----
-
-## Pattern behind items 4b, 6, 7, 8, 9 and 11
-
-    ALK-3425  systemic across at least four paths; titled as one component
-    ALK-3005  cites a source path that does not exist at the deployed sha
-
-The setup line in each sector below is what that sector actually needs.
-
-**Read your sector's "Owned by other sectors" line before you start, not just its in-scope
-list.** One session lost about an hour to Sessions and notification settings before checking
-it and finding another sector had already covered all of it that day. The boundary line is
-the cheaper half of the section: the in-scope list tells you where to go, the boundary line
-tells you where someone else already is.
 
 ---
 
@@ -725,25 +479,6 @@ owns the board · treat `TESTING` as unverified from now on and re-check anythin
 · nothing. **Recommendation:** raise the pattern, and separately comment on the seven —
 seven re-verified negatives is evidence rather than an opinion, and the comments cost
 nothing beyond your say-so. Nothing has been filed or commented.
-
-## You widened a finding after deduping it
-
-**Widening a finding is not editing it — each added instance is a new claim needing its own
-dedup.** A finding cleared at two instances does not stay cleared as it grows.
-
-- A session deduped a finding at two instances, widened it to three, then to five, and never
-  re-deduped the additions. One of them turned out to be **ALK-3537, open in Backlog, filed
-  off that same session's own morning pass eight hours earlier.** Nothing about the
-  measurement was wrong; only the assumption that a finding stays deduped while it changes
-  shape. It would have been a duplicate of their own ticket, in their own report, on the
-  same day.
-
-**Check:** dedup per instance, not per finding. The existing rule — re-read withdrawn
-findings when you reach the screen — does not cover this, because nothing was withdrawn and
-each new screen was genuinely new. The failure mode is specifically **growing** a finding
-after it has been cleared.
-
-## Your comparison key was not unique
 
 ## 13 · The dedup filter misses 184 open bugs — should BLOCKED join it?
 
@@ -1017,20 +752,6 @@ under the wrong parameter name. Sector E put it in their log rather than their r
 enriched an open ticket rather than finding the defect — correct by the existing rule, and it is
 the kind of thing worth attaching if ALK-1972 is ever picked up.
 
-- `offersSeries = dialogText.includes('series')` — **true because the dialog says "The rest of
-  the series stays in the calendar"**, which is the exact opposite of offering a series delete.
-  The buttons were Cancel and Delete meeting; there was no series option at all.
-
-**Three separate sectors hit this on one day, which makes it a pattern rather than an anecdote,
-and in every case the regex was right and the name was wrong.**
-
-**Check:** name a variable for **what its expression matches**, not for the conclusion you hope
-to draw from it. `mentionsSeries` would have been honest; `offersSeries` was an argument wearing
-a variable name. A conclusion-named boolean silently inverts every downstream reading — including
-in the log a later session reads, where nobody can see the expression that produced it. The tell
-is that the name contains a verb about the product's behaviour (`offers`, `gone`, `works`,
-`allows`) while the expression only does string matching.
-
 ### 13 · A fourth stale premise, and the enum diff has a better direction
 
 **ALK-1999** — "API does not support explicitly clearing a meeting password" — **premise no longer
@@ -1103,24 +824,6 @@ is that **this exact defect was reported, accepted, fixed, and the reasoning wri
 for the neighbouring permission, and the same treatment stops three lines short.** The team's own
 sentence about `member.kick` describes `role.manage` today.
 
-### 13 · BLOCKED tally, final: twelve checked on one sector's surfaces
-
-Sector E extended their pass. Twelve of the 184 touch their sector:
-
-    FIXED (8)       ALK-1967 · ALK-2009 · ALK-1961 · ALK-2143 · ALK-2013
-                    ALK-2648 · ALK-2016 · ALK-1962
-    REPRODUCES (3)  ALK-3069 · ALK-1966 · ALK-1972 (now with a confirmed cause)
-    PREMISE GONE    ALK-1965 — no Required/optional choice exists to downgrade
-
-**Two thirds of a parked queue no longer describing the product.** Combined with sector D's
-verified-clean ALK-3000, the shape is drift rather than neglect: things are being fixed, and the
-board is not being walked back to match. That is a maintenance problem with an obvious owner, not
-an indictment of anyone's process — and it is the version worth putting to whoever runs the board.
-
-**Sector E's own framing of the gate is worth keeping:** "no user-visible consequence, no finding"
-is not a new rule for source diffing, it is the existing bar applied to source instead of screens.
-It killed nine candidates for them today.
-
 ### A thirteenth finding, from verifying a ticket that was fixed
 
 Sector E found this while confirming ALK-2648 is genuinely fixed. The Files card now correctly
@@ -1140,20 +843,6 @@ relationship to it. Deduped across all four layers; nothing covers it.
 *verifying that a ticket was fixed* — this one and sector D's BUG-17 via ALK-3000's comment.
 Re-verifying closed work is finding new defects at a decent rate, which is an argument for doing it
 deliberately rather than incidentally.
-
-### 13 · Final BLOCKED sweep: fifteen tickets, eleven no longer describe the product
-
-Sector E closed their pass at fifteen:
-
-    FIXED (11)        ALK-1967 ALK-2009 ALK-1961 ALK-2143 ALK-2013 ALK-2648
-                      ALK-2016 ALK-1962 ALK-2020 ALK-2088 ALK-1591
-    REPRODUCES (3)    ALK-3069 · ALK-1966 · ALK-1972 (with a confirmed cause)
-    PREMISE GONE (1)  ALK-1965
-
-**Eleven of fifteen, and nothing in the tickets separates them from the three that still hold** —
-same status, same age range, same areas. That is the number worth carrying to whoever owns the
-board: not "BLOCKED is stale" but "BLOCKED is 73% stale on a measured sample and the ticket does
-not tell you which is which".
 
 ### The re-verification argument is better than I framed it
 
@@ -1512,61 +1201,6 @@ stands on its own: a guardrail inside a tool that must be run did prevent a know
 matching negative, so the honest claim is "a check in the path of work demonstrably worked once",
 not "prose demonstrably fails".
 
-## 16 · Nobody can cite CLAUDE.md's provenance, because it is uncommitted
-
-This came out of the argument above and is worth more than the argument was. It is about the repo's
-state, not about anyone's reasoning.
-
-    git diff --stat CLAUDE.md    +197 / −28, uncommitted
-    several sessions editing it live, all evening
-
-**So "it says X" is checkable and "it said X when you started" is not — for anyone here.** Lines a
-session is certain it read at 14:40 are absent from HEAD, and lines added at 22:00 are equally
-absent. HEAD cannot distinguish them, and neither can any session.
-
-Consequences beyond tonight's disagreement:
-
-- A session cannot tell whether a rule it is following was in its own briefing or was added by a
-  peer mid-run — which matters, because a rule added mid-run may contradict work already done under
-  the old wording.
-- No finding, ticket or report can honestly cite when a convention took effect.
-- The **announce-before-it-lands** convention for shared helpers has no equivalent for CLAUDE.md,
-  and CLAUDE.md changed far more today than any helper did.
-
-**The fix is to commit it**, which is yours — this repo's convention is that I commit only when
-asked, and I have not. A commit now would date everything from here forward, which is most of the
-value; it would not recover today's provenance.
-
-Until then the honest rule is: **cite CLAUDE.md's contents, never its history.**
-
-Worth noting `PITFALLS.md` (958 lines), `HANDOFF.md`, `DECISIONS-PENDING.md` and
-`CHANGES-APPLIED.md` are in the same state.
-
-Most likely I added it myself earlier today, before this context window. If so the case is not "a
-documented rule failed to fire" — it is two sessions deriving the same rule hours apart, which is
-mild evidence that such rules are *discoverable*, and arguably points the opposite way.
-
-**Precision, at that sector's insistence:** they did not establish that I was wrong, only that git
-cannot settle it — a weaker result. Absence from HEAD proves nothing about the working copy, since
-lines they are certain they read at 14:40 are also absent from HEAD. The claim is **unverifiable**,
-not refuted. If those lines are ever dated, it may be recoverable.
-
-### 16 · A worked example — a session tested the wrong screen because the doc changed under it
-
-Sector E reported that `/settings/profile` and `/settings/calls` are missing from CLAUDE.md's route
-list. I grepped the current file, found both present, and nearly told them they were wrong.
-
-    HEAD:     settings/{account|privacy|sessions|appearance|notifications|about}
-    current:  settings/{…|profile|calls|security|company|workspace|roles}
-
-**The list was extended today.** The copy that sector started with almost certainly lacked both, so
-their first attempt tested `/settings/account` and would have answered ALK-3522 wrongly. Neither of
-us can date the change.
-
-That is item 16 in concrete form: it has now cost a wrong route, a wrong test, and very nearly a
-wrong correction from me on top. Committing the file would not recover today's history but would
-stop this from here.
-
 ### My opening ticket analysis was overstated — correction for the record
 
 At the start of this session I gave a table splitting seven TESTING tickets by whether a fix commit
@@ -1714,50 +1348,6 @@ same instant.
 their published report is still the 13-finding version and this is the 14th. Retry after 05:00; they
 will say explicitly if it fails rather than let the link look current.
 
-## 17 · The Artifact publish cap is holding back three sectors' reports
-
-`Artifact` is returning `429 frame_daily_push_cap_reached`. Confirmed across three sectors, each of
-whose **published artifact now lags their local report**:
-
-    sector B   published 11   local 12   the seat leak is the unpublished one
-    sector C   published 26   local 25   includes a finding they WITHDREW
-    sector D   published 17   local 18   plus four local-only additions
-    sector E   published 13   local 15
-
-**Four sectors, not three** — I told sector D theirs was the only current artifact and was wrong;
-they hit the same cap after three attempts and the tool told them to stop.
-
-Sector D's gap in detail, since theirs is the largest: finding #18 (unsaved changes in settings
-forms discarded on navigation *and* reload, no warning, while the product itself shows "1 unsaved
-change" and no `beforeunload` handler is registered) exists only on disk. Four smaller additions are
-also local-only — a triage note on #2 pre-empting "the company audit page isn't built yet, that's
-ALK-3307", cross-references to another sector on #6 and #8, a note on #14 that the misleading string
-is identical in all four dictionaries so the fix is eight strings rather than one, and a footer
-correction understating 2FA coverage.
-
-**None of it changes a measurement, a cause or a repro path** — the published subsets are complete
-and correct as published. It is the headline counts that differ, which is the kind of mismatch that
-makes a reader distrust the whole set.
-
-**Their suggestion, which is the efficient one:** whoever gets a working publish first should
-publish their own file at the same `url` and say so, rather than five sectors independently
-re-testing whether the cap has lifted.
-
-**Sector C's is the one that matters**: their artifact currently shows a withdrawn finding as live.
-That is the failure direction that costs someone — a developer could pick up a High that its author
-has already retracted.
-
-All three are handling it correctly: noted prominently in their logs, retrying after 05:00, and each
-said they will state explicitly if the retry fails rather than let a link look current.
-
-**Nothing is lost** — the local report sources under `reports/` are correct and current. This is a
-publishing-quota problem, not a data problem.
-
-**Nothing needed from you unless you want a different route.** The options if the cap persists past
-their boxes closing: leave the artifacts stale with the local files as the record, or have one
-session publish a consolidated report once quota returns. I have not chosen — it depends whether
-anyone reads the artifacts before you do.
-
 ### 14 · Most of tonight's rules have never been watched fail
 
 Sector E gave `scripts/verify_report.py` a negative control — reconstructed the bug that had
@@ -1819,83 +1409,6 @@ measurement rather than by reading the ticket.
 Three of those change what the fix is rather than confirming the ticket, which is the more valuable
 half: ALK-2807 (two kinds, not one), ALK-2843 (the ticket's wording points at the wrong fix), and
 ALK-3534's caveat, which stops a reviewer killing the finding on a case it never claimed.
-
-### 16 · Untracked shared files cannot be audited after the fact
-
-Sector E's observation, from tonight's helper-edit disclosure, and it is a property of the repo
-rather than of anyone's diligence:
-
-`snip/lib.mjs` is tracked, so `git diff --stat` settled the question in one command — 238
-insertions, 0 deletions, nothing existing could behave differently. **`snip/api.mjs` is untracked,
-so the same question has no answer.** The best available evidence is my own inspection of a file I
-edited, which is exactly the evidence nobody should have to accept.
-
-The rest of `snip/` is in the same state, as are `PITFALLS.md`, `HANDOFF.md`,
-`DECISIONS-PENDING.md` and `CHANGES-APPLIED.md`.
-
-**This is the same fix as the item-16 provenance problem, for a different reason**: committing makes
-the shared surface auditable, both for "what changed" and "when". It would not recover today's
-history either way.
-
-**The stronger argument for the announce rule, also theirs:** they were unaffected because zero of
-their 554 snippets import the shared helpers — but they wrote their own fragments on day one for
-unrelated reasons. *"I was isolated by luck, not by design."* A session that had sensibly used the
-shared helpers would now hold measurements straddling an unannounced change, **with the mtime as the
-only signal, and only if they thought to look.**
-
-### 17 · Everything you need to publish these yourself, in one action each
-
-The local report sources are all current. Three of five have their artifact URL recorded, so
-updating them in place is one `Artifact` call each with `url` set:
-
-    reports/aloqa-chat-qa-2026-08-26-C-2.html        25   .../artifact/881e4cdc-5484-4cc9-b172-273dbf0e6392
-    reports/aloqa-org-qa-2026-08-26-D-2.html         18   .../artifact/064c01ce-baeb-4af1-b456-a0c8c71efa7f
-    reports/aloqa-calls-inside-qa-2026-08-26-A.html   9   .../artifact/7b7b4e84-6001-403f-a293-62c7799aa46a
-    reports/aloqa-calls-around-qa-2026-08-26-B.html  12   no URL row yet — publishes as new
-    reports/aloqa-workspace-qa-2026-08-26-E-2.html   15   no URL row yet — publishes as new
-
-**The chat one is the one to do first if you do only one.** Its published artifact currently shows a
-**withdrawn High** as live — a backend finding that does not reproduce, with nothing on the page
-saying so. Sector C's framing, which is the right tiebreak: *the other sectors' artifacts are
-behind; mine is wrong.*
-
-They have mitigated it everywhere a reader might land — the `reports/README.md` row now flags the
-withdrawal in its first sentence, before the historical text, and their log's `## Current state`
-block leads with it.
-
-**Why nobody is retrying.** Sector C's Artifact tool has escalated past a plain 429: after the
-fourth attempt it refused with an instruction to stop sending the same call and surface the failure
-rather than retry. That is the tool working correctly, and it means blind probing is off the table
-for at least that sector. Their plan is the disciplined one — if another sector reports a *success*,
-that is new information rather than a blind retry, and they will make exactly one attempt on the
-back of it.
-
-I have not attempted a publish on anyone's behalf. The tool has signalled to stop and surface, and
-these are their artifacts.
-
-### 17 · RESOLVED — the cap was a daily quota and has reset
-
-Sector B retried at **06:43**, after three consecutive `429 frame_daily_push_cap_reached` between
-00:26 and 01:47, and it went through on the first attempt. Their report is now complete at the
-published URL: 12 findings, 2 High / 7 Medium / 3 Low, seat leak included, no local-only delta.
-
-**So it was a rolling daily quota, not a failure.** All four remaining sectors told immediately,
-each with their own current gap:
-
-    sector C   26 published / 30 local   — and the published one still shows a WITHDRAWN High
-    sector D   17 published / 19 local   — hard deadline 09:00
-    sector E   13 published / 21 local   — the largest gap
-    sector A   9 local, publish state unknown — never reported a gap
-
-**Nothing needed from you on this** unless a sector's box closes before it publishes; the local
-sources under `reports/` are correct either way and item 17 above still lists the URLs for
-one-call publishing.
-
-**The infrastructure note worth keeping**, in sector B's framing: five sectors hit the same cap
-within hours of each other on a day when everyone published repeatedly, and it cleared on its own.
-It is a daily quota and the mitigation is to retry later — **the tool's error text does not say
-so**, which is why three sectors treated it as terminal and one escalated to a hard refusal. That
-is the only actionable part: the error is accurate but not informative.
 
 ## 19 · ALK-3538 is in doubt, and the same symptom has been closed three times before
 
@@ -2370,39 +1883,6 @@ someone goes off to amend a project rule that would achieve nothing.
 
 **So: this needs you. It is not blocked on anyone's diligence.**
 
-## 25 · Two housekeeping items in `reports/README.md`, safe to fix once the boxes close
-
-**Line 19 is a stray blank line inside the reports table**, splitting it in two — verified. Rows
-20–23, which are today's second-pass reports, therefore do not render as a table. A one-line
-deletion fixes it.
-
-**Nobody has fixed it mid-run and that is correct**: sessions are still appending rows, and a
-concurrent write to a shared file is worse than a cosmetic defect. Sector E flagged it rather than
-reformatting under other sessions' feet, and added their row to the second block for consistency.
-Safe to fix after 09:00.
-
-**Line 15 has a live instance of the same trap** — verified, and it is the only other row in the
-table with a wrong pipe count:
-
-    line 15   5 pipes, should be 4
-              `aloqa-incall-qa-2026-08-26-A.html`  (sector A, an earlier hourly session)
-              stray pipe inside:  `role=status|alert`
-
-That row renders with a phantom column from `alert` onward. **A raw `|` splits a Markdown cell even
-inside backticks.** Count pipes before appending — four for a three-column row. Any row quoting a
-regex or an alternation is exposed; a sector caught `department|position` in their own draft the
-same way.
-
-**Nobody fixed line 15 either, and the sector who found it said why explicitly:**
-
-> It's someone else's row, sessions are still appending, and a concurrent write is a worse outcome
-> than a cosmetic rendering defect. That's the identical reasoning I gave for leaving the line-19
-> blank alone. **Making an exception for the defect I happened to find myself would have been the
-> same decision reached two different ways — and that's the kind of inconsistency that's invisible
-> from inside.**
-
-Both are one-line fixes, both safe after 09:00.
-
 ### 21 (sixth) · An audit tool that parses the artifact manufactures the error class it hunts
 
 Sector D's citation audit came back clean — 13 of 13 frontend paths resolve at the deployed sha, all
@@ -2516,7 +1996,7 @@ than written, with the `setOffline` diff and the per-CDP-session note.
 
 ## 2026-08-27 — from the verification tooling
 
-### 23 · Twelve findings are right about a real bug and wrong in a detail
+### 26 · Twelve findings are right about a real bug and wrong in a detail
 
 The reverify pass flagged twelve where the defect holds but something beside it does not: a count, a
 quoted string, a title claiming more than the measurement shows. They are listed in the lane logs. None
@@ -2526,7 +2006,7 @@ wrong count beside a real finding is how the finding stops being believed.
 **Decision:** correct them in place before any of the twelve is filed, or leave them and correct at
 filing time. Correcting in place means re-publishing five reports.
 
-### 24 · Lane D's report disagrees with itself in one row
+### 27 · Lane D's report disagrees with itself in one row
 
 `scripts/verify_report.py` reports a TITLE/ROW MISMATCH on `aloqa-org-qa-2026-08-26-D-2.html`, and lane
 D separately flagged one of its own counts as wrong (says 0 interactive elements where 2 were
@@ -2534,7 +2014,7 @@ measured). Pre-existing, not a substitution — but both are in a published repo
 
 **Decision:** fix and republish D, or carry the mismatch.
 
-### 25 · What happens to a priority you change in Review
+### 28 · What happens to a priority you change in Review
 
 Re-rating a finding writes to `~/.cache/aloqa-qa/reproducer-state.json` and shows up in
 `verifications/verification-<date>.md`. It does **not** touch the report HTML, so a report published
@@ -2544,7 +2024,7 @@ today keeps the old severity for anyone reading it.
 back into the reports afterwards. It is a mechanical edit and I can do it, but it rewrites published
 documents, so it is yours to say.
 
-### 26 · Real 80% zoom in the rig browsers
+### 29 · Real 80% zoom in the rig browsers
 
 The rig page at 100% in a 1440px window shows less than it could. CSS zoom cannot do it — viewport
 units do not rescale, so the app paints at 80% inside a full-size window and leaves a band. Real browser
@@ -2553,3 +2033,232 @@ overrides are dropped when the session detaches.
 
 **Decision:** whether to take it. It changes the device scale factor for **every** rig browser, and all
 88 snippets were verified at the default, so it wants a re-verification pass behind it.
+
+---
+
+# Resolved while you were away — review, then delete
+
+Queued items that were overtaken by events after being raised. Bodies are verbatim; the answer
+sits in the groom note at each head. Per this file's contract these leave the file only once
+**you** have seen them — deleting this section after the walkthrough is the intended end state.
+
+> _Groom note (2026-08-29): **resolved by events.** CLAUDE.md, PITFALLS.md, HANDOFF.md, this file,
+> CHANGES-APPLIED.md and the `snip/` helpers are all tracked and committed now (first landed in
+> `3a1412e` «Add the session knowledge base and rewrite CLAUDE.md around it», 2026-08-27; stray
+> session snippets followed on 2026-08-29). Provenance is datable from here forward, which is what
+> the item asked for. Bodies below kept verbatim._
+
+## 16 · Nobody can cite CLAUDE.md's provenance, because it is uncommitted
+
+This came out of the argument above and is worth more than the argument was. It is about the repo's
+state, not about anyone's reasoning.
+
+    git diff --stat CLAUDE.md    +197 / −28, uncommitted
+    several sessions editing it live, all evening
+
+**So "it says X" is checkable and "it said X when you started" is not — for anyone here.** Lines a
+session is certain it read at 14:40 are absent from HEAD, and lines added at 22:00 are equally
+absent. HEAD cannot distinguish them, and neither can any session.
+
+Consequences beyond tonight's disagreement:
+
+- A session cannot tell whether a rule it is following was in its own briefing or was added by a
+  peer mid-run — which matters, because a rule added mid-run may contradict work already done under
+  the old wording.
+- No finding, ticket or report can honestly cite when a convention took effect.
+- The **announce-before-it-lands** convention for shared helpers has no equivalent for CLAUDE.md,
+  and CLAUDE.md changed far more today than any helper did.
+
+**The fix is to commit it**, which is yours — this repo's convention is that I commit only when
+asked, and I have not. A commit now would date everything from here forward, which is most of the
+value; it would not recover today's provenance.
+
+Until then the honest rule is: **cite CLAUDE.md's contents, never its history.**
+
+Worth noting `PITFALLS.md` (958 lines), `HANDOFF.md`, `DECISIONS-PENDING.md` and
+`CHANGES-APPLIED.md` are in the same state.
+
+**Precision, at that sector's insistence:** they did not establish that I was wrong, only that git
+cannot settle it — a weaker result. Absence from HEAD proves nothing about the working copy, since
+lines they are certain they read at 14:40 are also absent from HEAD. The claim is **unverifiable**,
+not refuted. If those lines are ever dated, it may be recoverable.
+
+### 16 · A worked example — a session tested the wrong screen because the doc changed under it
+
+Sector E reported that `/settings/profile` and `/settings/calls` are missing from CLAUDE.md's route
+list. I grepped the current file, found both present, and nearly told them they were wrong.
+
+    HEAD:     settings/{account|privacy|sessions|appearance|notifications|about}
+    current:  settings/{…|profile|calls|security|company|workspace|roles}
+
+**The list was extended today.** The copy that sector started with almost certainly lacked both, so
+their first attempt tested `/settings/account` and would have answered ALK-3522 wrongly. Neither of
+us can date the change.
+
+That is item 16 in concrete form: it has now cost a wrong route, a wrong test, and very nearly a
+wrong correction from me on top. Committing the file would not recover today's history but would
+stop this from here.
+
+### 16 · Untracked shared files cannot be audited after the fact
+
+Sector E's observation, from tonight's helper-edit disclosure, and it is a property of the repo
+rather than of anyone's diligence:
+
+`snip/lib.mjs` is tracked, so `git diff --stat` settled the question in one command — 238
+insertions, 0 deletions, nothing existing could behave differently. **`snip/api.mjs` is untracked,
+so the same question has no answer.** The best available evidence is my own inspection of a file I
+edited, which is exactly the evidence nobody should have to accept.
+
+The rest of `snip/` is in the same state, as are `PITFALLS.md`, `HANDOFF.md`,
+`DECISIONS-PENDING.md` and `CHANGES-APPLIED.md`.
+
+**This is the same fix as the item-16 provenance problem, for a different reason**: committing makes
+the shared surface auditable, both for "what changed" and "when". It would not recover today's
+history either way.
+
+**The stronger argument for the announce rule, also theirs:** they were unaffected because zero of
+their 554 snippets import the shared helpers — but they wrote their own fragments on day one for
+unrelated reasons. *"I was isolated by luck, not by design."* A session that had sensibly used the
+shared helpers would now hold measurements straddling an unannounced change, **with the mtime as the
+only signal, and only if they thought to look.**
+
+> _Groom note (2026-08-29): **resolved on 2026-08-27** — the cap was a daily quota and reset
+> (sector B's publish went through at 06:43; the item's final block below records it). Current
+> artifact state per report is whatever `reports/README.md` records; the per-report URL list below
+> is still the way to update one in place._
+
+## 17 · The Artifact publish cap is holding back three sectors' reports
+
+`Artifact` is returning `429 frame_daily_push_cap_reached`. Confirmed across three sectors, each of
+whose **published artifact now lags their local report**:
+
+    sector B   published 11   local 12   the seat leak is the unpublished one
+    sector C   published 26   local 25   includes a finding they WITHDREW
+    sector D   published 17   local 18   plus four local-only additions
+    sector E   published 13   local 15
+
+**Four sectors, not three** — I told sector D theirs was the only current artifact and was wrong;
+they hit the same cap after three attempts and the tool told them to stop.
+
+Sector D's gap in detail, since theirs is the largest: finding #18 (unsaved changes in settings
+forms discarded on navigation *and* reload, no warning, while the product itself shows "1 unsaved
+change" and no `beforeunload` handler is registered) exists only on disk. Four smaller additions are
+also local-only — a triage note on #2 pre-empting "the company audit page isn't built yet, that's
+ALK-3307", cross-references to another sector on #6 and #8, a note on #14 that the misleading string
+is identical in all four dictionaries so the fix is eight strings rather than one, and a footer
+correction understating 2FA coverage.
+
+**None of it changes a measurement, a cause or a repro path** — the published subsets are complete
+and correct as published. It is the headline counts that differ, which is the kind of mismatch that
+makes a reader distrust the whole set.
+
+**Their suggestion, which is the efficient one:** whoever gets a working publish first should
+publish their own file at the same `url` and say so, rather than five sectors independently
+re-testing whether the cap has lifted.
+
+**Sector C's is the one that matters**: their artifact currently shows a withdrawn finding as live.
+That is the failure direction that costs someone — a developer could pick up a High that its author
+has already retracted.
+
+All three are handling it correctly: noted prominently in their logs, retrying after 05:00, and each
+said they will state explicitly if the retry fails rather than let a link look current.
+
+**Nothing is lost** — the local report sources under `reports/` are correct and current. This is a
+publishing-quota problem, not a data problem.
+
+**Nothing needed from you unless you want a different route.** The options if the cap persists past
+their boxes closing: leave the artifacts stale with the local files as the record, or have one
+session publish a consolidated report once quota returns. I have not chosen — it depends whether
+anyone reads the artifacts before you do.
+
+### 17 · Everything you need to publish these yourself, in one action each
+
+The local report sources are all current. Three of five have their artifact URL recorded, so
+updating them in place is one `Artifact` call each with `url` set:
+
+    reports/aloqa-chat-qa-2026-08-26-C-2.html        25   .../artifact/881e4cdc-5484-4cc9-b172-273dbf0e6392
+    reports/aloqa-org-qa-2026-08-26-D-2.html         18   .../artifact/064c01ce-baeb-4af1-b456-a0c8c71efa7f
+    reports/aloqa-calls-inside-qa-2026-08-26-A.html   9   .../artifact/7b7b4e84-6001-403f-a293-62c7799aa46a
+    reports/aloqa-calls-around-qa-2026-08-26-B.html  12   no URL row yet — publishes as new
+    reports/aloqa-workspace-qa-2026-08-26-E-2.html   15   no URL row yet — publishes as new
+
+**The chat one is the one to do first if you do only one.** Its published artifact currently shows a
+**withdrawn High** as live — a backend finding that does not reproduce, with nothing on the page
+saying so. Sector C's framing, which is the right tiebreak: *the other sectors' artifacts are
+behind; mine is wrong.*
+
+They have mitigated it everywhere a reader might land — the `reports/README.md` row now flags the
+withdrawal in its first sentence, before the historical text, and their log's `## Current state`
+block leads with it.
+
+**Why nobody is retrying.** Sector C's Artifact tool has escalated past a plain 429: after the
+fourth attempt it refused with an instruction to stop sending the same call and surface the failure
+rather than retry. That is the tool working correctly, and it means blind probing is off the table
+for at least that sector. Their plan is the disciplined one — if another sector reports a *success*,
+that is new information rather than a blind retry, and they will make exactly one attempt on the
+back of it.
+
+I have not attempted a publish on anyone's behalf. The tool has signalled to stop and surface, and
+these are their artifacts.
+
+### 17 · RESOLVED — the cap was a daily quota and has reset
+
+Sector B retried at **06:43**, after three consecutive `429 frame_daily_push_cap_reached` between
+00:26 and 01:47, and it went through on the first attempt. Their report is now complete at the
+published URL: 12 findings, 2 High / 7 Medium / 3 Low, seat leak included, no local-only delta.
+
+**So it was a rolling daily quota, not a failure.** All four remaining sectors told immediately,
+each with their own current gap:
+
+    sector C   26 published / 30 local   — and the published one still shows a WITHDRAWN High
+    sector D   17 published / 19 local   — hard deadline 09:00
+    sector E   13 published / 21 local   — the largest gap
+    sector A   9 local, publish state unknown — never reported a gap
+
+**Nothing needed from you on this** unless a sector's box closes before it publishes; the local
+sources under `reports/` are correct either way and item 17 above still lists the URLs for
+one-call publishing.
+
+**The infrastructure note worth keeping**, in sector B's framing: five sectors hit the same cap
+within hours of each other on a day when everyone published repeatedly, and it cleared on its own.
+It is a daily quota and the mitigation is to retry later — **the tool's error text does not say
+so**, which is why three sectors treated it as terminal and one escalated to a hard refusal. That
+is the only actionable part: the error is accurate but not informative.
+
+> _Groom note (2026-08-29): **both fixes applied during grooming** — the blank line splitting the
+> table is gone and line 15's stray `|` (in `role=status\|alert`) is escaped; the table renders as
+> one again. The item's own text said «safe to fix once the boxes close», which they long since
+> have. Kept for the pipe-counting lesson._
+
+## 25 · Two housekeeping items in `reports/README.md`, safe to fix once the boxes close
+
+**Line 19 is a stray blank line inside the reports table**, splitting it in two — verified. Rows
+20–23, which are today's second-pass reports, therefore do not render as a table. A one-line
+deletion fixes it.
+
+**Nobody has fixed it mid-run and that is correct**: sessions are still appending rows, and a
+concurrent write to a shared file is worse than a cosmetic defect. Sector E flagged it rather than
+reformatting under other sessions' feet, and added their row to the second block for consistency.
+Safe to fix after 09:00.
+
+**Line 15 has a live instance of the same trap** — verified, and it is the only other row in the
+table with a wrong pipe count:
+
+    line 15   5 pipes, should be 4
+              `aloqa-incall-qa-2026-08-26-A.html`  (sector A, an earlier hourly session)
+              stray pipe inside:  `role=status|alert`
+
+That row renders with a phantom column from `alert` onward. **A raw `|` splits a Markdown cell even
+inside backticks.** Count pipes before appending — four for a three-column row. Any row quoting a
+regex or an alternation is exposed; a sector caught `department|position` in their own draft the
+same way.
+
+**Nobody fixed line 15 either, and the sector who found it said why explicitly:**
+
+> It's someone else's row, sessions are still appending, and a concurrent write is a worse outcome
+> than a cosmetic rendering defect. That's the identical reasoning I gave for leaving the line-19
+> blank alone. **Making an exception for the defect I happened to find myself would have been the
+> same decision reached two different ways — and that's the kind of inconsistency that's invisible
+> from inside.**
+
+Both are one-line fixes, both safe after 09:00.
