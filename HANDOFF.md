@@ -1,12 +1,23 @@
 # Handoff
 
-Things one session found that belong to someone else, and fixture state a later session
-needs to know before it starts. Append, never rewrite. Read at session start — this is
-what stops a finding dying in the log of the sector that could not act on it.
+What one session leaves for another. Three parts:
 
-One line per item: date · from · to · what · where the measurement lives.
+- **Part 1 · Fixture state** — lane state a later session inherits. Read before testing on
+  those lanes.
+- **Part 2 · Standing guidance and verified baselines** — still-true knowledge: what is already
+  published (do not re-file), what is checked and clean (do not go looking), how to handle the
+  fixtures, and the baselines that make a null result mean something. Read at session start, and
+  grep it again before writing up anything that smells familiar.
+- **Part 3 · Archive** — settled investigations and dated ticket-state snapshots, kept verbatim
+  for their measurements. Nothing there needs action.
 
-## Fixture state — read before testing on these lanes
+Append into the matching part; never rewrite what is there. Start an entry with
+`date · from-sector · to-sector` where a handoff has a specific owner; an entry is as long as its
+content needs. (The original "one line per item" contract did not survive contact with real
+handoffs and was retired when the file was restructured on 2026-08-29, with Mahmud's approval;
+the pre-restructure state is the parent of the commit that landed this.)
+
+# Part 1 · Fixture state — read before testing on these lanes
 
 **All lanes · 2026-08-27 · state the reverification pass left behind.** The rc-6 pass ran
 88 repro snippets across every lane, and handover snippets deliberately leave the app in the
@@ -54,6 +65,8 @@ reproducible, since it now has same-second groups of 19-25 rows.
 (`C4OWMLIQOY3NDZ2`), created 2026-08-26 by the lane C guest account during a
 guest-permission probe. Disposable, safe to delete.
 
+# Part 2 · Standing guidance and verified baselines
+
 ## Surfaces that changed state
 
 **Channel notifications became testable on 2026-08-26.** They never worked on fixtures:
@@ -97,15 +110,6 @@ channel now creates a `mention` notification for a channel member (lane D, rc.5,
 by sector D against the exact case that had produced their false finding). **Still
 unestablished:** plain non-mention channel messages, `@all`/`@here`, the ALK-2559 mute
 override, and the realtime toast in a live tab. Details in `CHANGES-APPLIED.md`.
-
-**Also re-verified on rc.5 by sector B, all still reproducing:** ALK-3529 (guest
-waiting-for-approval screen, `interactiveCount: 0` across the whole document — independently
-confirmed by sector A in the same session, two sectors, two runs), ALK-3530
-(see `DECISIONS-PENDING.md` — its framing is misleading), ALK-3531 (raw
-`GET /meeting/<id>/events` carries no knock, deny or admit event types at all, confirming
-the corrected "absent, not anonymised" framing).
-
-## Cross-sector findings
 
 ### `/join/<invalid token>` offers no route out — ALREADY PUBLISHED by sector B
 
@@ -168,6 +172,262 @@ house style.
 **To re-measure, use a fresh context with no session** — the sibling comparisons above were taken that way, and a signed-in context changes `/invite?token=<bad>` materially. Snippet `scripts/callrig/snip/d2-joindead.mjs` (needs no rig — three page loads). Write-up in
 `logs/AIRION-QA-2026-08-26-D-org-2.md` under "Для сектора B: /join/<токен>".
 
+## For whoever consolidates the reports
+
+**Call rating — an extension to the published lane-A finding, deliberately not duplicated.**
+That finding says the rating is sent on the first click and cannot afterwards be seen or
+changed. Sector B measured a piece it does not have: **the server computes an aggregate and
+hands it to the owner**, and nothing renders it.
+
+    API to the host (owner):  "rating":{"average":3,"count":2,"my_rating":4,"owner_only":false}
+    API to the participant:   "rating":{"my_rating":2,"owner_only":true}
+
+    ended-call detail page, whole document searched:
+      rating-related testids: []
+      /rat(e|ing)/ matches:   ["QA rating flow"]   <- the call's own name, nothing else
+
+So it is not "you cannot see your own rating afterwards" — **nobody can see the result at
+all, including the one person the backend deliberately exposes it to.** Users are asked to
+rate every call and the output has no destination.
+
+Sector B kept this out of their own report on purpose, to avoid the merge friction that the
+duplicated unread-counter finding caused between C and E. **Decision needed at
+consolidation:** fold the aggregate detail into the lane-A finding, or file fresh. Dedup
+already done — no ALK ticket covers it; not in ALK-3405…3413 from that run, and the only
+rating hits among open bugs are ALK-3051 (different) and ALK-2051 (rating not being *sent*,
+closed).
+
+## Fixture handling every session needs
+
+### Restoring an account's language: match the language *names*, not the string "English"
+
+The language control's own label is the **current language written in the current
+language** — `English` in English, `Русский` in Russian, `Oʻzbekcha` in Uzbek — and the
+menu options are localised too (`Английский`, `Inglizcha`). So a restore step that clicks
+the control matching text `English` works from English and silently does nothing from any
+other locale. It fails without an error, and the account stays in the wrong language for
+whoever tests it next.
+
+Cost sector D two failed restores before they noticed.
+
+Match the button whose text is **any of the four language names in any of the four
+languages**, then assert `document.documentElement.lang` afterwards rather than trusting
+the click. Setting the language is one of the few state changes here that outlives the
+session and hits the next one, so it is worth the assert.
+
+
+**Reading a notification destroys it — "mark as read" is a DELETE, not an UPDATE.**
+`notification_repository/mark_as_read.go` is `DELETE FROM notifications … RETURNING id`
+plus a delete of the matching `notification_deliveries`, in one transaction, with the intent
+stated above it: *«MarkAsRead удаляет прочитанные уведомления безвозвратно (историю не
+храним…)»*. Measured from outside first:
+
+    POST /notifications/read {"notification_ids":[id]} -> 200 {"marked_count":1}
+    GET  /notifications?limit=50 -> row gone, total drops, still gone after a full reload
+    "Mark all as read" -> {"marked_count":15}, panel: "All caught up | No notifications yet."
+    six query variants (read=true, status=read, filter=all, include_read=true,
+      unread_only=false, bare) all return 0
+
+**So: clicking a notification, or clicking "Mark all as read", destroys it permanently. You
+cannot restore notification state by re-reading — an experiment that needs a notification
+must produce a fresh one.** One session lost 15 it was using as fixtures to a single
+"Mark all as read".
+
+Deliberate, documented at the handler, and **not reported**. The drafted counter-example —
+the same mention produces a Mentions row that survives being read (`All (1) Unread (0)`,
+persists across reload) while the notification vanishes, so the read-but-retained pattern
+exists one screen away — is a design observation, not a defect.
+
+**By-product, API shape only:** the `read` field can never be true. `list_by_user.go` filters
+`read = false` only when `UnreadOnly` is set (verified), and the count is
+`COUNT(*), COUNT(*) FILTER (WHERE read = false)` — so schema, filter and counter all describe
+a state the delete makes unreachable, and `total` always equals `unread_count`. Out of scope
+to report; it will confuse the next person reading that response.
+
+## Baselines worth having
+
+**The browser console is clean during calls.** A `console` + `pageerror` listener on a
+participant's window across 60 seconds of a live three-person call recorded **zero errors and
+zero warnings**. So console noise during a call is a deviation from the normal state, not
+background — worth knowing before anyone treats it as ambient.
+
+**ALK-3119 context** (history tab filters only cover loaded pages): the empty-state copy
+admits it out loud. An account with five group calls and no 1-to-1s sees, on the 1-to-1 tab,
+`"No 1-to-1 calls in loaded history."` The behaviour is deliberate enough to have its own
+string — but "loaded history" means nothing to a user, and the ticket asks for auto-loading
+rather than a caveat.
+
+## Withdrawn after measurement — the reasoning, so nobody re-derives it
+
+**The company audit-log cursor is lossy, and it is out of scope.** Verified: `next_before`
+equals the last row's `created_at` at second precision, page 2 starts strictly before it,
+`overlapIds: 0`, and walking to exhaustion reaches 78/152 at `limit=5`, 128/152 at
+`limit=25`, 152/152 at `limit=100`. Real, measured, reproducible on lane D.
+
+**But no screen calls it.** Across six admin routes the only audit call any screen issues is
+to the *workspace* endpoint, whose client synthesises an overlapping cursor — sending
+`before` one second **above** the last row received — and deduplicates by id. That path is
+safe by construction at any limit. Per `CLAUDE.md`, an endpoint no screen reaches is the
+developers' job, so the finding was withdrawn rather than filed.
+
+**Keep it for ALK-3535.** That ticket's subject is precisely that company-scope events never
+reach the screen. A fix pointing the page at the company endpoint inherits its lossy cursor
+and makes this user-reachable on day one — so this is a ready-made regression case, and lane
+D still has the same-second groups (19-25 rows) needed to reproduce it.
+
+## Resolved: `workspace.delete` is not a UI oversight
+
+The permission matrix flagged `workspace.delete` as declared in the backend catalogue but
+never offered in the Create-role UI, and left open whether that was a missing checkbox.
+**It is not.** `POST …/roles` carrying it returns
+`400 ORG_PERMISSION_UNKNOWN_RESOURCE` — *«неизвестное действие для слоя»*. The layer does
+not accept the action at all, so the absent checkbox is correct and nobody should go looking
+for it. This also supports the separately-reported workspace-ownership dead end: there is no
+grantable permission behind the missing delete.
+
+## Checked and clean — do not go looking here
+
+### Saved Messages has no Unsave — distinct from ALK-3507, which is about Unpin
+
+Removing an item from Saved Messages has no control anywhere — not on the row, not under More
+actions. The only route is **Delete**, whose confirmation reads *"Delete permanently? This will
+permanently delete this message. It cannot be recovered."*
+
+**Distinct from ALK-3507**, which covers **Unpin** in the same space — that one exists and works end
+to end. Two similar-sounding actions on one surface, one present and one absent, and only the
+measurement separates them. Do not dedup one against the other on the title.
+
+
+### Reconnection triggers a refetch on chat and nowhere else — Calendar AND Files
+
+Two clean reproductions each, same shape:
+
+    Calendar   meeting created during the outage   33/34 chips before, during and after reconnect
+    Files      file shared during the outage       7/8 items before, during and after reconnect
+               (Shared with me tab, [data-testid="virtuoso-item-list"] > *)
+
+    control, connected    the same item reaches the open view in ~5 s (calendar) / ~20 s (files)
+    control, chat         a message sent during the same outage arrives on reconnect
+
+**Every component works** — events publish, the screens render them live, an on-demand refetch is
+instant, and the same page asks the server successfully at the same moment. **The single missing
+link is that reconnection is wired to a refetch on chat and nowhere else.** Medium: any navigation
+heals it.
+
+Probe notes for anyone re-measuring: the file list is **virtualised** (`virtuoso`), so row selectors
+over `tbody tr` never match; and the observing account's default tab is `My files`, where a file
+shared into a channel correctly never appears — use `Shared with me`.
+
+### A seven-hour session is stable — with the control that makes the null result mean something
+
+One tab, **416 minutes**, no reload or navigation at any point:
+
+    five readings   heap flat at 71–72 MB
+                    DOM node count byte-identical every time
+
+    then, from the other account:
+                    message rendered on the parked page 4 s later
+                    35 → 36 messages, +43 nodes, +4 MB
+
+**Realtime, auth and render all survive a seven-hour session.** The movement on the last reading is
+what makes the four flat ones worth anything — they are flat because nothing accumulated, not
+because the probe had stopped measuring.
+
+### Realtime reconnection works — verified, and `setOffline` cannot test it
+
+    socket closed from inside the page   "Reconnecting…" within 1 s, replacement socket,
+                                         banner cleared by 2 s
+
+The app's behaviour is correct. Note the instrument: `page.context().setOffline(true)` flips
+`navigator.onLine` but leaves an already-open WebSocket open — measured over 20 s with the
+constructor instrumented, `open 1, closed 0`, and no banner, correctly, because nothing had
+disconnected.
+
+Also: `page.routeWebSocket` did not fire alongside an `addInitScript` constructor wrapper — the two
+appear mutually exclusive, so pick one per run.
+
+### No memory leak in a running call — and the observer was the cause
+
+A heap that appeared to be growing through a long call was tracking the polling session's own
+`getStats()` calls. The control is the swap, not the idle reading:
+
+    alice, untouched              240 -> 242 MB   across 4 h 19 m
+    dave, 3-minute polling        110 -> 152 MB   same window
+
+**Swapping which tab was polled swapped which heap grew.** There is no leak in a running call — the
+measurement was generating the signal it measured.
+
+Worth keeping as an instrument lesson as much as a result — the measurement was generating the
+thing it measured.
+
+### Live removal (kick) is handled cleanly — verified on the deployed build
+
+    workspace kick   auth/me stays 200 (still in the company); the open tab redirects to the
+                     user's personal workspace, not a broken screen and not the login form
+    company kick     users/me/companies -> {"companies":[]}; the user lands in a personal
+                     workspace that is created on demand
+
+Reversible for testing: `seed/seed.sh --lanes <letter>` restores both memberships (verified in
+`org_db`). Avatars are not — `avatar_url` on companies and workspaces is absent from the seeder's
+upserts.
+
+
+**Keyboard reachability on org and settings screens (2026-08-26, rc.5).** ALK-3369 shows
+keyboard-unreachable controls are a filed class in this project, so five screens were tabbed
+through and compared against a full enumeration of visible controls:
+
+    settings/roles            not reached: "Workspace roles" (tablist), "Assign role" (disabled)
+    settings/admin/members    not reached: none
+    settings/admin/invites    not reached: "Create invite link", "Send direct invites" (both disabled)
+    settings/notifications    not reached: none
+    settings/privacy          not reached: "Block" (disabled), "Request export" (disabled)
+    controls focused without a visible focus ring, any page: none
+
+**Every miss is a control that is `disabled` at load** — the invite submits until a role and
+recipient are chosen, `Block` until a participant is picked, `Request export` because the
+feature is off — and disabled controls are correctly not focusable. The one non-disabled
+miss is the scope **tablist**, which is right: Tab enters it once, arrow keys move within.
+
+**Methodological caveat from the session that ran it, which must travel with the table:**
+the "reached" counts are deduplicated by label, so a page with six buttons all reading
+`Delete` contributes one. **Only the "not reached" column means anything** — do not quote
+this as "N of M controls are reachable", because that is not what it measures.
+
+### Three tickets deliberately not tested, and why — ALK-3426 / ALK-3117 / ALK-2784
+
+All three need a profile save, and **the server locks profile updates for a week** after one. Testing
+them on a fixture account would:
+
+- break the cross-lane display-name invariant for seven days, and
+- mutate the department/position state that a **published finding already depends on** — a later
+  verifier would see fixture drift and read it as a false positive.
+
+**Safe route for whoever picks them up:** one disposable account settles all three, because the 429
+path only appears on the *second* save. Do not use a `qa.*` fixture.
+
+This is a skip with a reason and a route, not an untested gap.
+
+**Settled sagas live in Part 3** — verdicts here, full measurements there, verbatim:
+
+- **Ghost guests** · a guest whose browser dies *while inside a Side Room* leaves a permanent
+  phantom participant row that consumes a seat for the life of the call; the breakout sweeper
+  runs and does its job — the meeting-level row is what never closes. CLOSED, ticket-ready,
+  awaiting report consolidation.
+- **Lingering 1:1 meetings** · a 1:1 can stay `active` for minutes after both parties leave
+  (worst case ~4 min, both `left_at` written late by a sweep; a plain tab close has its own
+  ~45 s signature), bouncing every navigation back to the call meanwhile. Intermittent; lane,
+  channel and entry path all excluded.
+- **Guest permissions** · `is_guest` is a disclosure flag, not an authorization input — by
+  design, verified in source. The three «guest can do X» observations are not defects; do not
+  file them without a product decision saying guests should be capped.
+
+# Part 3 · Archive — settled investigations and dated ticket-state snapshots
+
+Nothing here needs action. The investigations are settled and kept verbatim for their
+measurements; the ticket-state rows were true on the build they name and drift with every
+release — verify against the current build before relying on one.
+
+## Settled investigations
 
 ### PARTICIPANT LIMIT — measured by sector A, owned by sector B, one part unresolved
 
@@ -335,7 +595,6 @@ defect is the roster, not the call.
 
 **Superseded detail —** four rows, oldest `18:04:42`, counted at **06:52 — twelve hours and forty-eight minutes.** Final reading at 08:00, but the answer to permanence is settled barring a surprise: a seat lost this way is lost for the life of the call. **Four rows now — 18:04, 18:08, 19:17, 20:29.** The fourth arrived **unintentionally**, from the run that failed to find `Leave call` inside a room: ordinary testing activity created a ghost without anyone trying to. That is worth putting in the ticket — the trigger is not merely reachable, it was hit by accident by someone who knew about it. If they survive a full night the leak has no
 expiry and the seat is gone for the life of the call.
-
 
 **2026-08-26 · from C · to B · a 1:1 meeting stays active after everyone leaves, and
 blocks navigation while it does.** Measured: both participants left at 10:47:39.3Z and
@@ -507,30 +766,14 @@ the opposite direction: layers resolved independently, with no cross-layer notio
 "this person is limited". Measurements in `logs/AIRION-QA-2026-08-26-C-chat-2.md` (UI)
 and the sector D log (role chain).
 
-## For whoever consolidates the reports
+## Ticket-state snapshots — measured on v0.61.0-rc.5, 2026-08-26/27
 
-**Call rating — an extension to the published lane-A finding, deliberately not duplicated.**
-That finding says the rating is sent on the first click and cannot afterwards be seen or
-changed. Sector B measured a piece it does not have: **the server computes an aggregate and
-hands it to the owner**, and nothing renders it.
-
-    API to the host (owner):  "rating":{"average":3,"count":2,"my_rating":4,"owner_only":false}
-    API to the participant:   "rating":{"my_rating":2,"owner_only":true}
-
-    ended-call detail page, whole document searched:
-      rating-related testids: []
-      /rat(e|ing)/ matches:   ["QA rating flow"]   <- the call's own name, nothing else
-
-So it is not "you cannot see your own rating afterwards" — **nobody can see the result at
-all, including the one person the backend deliberately exposes it to.** Users are asked to
-rate every call and the output has no destination.
-
-Sector B kept this out of their own report on purpose, to avoid the merge friction that the
-duplicated unread-counter finding caused between C and E. **Decision needed at
-consolidation:** fold the aggregate detail into the lane-A finding, or file fresh. Dedup
-already done — no ALK ticket covers it; not in ALK-3405…3413 from that run, and the only
-rating hits among open bugs are ALK-3051 (different) and ALK-2051 (rating not being *sent*,
-closed).
+**Also re-verified on rc.5 by sector B, all still reproducing:** ALK-3529 (guest
+waiting-for-approval screen, `interactiveCount: 0` across the whole document — independently
+confirmed by sector A in the same session, two sectors, two runs), ALK-3530
+(see `DECISIONS-PENDING.md` — its framing is misleading), ALK-3531 (raw
+`GET /meeting/<id>/events` carries no knock, deny or admit event types at all, confirming
+the corrected "absent, not anonymised" framing).
 
 ## Filed tickets re-verified on v0.61.0-rc.5
 
@@ -559,66 +802,6 @@ checked against the deployed build until now:
     ALK-3536  raw key `audit.view` in the permission list    FIXED — see DECISIONS-PENDING
     ALK-3537  Workspace identity subtitle promises absent fields   reproduces
     (owner cannot leave the workspace — dead end)            reproduces
-
-## Fixture handling every session needs
-
-### Restoring an account's language: match the language *names*, not the string "English"
-
-The language control's own label is the **current language written in the current
-language** — `English` in English, `Русский` in Russian, `Oʻzbekcha` in Uzbek — and the
-menu options are localised too (`Английский`, `Inglizcha`). So a restore step that clicks
-the control matching text `English` works from English and silently does nothing from any
-other locale. It fails without an error, and the account stays in the wrong language for
-whoever tests it next.
-
-Cost sector D two failed restores before they noticed.
-
-Match the button whose text is **any of the four language names in any of the four
-languages**, then assert `document.documentElement.lang` afterwards rather than trusting
-the click. Setting the language is one of the few state changes here that outlives the
-session and hits the next one, so it is worth the assert.
-
-
-**Reading a notification destroys it — "mark as read" is a DELETE, not an UPDATE.**
-`notification_repository/mark_as_read.go` is `DELETE FROM notifications … RETURNING id`
-plus a delete of the matching `notification_deliveries`, in one transaction, with the intent
-stated above it: *«MarkAsRead удаляет прочитанные уведомления безвозвратно (историю не
-храним…)»*. Measured from outside first:
-
-    POST /notifications/read {"notification_ids":[id]} -> 200 {"marked_count":1}
-    GET  /notifications?limit=50 -> row gone, total drops, still gone after a full reload
-    "Mark all as read" -> {"marked_count":15}, panel: "All caught up | No notifications yet."
-    six query variants (read=true, status=read, filter=all, include_read=true,
-      unread_only=false, bare) all return 0
-
-**So: clicking a notification, or clicking "Mark all as read", destroys it permanently. You
-cannot restore notification state by re-reading — an experiment that needs a notification
-must produce a fresh one.** One session lost 15 it was using as fixtures to a single
-"Mark all as read".
-
-Deliberate, documented at the handler, and **not reported**. The drafted counter-example —
-the same mention produces a Mentions row that survives being read (`All (1) Unread (0)`,
-persists across reload) while the notification vanishes, so the read-but-retained pattern
-exists one screen away — is a design observation, not a defect.
-
-**By-product, API shape only:** the `read` field can never be true. `list_by_user.go` filters
-`read = false` only when `UnreadOnly` is set (verified), and the count is
-`COUNT(*), COUNT(*) FILTER (WHERE read = false)` — so schema, filter and counter all describe
-a state the delete makes unreachable, and `total` always equals `unread_count`. Out of scope
-to report; it will confuse the next person reading that response.
-
-## Baselines worth having
-
-**The browser console is clean during calls.** A `console` + `pageerror` listener on a
-participant's window across 60 seconds of a live three-person call recorded **zero errors and
-zero warnings**. So console noise during a call is a deviation from the normal state, not
-background — worth knowing before anyone treats it as ambient.
-
-**ALK-3119 context** (history tab filters only cover loaded pages): the empty-state copy
-admits it out loud. An account with five group calls and no 1-to-1s sees, on the 1-to-1 tab,
-`"No 1-to-1 calls in loaded history."` The behaviour is deliberate enough to have its own
-string — but "loaded history" means nothing to a user, and the ticket asks for auto-loading
-rather than a caveat.
 
 ## Positives that bound an open ticket
 
@@ -653,153 +836,3 @@ unavailable" in the same toolbar — chat keeps the button and explains itself i
 reactions remove the button entirely. Only mic does a third thing: stays, greys to
 `opacity:0.4`, `cursor:not-allowed`, keeps its normal tooltip, and says nothing. The fix
 does not need inventing.
-
-## Withdrawn after measurement — the reasoning, so nobody re-derives it
-
-**The company audit-log cursor is lossy, and it is out of scope.** Verified: `next_before`
-equals the last row's `created_at` at second precision, page 2 starts strictly before it,
-`overlapIds: 0`, and walking to exhaustion reaches 78/152 at `limit=5`, 128/152 at
-`limit=25`, 152/152 at `limit=100`. Real, measured, reproducible on lane D.
-
-**But no screen calls it.** Across six admin routes the only audit call any screen issues is
-to the *workspace* endpoint, whose client synthesises an overlapping cursor — sending
-`before` one second **above** the last row received — and deduplicates by id. That path is
-safe by construction at any limit. Per `CLAUDE.md`, an endpoint no screen reaches is the
-developers' job, so the finding was withdrawn rather than filed.
-
-**Keep it for ALK-3535.** That ticket's subject is precisely that company-scope events never
-reach the screen. A fix pointing the page at the company endpoint inherits its lossy cursor
-and makes this user-reachable on day one — so this is a ready-made regression case, and lane
-D still has the same-second groups (19-25 rows) needed to reproduce it.
-
-## Resolved: `workspace.delete` is not a UI oversight
-
-The permission matrix flagged `workspace.delete` as declared in the backend catalogue but
-never offered in the Create-role UI, and left open whether that was a missing checkbox.
-**It is not.** `POST …/roles` carrying it returns
-`400 ORG_PERMISSION_UNKNOWN_RESOURCE` — *«неизвестное действие для слоя»*. The layer does
-not accept the action at all, so the absent checkbox is correct and nobody should go looking
-for it. This also supports the separately-reported workspace-ownership dead end: there is no
-grantable permission behind the missing delete.
-
-## Checked and clean — do not go looking here
-
-### Saved Messages has no Unsave — distinct from ALK-3507, which is about Unpin
-
-Removing an item from Saved Messages has no control anywhere — not on the row, not under More
-actions. The only route is **Delete**, whose confirmation reads *"Delete permanently? This will
-permanently delete this message. It cannot be recovered."*
-
-**Distinct from ALK-3507**, which covers **Unpin** in the same space — that one exists and works end
-to end. Two similar-sounding actions on one surface, one present and one absent, and only the
-measurement separates them. Do not dedup one against the other on the title.
-
-
-### Reconnection triggers a refetch on chat and nowhere else — Calendar AND Files
-
-Two clean reproductions each, same shape:
-
-    Calendar   meeting created during the outage   33/34 chips before, during and after reconnect
-    Files      file shared during the outage       7/8 items before, during and after reconnect
-               (Shared with me tab, [data-testid="virtuoso-item-list"] > *)
-
-    control, connected    the same item reaches the open view in ~5 s (calendar) / ~20 s (files)
-    control, chat         a message sent during the same outage arrives on reconnect
-
-**Every component works** — events publish, the screens render them live, an on-demand refetch is
-instant, and the same page asks the server successfully at the same moment. **The single missing
-link is that reconnection is wired to a refetch on chat and nowhere else.** Medium: any navigation
-heals it.
-
-Probe notes for anyone re-measuring: the file list is **virtualised** (`virtuoso`), so row selectors
-over `tbody tr` never match; and the observing account's default tab is `My files`, where a file
-shared into a channel correctly never appears — use `Shared with me`.
-
-### A seven-hour session is stable — with the control that makes the null result mean something
-
-One tab, **416 minutes**, no reload or navigation at any point:
-
-    five readings   heap flat at 71–72 MB
-                    DOM node count byte-identical every time
-
-    then, from the other account:
-                    message rendered on the parked page 4 s later
-                    35 → 36 messages, +43 nodes, +4 MB
-
-**Realtime, auth and render all survive a seven-hour session.** The movement on the last reading is
-what makes the four flat ones worth anything — they are flat because nothing accumulated, not
-because the probe had stopped measuring.
-
-### Realtime reconnection works — verified, and `setOffline` cannot test it
-
-    socket closed from inside the page   "Reconnecting…" within 1 s, replacement socket,
-                                         banner cleared by 2 s
-
-The app's behaviour is correct. Note the instrument: `page.context().setOffline(true)` flips
-`navigator.onLine` but leaves an already-open WebSocket open — measured over 20 s with the
-constructor instrumented, `open 1, closed 0`, and no banner, correctly, because nothing had
-disconnected.
-
-Also: `page.routeWebSocket` did not fire alongside an `addInitScript` constructor wrapper — the two
-appear mutually exclusive, so pick one per run.
-
-### No memory leak in a running call — and the observer was the cause
-
-A heap that appeared to be growing through a long call was tracking the polling session's own
-`getStats()` calls. The control is the swap, not the idle reading:
-
-    alice, untouched              240 -> 242 MB   across 4 h 19 m
-    dave, 3-minute polling        110 -> 152 MB   same window
-
-**Swapping which tab was polled swapped which heap grew.** There is no leak in a running call — the
-measurement was generating the signal it measured.
-
-Worth keeping as an instrument lesson as much as a result — the measurement was generating the
-thing it measured.
-
-### Live removal (kick) is handled cleanly — verified on the deployed build
-
-    workspace kick   auth/me stays 200 (still in the company); the open tab redirects to the
-                     user's personal workspace, not a broken screen and not the login form
-    company kick     users/me/companies -> {"companies":[]}; the user lands in a personal
-                     workspace that is created on demand
-
-Reversible for testing: `seed/seed.sh --lanes <letter>` restores both memberships (verified in
-`org_db`). Avatars are not — `avatar_url` on companies and workspaces is absent from the seeder's
-upserts.
-
-
-**Keyboard reachability on org and settings screens (2026-08-26, rc.5).** ALK-3369 shows
-keyboard-unreachable controls are a filed class in this project, so five screens were tabbed
-through and compared against a full enumeration of visible controls:
-
-    settings/roles            not reached: "Workspace roles" (tablist), "Assign role" (disabled)
-    settings/admin/members    not reached: none
-    settings/admin/invites    not reached: "Create invite link", "Send direct invites" (both disabled)
-    settings/notifications    not reached: none
-    settings/privacy          not reached: "Block" (disabled), "Request export" (disabled)
-    controls focused without a visible focus ring, any page: none
-
-**Every miss is a control that is `disabled` at load** — the invite submits until a role and
-recipient are chosen, `Block` until a participant is picked, `Request export` because the
-feature is off — and disabled controls are correctly not focusable. The one non-disabled
-miss is the scope **tablist**, which is right: Tab enters it once, arrow keys move within.
-
-**Methodological caveat from the session that ran it, which must travel with the table:**
-the "reached" counts are deduplicated by label, so a page with six buttons all reading
-`Delete` contributes one. **Only the "not reached" column means anything** — do not quote
-this as "N of M controls are reachable", because that is not what it measures.
-
-### Three tickets deliberately not tested, and why — ALK-3426 / ALK-3117 / ALK-2784
-
-All three need a profile save, and **the server locks profile updates for a week** after one. Testing
-them on a fixture account would:
-
-- break the cross-lane display-name invariant for seven days, and
-- mutate the department/position state that a **published finding already depends on** — a later
-  verifier would see fixture drift and read it as a false positive.
-
-**Safe route for whoever picks them up:** one disposable account settles all three, because the 429
-path only appears on the *second* save. Do not use a `qa.*` fixture.
-
-This is a skip with a reason and a route, not an untested gap.
