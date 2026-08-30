@@ -29,57 +29,46 @@ if curl -s -m 1 "http://127.0.0.1:$PORT/json/version" >/dev/null 2>&1; then
 fi
 # ---- window caps -------------------------------------------------------------
 # A Chrome-for-Testing window costs ~470-590 MB resident (measured across live
-# five-session runs). Two caps: per-lane stops one session starving the others,
-# total keeps the machine off swap — and the total is the one that matters, since
-# 20 browsers put a 16 GB machine into 4.6 GB of swap, where macOS discards
-# background tabs and a discarded tab in a live call looks exactly like a
-# participant dropping. Sectors need different amounts (E rarely wants more than
-# 2, A's own scope line asks for 3-4), so the per-lane default is deliberately
-# below what the widest sector needs and the slack lives in the global pool.
-# Both are deliberate to exceed, never accidental:
-#   QA_MAX_PER_LANE=4 ./launch.sh A dave   # a genuine 4-participant call
-# Per-SECTOR caps, sized from each sector's own setup line in its map rather
-# than one number for everyone — a flat cap pinches the sectors that genuinely
-# need windows while leaving the single-browser sectors' slack unused.
+# five-session runs), and past 1 GB with the app fully loaded and painting video.
+# Two caps: per-lane stops one session starving the others, total keeps the machine
+# off swap -- and swap is not a comfort issue here, it is a correctness one. At 20
+# browsers a 16 GB machine sat in 4.6 GB of swap, where macOS discards background
+# tabs and a discarded tab in a live call is indistinguishable from a participant
+# dropping. Both caps are deliberate to exceed, never accidental:
+#   QA_MAX_PER_LANE=5 ./launch.sh A dave   # a genuine 5-participant call
 #
-# Two maps, and only one runs on a given day (both use lanes A-E):
-#   A-E  SECTORS.md        the whole product
-#   K-O  SECTORS-CALLS.md  Calls only, sector K on lane A .. O on lane E
+# One map now: SECTORS.md, nine sectors A-I on nine lanes A-I, sector letter =
+# lane letter. (The Calls-only map's K-O are retired to archive/.) Caps are sized
+# from each sector's own setup line in that map rather than one number for
+# everyone -- a flat cap pinches the sectors that genuinely need windows while
+# leaving the cheap sectors' slack unused.
 #
-# The two are budgeted differently, on purpose. A-E sum to 19 against a global
-# cap of 16: they over-subscribe, because only A and B want the call rig and the
-# five never reach their ceilings together — MAX_TOTAL is the backstop. K-O sum
-# to exactly 15, because there ALL FIVE want the rig, and an over-subscribed
-# Calls day would have the global cap refuse a browser mid-run in whichever
-# session happened to ask last. That is arbitrary from inside the session and
-# reads like a rig fault. So on the Calls map the per-sector budgets are the
-# real allocation: do not raise one without lowering another.
+# THREE sessions run at once, not nine. So these nine numbers are a per-sector
+# ceiling, not a budget that has to sum to anything: the three heaviest sectors
+# that can run together want 4+4+4 = 12 against MAX_TOTAL=20, and every other
+# combination is smaller. That is why raising one no longer requires lowering
+# another, which it did on the old Calls map where all five sectors wanted the rig.
 sector_cap() {
   case "$1" in
-    # Counted from the accounts each sector's repro blocks actually name. No one
-    # finding needs more than three, but browsers accumulate as you work through
-    # a lane, so the cap has to cover the distinct accounts it touches -- B, C
-    # and D each reach four, and the fourth launch was being refused mid-run.
-    A) echo 4 ;;   # calls, inside: alice, bob, carol
-    B) echo 4 ;;   # calls, around: alice, bob, carol, guest
-    C) echo 4 ;;   # chat: alice, bob, carol, dave
-    D) echo 4 ;;   # org/identity: alice, carol, owner, outsider
-    E) echo 3 ;;   # workspace: alice, bob, and a slot spare
-    # Calls-only map (SECTORS-CALLS.md). All five want the rig, so these are a
-    # budget rather than a ceiling: 3+4+4+2+2 = 15.
-    K) echo 3 ;;   # calls, getting in: caller, callee, + waiting room or guest
-    L) echo 4 ;;   # calls, media: grid pagination and filmstrip need bodies
-    M) echo 4 ;;   # calls, floor: a host and three targets, or a side room split
-    N) echo 2 ;;   # calls, collab: one acting, one observing
-    O) echo 2 ;;   # calls, record: one producing calls, one inspecting
-    *) echo 3 ;;   # free lanes carrying no sector
+    # Counted from the accounts each sector's scope actually needs in one window
+    # each -- browsers accumulate as you work down a lane, so the cap has to cover
+    # the distinct accounts a sector touches, not the worst single finding.
+    A) echo 4 ;;   # calls, lifecycle: caller, callee, waiting room, guest window
+    B) echo 4 ;;   # calls, room: a host and three targets, or a side room split
+    C) echo 4 ;;   # calls, studio: acting, observing, a 2nd sharer, a guest
+    D) echo 3 ;;   # chat, messages: alice (owns #qa-private), bob, carol
+    E) echo 3 ;;   # chat, spaces: alice, bob, dave (in no channel)
+    F) echo 4 ;;   # admin/org: owner, admin, outsider, guest
+    G) echo 3 ;;   # identity: two signed in, one kept deliberately signed out
+    H) echo 3 ;;   # shell: driver, presence/directory peer, a 3rd for profiles
+    I) echo 3 ;;   # calendar/files: driver, invitee, a 3rd seat for RSVP
+    *) echo 3 ;;   # lane J and beyond: no sector, free work
   esac
 }
-# 20, not 16: the SECTORS.md map (A4 B4 C4 D4 E3) wants 19 across five concurrent
-# sessions, and a cap of 16 refused the 17th launch mid-run. This is a ceiling for
-# five sessions, not a statement that the RAM is there -- 19 browsers at ~1.3 GB is
-# past 16 GB of physical memory, so the headroom warning below is the thing to
-# read, and a lane that is done should ./stop.sh rather than idle on a slot.
+# 20 is a backstop, not an allocation. With three concurrent sessions the worst
+# case any map can ask for is 12, so this should never refuse a launch -- if it
+# does, something is holding browsers it stopped using. ./stop.sh <lane> rather
+# than raising it.
 MAX_TOTAL="${QA_MAX_BROWSERS:-20}"
 
 count_live() {   # $1 = first port, $2 = last port

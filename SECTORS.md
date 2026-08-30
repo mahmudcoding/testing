@@ -1,257 +1,714 @@
 # Test sectors
 
-Scope allocation for parallel QA sessions — **which part of the product a session
-covers**. Weights come from `reports/aloqa-module-scope-census.html`
+Scope allocation for parallel QA sessions — **which part of the product a session covers**.
+Nine sectors, **A–I**: three for Calls, six for everything else. Weights come from
+`reports/aloqa-module-scope-census.html`
 (published: https://claude.ai/code/artifact/9cba3e8e-ffda-4623-9821-14cf0cf9b3f3).
 
-**There is a second map, and the two are alternatives.** This file is the product-wide map:
-five sectors A-E across everything, of which Calls gets two. `SECTORS-CALLS.md` is the
-Calls-only map: five sectors **K-O** that between them cover Calls and nothing else, for the
-days when the goal is to exhaust the module rather than sweep the product. Both run on lanes
-A-E, so one map runs on a given day. Sector letters do not overlap, so a log, a handoff or a
-relayed message naming a sector is unambiguous about which map it means.
+**This is the only sector map.** There were two — `SECTORS.md` with five sectors A–E across
+the whole product, and `SECTORS-CALLS.md` with five sectors K–O inside Calls alone — and they
+were alternatives, so only one ran on a given day. Both are retired; `SECTORS-CALLS.md` now
+lives in `archive/` and is kept only so the logs indexed by its letters stay readable. Nothing
+should be read out of either for scope again.
 
-**A sector is not a lane.** A *lane* (`QA_LANE`, `seed.sh --lanes`, `rigmap`) is the
-isolated fixture set and browser port block a session runs on. A *sector* is what that
-session tests. Sector letters are aligned to lane letters — sector A is meant to run on
-lane A — but they are separate things, and a prompt may pair them differently.
+**Three sessions run at once, not five.** That is what made nine sectors possible: the old maps
+were sized by what the rig could survive rather than by where the product's seams are. At three
+concurrent sessions the heaviest three sectors want twelve browsers against a global cap of
+twenty, so load stops being the constraint and the cut can follow the product.
 
-**Browsers are capped per lane.** `launch.sh` refuses past the cap and prints the override —
-each window costs real memory, and one session taking more than it needs starves the others.
-The setup line in each sector below is what that sector actually needs.
+---
 
-**Read your sector's "Owned by other sectors" line before you start, not just its in-scope
-list.** One session lost about an hour to Sessions and notification settings before checking
-it and finding another sector had already covered all of it that day. The boundary line is
-the cheaper half of the section: the in-scope list tells you where to go, the boundary line
-tells you where someone else already is.
+## The letters were re-dealt on 2026-08-30
 
-**There are more lanes than sectors.** Sectors A–E below cover the product for QA passes;
-lanes beyond E carry no sector and are free for other work — bugfixes, one-off
-investigations, anything needing its own fixtures and browsers. A lane letter with no
-sector is not a mistake. Add lanes with `seed/seed.sh --lanes <letters>` and read their
-ports with `node scripts/callrig/rigmap.mjs table <letter>`.
+Nine sectors need nine letters, so A–E no longer mean what they meant in `logs/` and
+`reports/` before this date. **This is a live dedup trap** — a new sector-D session listing
+`reports/aloqa-*qa-*-D-*.html` finds the old org reports, which are nothing to do with it.
+Use the `<area>` token in a filename, never the letter, to tell what a historical file covers.
 
-Start a session with just the letter:
+| before 2026-08-30 | covered | now covered by |
+|---|---|---|
+| A (old) · calls-inside | in-call media, tiles, participants, side rooms, in-call chat | B and C |
+| B (old) · calls-around | entry, lobby, ringing, hub, history, detail, guest, meeting settings | A and C |
+| C (old) · chat | all of chat | D and E |
+| D (old) · org | admin, roles, personal settings, auth | F and G |
+| E (old) · workspace | shell, directories, calendar, files, search | H and I |
+| K (old) · calls-entry | getting in | A |
+| L (old) · calls-media | media, devices, tiles, PiP | B and C |
+| M (old) · calls-floor | participants, moderation, side rooms | B |
+| N (old) · calls-collab | in-call chat, share, recording, meeting settings | C |
+| O (old) · calls-record | leaving, ended, hub, detail, recordings | A and C |
+
+---
+
+## A sector is not a lane — but here they always match
+
+A *lane* (`QA_LANE`, `seed.sh --lanes`, `rigmap`) is the isolated fixture set and browser port
+block a session runs on. A *sector* is what that session tests. On this map every sector has
+its own lane and the letters are identical, so a bare letter is the whole instruction:
 
 ```bash
-/run-until 14:00 A
+/run-until 14:00 G
 ```
 
-That is the whole instruction — **sector A on lane A**. A hook
-(`scripts/hooks/sector_context.py`) reads the letter off the prompt and injects that sector's
-section below straight into the session, so the scope never has to be pasted or re-derived;
-`CLAUDE.md` says the same thing as a fallback if the hook is not running. Name sector and lane
-separately only when they differ:
+means **sector G on lane G**. A hook (`scripts/hooks/sector_context.py`) reads the letter off
+the prompt and injects that sector's section below straight into the session, so the scope
+never has to be pasted or re-derived. Name them separately only when they genuinely differ:
 
 ```bash
-/run-until 14:00 sector A on lane C
+/run-until 14:00 sector G on lane C
 ```
 
-The session then follows **Start of a session** in `CLAUDE.md` (export `QA_LANE`,
-verify fixtures, record the build stamp, sync the Jira mirror, open the session log)
-and reads its own section below.
+and then export both, because `launch.sh` reads the sector off the lane letter otherwise and
+hands out the wrong browser cap:
 
-**"Owned by sector X" means another session is covering it today**, so you can hand it
-off instead of duplicating work — not that the area is untestable. If you find a defect
-there while passing through, log it and say which sector it belongs to.
+```bash
+export QA_LANE=C QA_SECTOR=G
+```
+
+**Nine lanes exist, A–I, one per sector.** Lane J (ports 9310–9319) carries no sector and is
+free for bugfixes and one-off investigations; it is still inside the 9220–9319 window
+`launch.sh` counts for its global cap, so a browser there is not invisible. Lanes past J are
+outside that window and escape the cap entirely — do not use them.
+
+The session then follows **Start of a session** in `CLAUDE.md` (export `QA_LANE`, verify
+fixtures, record the build stamp, sync the Jira mirror, open the session log) and reads its
+own section below.
+
+**"Owned by sector X" means another session may be covering it today**, so you can hand it off
+instead of duplicating work — not that the area is untestable. If you find a defect there
+while passing through, log it and say which sector it belongs to.
+
+**Read your sector's boundary line before you start, not just its in-scope list.** One session
+lost about an hour to Sessions and notification settings before checking, and found another
+sector had already covered all of it that day. The boundary line is the cheaper half of the
+section: the in-scope list tells you where to go, the boundary line tells you where someone
+else already is.
+
+---
+
+## The nine
+
+Scope is percent of the whole app, from the census composite (i18n strings 25%, UI components
+25%, frontend code 20%, API operations 15%, backend code 15%). Fresh component and line counts
+taken at the deployed sha agree with it.
+
+| sector | scope | lane | browsers | `<area>` |
+|---|---:|---|---:|---|
+| **A** · Calls — the door, the exit, the record | 12.1% | A | 4 | `calls-lifecycle` |
+| **B** · Calls — the room | 10.0% | B | 4 | `calls-room` |
+| **C** · Calls — the studio and the policy | 10.8% | C | 4 | `calls-studio` |
+| **D** · Chat — messages | 11.2% | D | 3 | `chat-messages` |
+| **E** · Chat — channels and DMs | 9.6% | E | 3 | `chat-spaces` |
+| **F** · Admin and org | 12.2% | F | 4 | `admin-org` |
+| **G** · Identity and access | 11.1% | G | 3 | `identity` |
+| **H** · Shell, people and discovery | 8.8% | H | 3 | `shell` |
+| **I** · Calendar and files | 12.0% | I | 3 | `calendar-files` |
+
+Sum 97.8%, plus Calls debug surfaces at 2.1% which stay unallocated. Mean 10.9%, spread
+8.8–12.2 — against 15.7–23.3 on the map this replaces.
+
+**Scope is not effort.** In-call work costs roughly 1.45× per unit of scope — three or four
+browsers, real media, multi-participant state, timing-sensitive checks — and reading records
+costs about 0.95×. Weighted that way the nine land at 13.3 · 15.0 · 14.6 · 11.2 · 10.6 · 12.8 ·
+11.1 · ~10 · 11.4. **B and C are the heaviest**, which is why their sections carry an explicit
+priority order. H's 8.8% understates it badly: eight of the surfaces it owns were counted by no
+measurement in the census because nothing had ever tested them.
+
+### Where the Calls cut falls, and why
+
+The three-way is cut along **measured import edges** at the deployed sha, not by moment. The
+facts that decided it:
+
+- `CallSurface.tsx` is 1,798 lines and imports sixteen children plus thirty model files. Every
+  in-call cluster meets there and nowhere else. It was unowned in both old maps; it is **B's**.
+- **Hub, history and the post-call detail page have zero import edges into the `CallSurface`
+  subtree** — different routes, different data plane. Cleanest seam in the module, and it is
+  the A/B border.
+- Grid, tiles, screen-share rendering and filmstrip are **one subtree of 42 files**
+  (`ParticipantGrid` imports `ScreenShareTrack`, `ShareThumbnailTile`, `CallFilmstrip`,
+  `ParticipantTile` directly). Both old maps cut through that parent-to-child edge. This one
+  does not.
+- Grid and participants both project from `model/roster/`, and `useCallSurfaceModerationActions`
+  acts on tiles *and* rows — pin-for-everyone is a moderation action whose effect is a layout
+  change. They stay together.
+- `activeContext` (side rooms) is read by the participants panel, the header tabs, PiP and
+  minimize. Breakout is a cross-cutting dimension, not a leaf feature.
+- Recording and meeting settings have **zero** edges between them, and recording-during splits
+  cleanly from recording-as-artifact. So C owns recording end to end — which **deletes** the
+  border both old maps flagged as the one most often crossed by accident.
+
+### Where the non-Calls cut falls, and why
+
+Chat is 18.8% against a 10.9% target, so it has to divide. The census argued against dividing
+it and named the cost exactly: the border between message actions and channel management is
+soft enough that each sector keeps wandering into the other. The answer is a **hard** border —
+**the message, versus the container it lives in.** D never opens a channel's info panel;
+E never opens the composer. Everything else follows the census's own module boundaries.
+
+---
 
 ## Choosing what to hit inside your sector
 
 The lists below are boundaries, not checklists. They say where your sector ends, not what
 counts as done — and they are **not exhaustive**: a surface that is not named but sits inside
-your sector's territory is still yours to test. Nothing here asks for a regression sweep of
-the listed features. Pick targets instead:
+your sector's territory is still yours. Nothing here asks for a regression sweep. Pick targets:
 
-- **Diff the component map.** `packages/features/<area>/ui-web/` and `apps/web/src/features/<area>/`
-  name the real surfaces. Compare against previous passes in `logs/` and go where the coverage
-  is thin — that is how the highest-yield session so far chose its scope.
-- **Diff the deploy.** The build stamp is a frontend commit, so `git log <deployed>..HEAD`
-  over your sector's paths names what changed recently and which ALK ids are waiting.
-- **Follow the state, not the screen.** Most of this app's surface is states inside a few
-  routes; a surface you have "already tested" in one state is usually untested in another.
-
-If the box is short, the priority order inside each sector is given with its scope below —
-it follows measured share, so covering in that order leaves the least behind.
+- **Diff the component map.** Each section names the source directories that back it. Compare
+  against previous passes in `logs/` and go where the coverage is thin.
+- **Diff the deploy.** The build stamp is a frontend commit, so `git log <deployed>..HEAD` over
+  your sector's paths names what changed recently and which ALK ids are waiting.
+- **Follow the state, not the screen.** Most of this app is states inside a few routes; a
+  surface you have "already tested" in one state is usually untested in another. Calls occupies
+  six of the app's fifty-one routes and 35% of its functionality, nearly all of it states.
+- **Read your dedup targets first** (see the section near the bottom). The closest prior work
+  is almost never in Jira.
 
 ---
 
-## Sector A · Calls — inside the call · 15.7%
+## Sector A · Calls — the door, the exit, the record · 12.1%
 
-Everything that happens once you are in a call. Runs on lane A.
+Everything outside the live call surface: every way in, every way out, and the record a call
+leaves behind. Owns six of the eight call route shapes. Runs on lane A.
 
 **In scope**
-- Media and controls — mic, camera, device switching, quality, tiles, grid, filmstrip, pinning, fullscreen, PiP
-- Participants panel and host powers — mute others, make host, remove, permission requests
-- In-call chat, threads in call chat, reactions
-- Screen share and recording (start/stop/consent, in-call behaviour)
-- Side rooms and breakout — create, move, join, return, visibility
+- Create a call — direct, from a channel, from a DM, starting a scheduled meeting
+- Lobby — device check, camera/mic preview, device bar, lobby settings, network status
+- Ringing — outgoing stage, incoming banner and toast, decline, no answer, cancel
+- Waiting room and approval, the approval modal, rejoin after approval
+- Password gate, entry mode, participant limit **at the door**
+- Call waiting — a second incoming call while in one, and switching between calls (there is
+  **no hold** in this product — the surface says "Accepting leaves your current call", and
+  accepting does exactly that)
+- Leaving, the leave confirmation, end for everyone, last participant leaves
+- Failure exits — connection loss and recovery, the recovery banner, refresh recovery,
+  takeover from a second device of the same account, peer disconnect
+- The ended surface — summary, actions, rating, close
+- Hub — Live now cards, All/Group/1-to-1 tabs and filters, history, `Load more` pagination
+- Post-call detail page — **chat tab, logs tab and its filters, participants dialog, host
+  summary, DM shortcuts** (the recording tab is C's)
+- Call event messages in a channel, and the numbers inside them
+- **The guest door, and it is mandatory, not an extension**: `/join/{token}`, the legacy
+  `/guest/c/{token}` 301, link validity and TTL, guest limits, and `GuestEntryGate` with its
+  fifteen terminal states — checking, anonymous join, user join, waiting, approval notice,
+  auto-join pending, already in call, blocked, rejected, link invalid, meeting ended
 
-**Seam with B** — the in-call **Add to call** dialog is A's (the trigger is `call-controls-add-to-call` in the in-call toolbar), but the *ringing* it causes is B's. A finding that crosses it belongs to whoever found it; note the border in your log.
+**Owned by other sectors** — anything after you are connected (B, C); recording in **any**
+form, during the call or afterwards (C); the meeting settings panel itself (C), though the
+effect of password, approval mode and participant limit at the door is yours; the guest
+in-call client (C).
 
-**Owned by other sectors** — creating or joining a call, the lobby, ringing, the end-of-call
-screen, hub and history (sector B); meeting settings and guest links (sector B).
+**Border with C** — a setting is C's, its effect at the door is yours. If a password set in
+C's panel does the wrong thing at the gate, that is your finding.
 
-**Border with sector B** — recording is split by moment: starting, stopping and consent *during*
-the call are yours; the recording as it appears afterwards on the call detail page is sector B's.
+**Border with E** — E renders a call event message in a channel; the numbers inside it
+(duration, participants) are produced by call lifecycle and are yours.
 
-**Setup** — the full rig, 3–4 browsers. One call per account:
-`scripts/callrig/launch.sh A alice`, then `bob`, `carol`, `dave`.
-Prove media with `getStats()`, not from the tiles.
+**Border with I** — I creates a scheduled meeting in the calendar; starting it and everything
+after is yours.
 
-**Priority if short** — media & controls (5.5%) → participants & host powers (3.6%) → in-call chat/share/recording (3.5%) → side rooms (3.1%)
+**A trap specific to this sector** — leaving a call is **two** steps: `Leave call` opens a
+confirmation, and clicking only the first leaves you in the call. Assert the state, not the
+click: after the leave, the URL must no longer match `/call/`. A published High was withdrawn
+over exactly this — inflated call durations that were correct readings of a meeting nobody had
+left. `snip/leave-call.mjs` leaves *and* ends the meeting; leaving alone keeps it `active` and
+every later navigation bounces back to `/call/<id>`.
+
+**Setup** — 4 browsers: caller, callee, a third for the waiting room or call waiting, and a
+guest window. Guest sessions share a browser's cookie jar and occupy 3 slots
+(`GUEST_COOKIE_MAX_LIVE`) — one window per participant, never tabs.
+
+**Priority if short** — ringing and entry lifecycle → leaving and end-for-everyone → the guest
+door → hub, history and the detail page → waiting room and approval → password and limit gates
+→ recovery, takeover and peer disconnect → lobby and device check → ratings
+
+**Entry** — `/w/{ws}/calls`, `/w/{ws}/call/{id}`, `/w/{ws}/calls/{id}`, `/join/{token}`
+
+**Source** — `packages/features/calls/ui-web/{Lobby*,IncomingCall*,OutgoingCall*,Create*,WaitingRoomList,CallEnded*,CallLeave*,CallConnectionRecoveryBanner,CallsHomePage,CallsHomeHeader,CallCard,RecentCallRow*,RecentsLoadMore,CallDurationBadge,CallEndForEveryoneDialog}`;
+**`apps/web/app/w/[wsId]/call/[callId]/`** (21 files, the join state machine — unowned in both
+old maps); `apps/web/src/widgets/CallBridges/`;
+`apps/web/src/features/calls/{hub,ended,takeover,peer-disconnect,CallDetail,CallPasswordGate.tsx}`;
+**`apps/web/src/features/guest-entry/`** (26 files, one of them a 2,177-line hook — cited by
+neither old map)
+
+---
+
+## Sector B · Calls — the room · 10.0%
+
+Who is in the call, what you may do to them, where they can be put, and how the room is laid
+out. Runs on lane B.
+
+**In scope**
+- Participants panel and rows — markers, states, ordering, search
+- Host powers — mute others, mute on entry, remove, ban and unban, end for everyone
+- Co-host — make host, promote, demote, remove co-host, and what a co-host may do
+- Permission requests — raise hand, the request list, approve/deny; per-participant device
+  permissions (`Allow`/`Ask`/`Block` for camera, mic, screen share)
+- The admin-permissions dialog — what it grants, what it can revoke
+- Side rooms and breakout — create, add people, move, join, return, ask to return, close,
+  private rooms; and the **isolation** of chat, audio, video and screen share between a room
+  and the main call
+- Participant grid, grid pagination, filmstrip, tiles, pinning and pin for everyone, the
+  global pin badge, view toggle, spotlight
+- Fullscreen, minimize, **Picture-in-Picture and the draggable PiP**
+- **How a screen share renders** — the share track in the grid, the share thumbnail tile, the
+  featured share, the collapsed share filmstrip
+- **The call surface shell** — `CallSurface`, `CallOverlay`, the toolbar, top bar, header
+  actions, banners, side-panel presence and the 360px slot the four panels share
+
+**Owned by other sectors** — your own mic and camera, and starting or stopping a share (C);
+in-call chat and reactions as features (C), though their **isolation** between a side room and
+the main call is yours; anything before you are connected or after you leave (A).
+
+**Border with C** — muting *yourself* is C's; muting *someone else* is yours. Starting,
+stopping and revoking a share is C's; how it renders in the grid is yours. The same control
+vocabulary appears on both sides, so match `aria-label` exactly rather than by substring.
+
+**PiP appears on every route.** `CallLayoutMode='pip'` means a live call surface is present on
+chat, files, calendar and settings pages. You own the widget; the other sectors report PiP
+interference to you rather than testing it themselves.
+
+**Reset between findings** — a promoted co-host, a ban or a live call survives into the next
+snippet and produces defects that are not there. `snip/_reset.mjs` puts one browser back to
+neutral, and it has to be run over *every* account a finding names: ending a meeting strands
+the other windows on "Call has ended".
+
+**Setup** — 4 browsers: a host and three targets, because a side room split is not meaningful
+with fewer and grid pagination needs bodies. Simulcast means you cannot read media off the
+tiles — prove it with `getStats()` and confirm from the **receiving** side.
+
+**Priority if short** — this is the heaviest sector on the map by effort, so the ordering
+matters: participants panel and host powers → side room lifecycle (create, move, join, return,
+close) → grid, tiles and pagination → device permissions and requests → isolation checks →
+pinning, PiP and fullscreen → private side rooms last.
 
 **Entry** — `/w/{ws}/call/{id}`
 
----
-
-## Sector B · Calls — around the call · 17.2%
-
-Every way into and out of a call, and everything the call leaves behind. Runs on lane B.
-
-**In scope**
-- Create a call — direct, from a channel, from a DM, scheduled start
-- Lobby, waiting room and approval, password gate, ringing, incoming/outgoing, decline, no-answer, call waiting
-- End, recovery, takeover, peer disconnect, call waiting and switching between calls (there is **no hold** in this product — a second incoming call raises a surface saying "Accepting leaves your current call", and accepting does exactly that)
-- Hub, history, filters and tabs; post-call detail page — recording, chat and log tabs, ratings
-- Meeting settings — name, password, approval mode, reactions, chat, device modes
-- Guest access — guest links, guest join, guest limits
-
-**Owned by other sectors** — anything after you are connected and the call is running (sector A);
-scheduled meeting creation in the calendar UI (sector E, which hands the meeting to this sector to start).
-
-**Setup** — 2 browsers plus a separate guest window. Guest sessions share a cookie jar
-and occupy 3 slots — one window per participant, never tabs.
-
-**Priority if short** — entry & lifecycle (7.2%) → hub, history & detail (5.7%) → guest access (2.4%) → meeting settings (1.9%)
-
-**Entry** — `/w/{ws}/calls`, `/w/{ws}/calls/{id}`
+**Source** — `packages/features/calls/ui-web/{ParticipantsListPanel,ParticipantRow,BanParticipantDialog,RemoveCoHostDialog,ParticipantPermissions*,PermissionRequest*,MeetingAdminPermissions*,DeviceRequestPrompt,SideRoomConfirmDialog,BreakoutInvitePrompt,AddToCallModal,WorkspaceMemberPicker,ParticipantGrid*,ParticipantTile*,CallFilmstrip,CallViewToggle,CallFullscreenButton,CallSurfaceMinimizeButton,DraggablePip,PipMiniCall,PipCallDuration,ParticipantGlobalPinBadge,ScreenShareTrack,ShareThumbnailTile,CallSurface,CallSurface*,CallOverlay,CallTopBar}`;
+`packages/features/calls/model/{breakout,roster}`;
+`apps/web/src/features/calls/{breakout,breakout/sideRooms,moderation}`;
+`apps/web/src/features/guest-meeting/ui/GuestBreakoutReturnPrompt.tsx` (a guest in a side room)
 
 ---
 
-## Sector C · Chat · 18.8%
+## Sector C · Calls — the studio and the policy · 10.8%
 
-The whole chat module, kept in one sector. Runs on lane C.
+What you send, what you share, what you say, what gets kept, and the panel that decides whether
+you may. Runs on lane C.
 
 **In scope**
-- Composer and sending — formatting, attachments, link previews, typing, drafts, long messages
-- Message actions — edit, delete, reactions, pin, forward, save, copy link, receipts
-- Channels — create, join, leave, archive/unarchive, members, info panel, mute, header
-- DMs — start, block/unblock, privacy gates, clear history, requests
-- Threads and replies; mentions and unread; saved messages; files and media inside chat
-- Call event messages in the channel
+- Mic and camera — toggle, state, permission denial, hot-plug, device switching mid-call
+- Device menu and the audio popover; personal call settings at `/w/{ws}/settings/calls`
+- Quality — the quality prompt, applied-quality row, maximum video quality, the signal meter
+- Network badge and indicator, media error banners, lifecycle error banner, audio mix,
+  diagnostics
+- In-call chat — sending, history, threads, the chat panel and its error states, system rows,
+  and **message reactions inside the chat panel**
+- **Live reactions** — the picker on the call controls and the reaction burst. Note these are
+  two unrelated features with near-identical names: `LiveReactionPicker` hangs off
+  `CallControls`, `CallReactionPicker` and `CallReactionRow` hang off `ChatMessageRow`
+- Screen share — **start, stop, two at once, revoke, what the sharer sees**
+- **Recording end to end** — start, stop, consent, the badge, who may record, what participants
+  are told; and the artifact afterwards: the recording tab on the detail page, playback,
+  download, access control, quotas, failure states
+- Meeting settings panel — name, password, approval mode, entry mode, reactions, chat, device
+  modes, video quality, participant limit, guest link visibility, admin-permission availability
+- **The guest in-call client, and it is mandatory, not an extension** — the guest chat panel,
+  session banner, resuming, engine boundary, remote config, the guest ended summary, guest
+  reactions, and the guest's own tiles and device handling
 
-**Seam with B** — call event messages in a channel are C's, but the numbers inside them (duration, participants) are produced by call lifecycle, which is B's. A wrong duration in a channel message sits exactly on this line.
+**Owned by other sectors** — the *effect* of a setting at the door (A owns the gate: password,
+approval mode, participant limit); how a share renders in the grid, and the participants panel
+(B); chat and reaction **isolation** between a side room and the main call (B); the guest door
+and the guest's arrival (A).
 
-**Owned by other sectors** — global search (sector E); the files page and the viewer opened from it
-(sector E); channel-level permissions and roles (sector D).
+**Recording is no longer split by moment.** Both old maps cut it between "during the call" and
+"the artifact afterwards", and both flagged that border as the one most often crossed by
+accident. There are no import edges between recording and meeting settings, and recording is
+self-contained, so it is yours whole. The rest of the detail page is A's.
 
-**Border with sector E** — an attachment *in a message* is yours, including the lightbox opened by
-clicking it. The same file reached from `/w/{ws}/files` is sector E's. If the two disagree about
-the same file, that is a finding — log it and say so.
+**Setup** — 4 browsers: one acting, one observing, a third for two simultaneous screen shares
+and a guest window for the guest client. Most checks here work at two.
 
-**Setup** — 2–3 browsers. Alice owns `#qa-private` but not `#qa-general`, which is what
-exercises the permission difference on her own messages.
+**Priority if short** — recording end to end → screen share → in-call chat and threads → the
+guest in-call client → mic, camera and devices → the settings panel toggle by toggle →
+quality and network → reactions
 
-**Priority if short** — message actions (5.1%) → composer & sending (4.6%) → channel management (4.2%) → mentions, threads, DMs (2.7% together)
+**Entry** — `/w/{ws}/call/{id}`, the Meeting settings panel inside it, `/w/{ws}/settings/calls`,
+`/w/{ws}/calls/{id}?tab=recording`, `/guest/meeting/{id}`
 
-**Entry** — `/w/{ws}/c/{channelId}`, `/w/{ws}/d/{dmId}`, `/w/{ws}/chat/saved`, `/w/{ws}/chat/mentions`
+**Source** — `packages/features/calls/ui-web/{CallControls,CallDeviceMenu,MainAudioPopover,CallQuality*,CallNetwork*,MediaStreamVideo,RemoteVideoTrackView,LocalMediaPreview,CallMediaErrorBanner,CallLifecycleErrorBanner,InCallChat*,ChatMessageRow,ChatMessageThreadAction,ChatSystemRow,CallReaction*,LiveReactionPicker,CallRecordButton,CallRecordingBadge,CallRecordingItem,CallRecordingsSection,MeetingSettings*,MeetingAccessSettingsSection,MeetingGuestLinkVisibilitySection,MeetingSettingToggle}`;
+`apps/web/src/features/calls/{audioMix,diagnostics,recording,CallLobbyRecordingConsent*}`;
+`apps/web/src/features/settings/calls`;
+`apps/web/src/widgets/CallBridges/{MediaDevicesBridge,RemoteAudioElement,RemoteMediaSink,WebRTCBridge}`;
+**`apps/web/src/features/guest-meeting/`** (88 files)
 
 ---
 
-## Sector D · Org, identity & settings · 23.3%
+## Sector D · Chat — messages · 11.2%
 
-Who you are, and what you are allowed to do. Runs on lane D.
+The message itself: writing it, sending it, and everything you can do to one afterwards.
+Runs on lane D.
 
 **In scope**
-- Admin and org — company and workspace settings, members, roles and permissions, direct
-  invites, workspace invites, kick, audit log, system settings, search reindex
-- Personal settings — account, privacy, notifications, appearance, security and 2FA,
-  sessions and "sign out other sessions", blocked users, about, language
-- Auth and onboarding — login, signup, email verification, magic link, forgot/reset password,
-  invite accept, name and company onboarding
+- Composer and sending — formatting, mentions in the composer, emoji picker, attachments,
+  link previews (external and internal), typing indicator, drafts, long messages, the voice
+  recorder, the link URL modal, the drop zone
+- Message actions — edit, delete, reactions and the reactions modal, pin, forward, share,
+  save, copy link, seen receipts and the viewers list
+- Threads and replies, and the thread panel
+- Saved messages — `/w/{ws}/chat/saved`. Note the route is live while its settings section is
+  release-gated to a 404; that mismatch is worth testing explicitly
+- Attachments **inside a message** — the file preview dialog and the lightbox opened by
+  clicking one
 
-**Owned by other sectors** — the notification *panel* and bell (sector E); guest join links (sector B).
+**Owned by other sectors** — the channel or DM the message sits in, its info panel, members,
+archive and mute (E); the pinned-messages bar and the all-pins modal (E — pinning *a message*
+is yours, the surface that lists them is E's); unread and mention counts (E); the same file
+reached from `/w/{ws}/files` (I); in-call chat (C).
 
-**Setup** — needs the negative-case accounts: `qa.outsider@` (in company, not in workspace),
-`qa.dave@` (in workspace, in no channel), `qa.guest@`. Signing out other sessions logs out
-every browser on that account — expect to re-login. **This sector also needs one window kept
-deliberately signed out**, for `/signup`, email verification, magic link and reset-password
-as an anonymous visitor. That window is working as intended: do not "repair" it, and do not
-point `ensure.sh` at it — `ensure.sh` will sign it back in.
+**Border with E, and it is the whole point of the split** — the message is yours, the container
+is E's. You never open a channel's info panel; E never opens the composer. If a defect needs
+both, it belongs to whoever found it; note the border in your log.
 
-**Too wide for one box — take a named half.** At 23.3% this cannot be covered in a single
-run, and leaving the choice implicit means admin eats the box. Take one half, say which in
-your session log's `## Current state`, and the next session takes the other:
-- **D1 · Admin & org** (12.2%) — company and workspace settings, members, roles and permissions, invites, kick, audit log, system settings
-- **D2 · Identity** (11.1%) — personal settings, plus auth and onboarding
+**Border with I** — an attachment in a message is yours, including the lightbox. The same file
+reached from the files page is I's. If the two disagree about the same file, that is a finding;
+log it and say so.
 
-**Priority within a half** — this ordering is by measured *share*, not by expected yield;
-a small area can hold the best finding of the run, so do not read it as "least valuable last".
+**Setup** — 3 browsers. Alice owns `#qa-private` but not `#qa-general`, which is what exercises
+the permission difference on her own messages inside a single account: Delete and Pin in the
+channel she owns, only "Hide for me" in the one she does not.
 
-**Entry** — `/w/{ws}/settings/{section}`, `/w/{ws}/settings/admin/*`, `/login`
+**Priority if short** — message actions → composer and sending → attachments and previews →
+threads and replies → receipts → saved messages
+
+**Entry** — `/w/{ws}/c/{channelId}`, `/w/{ws}/d/{dmId}`, `/w/{ws}/chat/saved`, `?thread=<msgId>`
+
+**Source** — `packages/features/chat/ui-web/{MessageItem,MessageList,MessageActionsMenu,MessageEditModal,MessageDeleteConfirm,ForwardModal,ShareMessageModal,Reactions*,ReactionPicker,LazyEmojiPicker,SeenViewers*,ThreadPanel,TypingIndicator,ExternalLinkPreview,InternalMessageLinkPreview,MessageFilePreview*}`;
+`packages/composer-web`; `apps/web/src/features/chat`;
+`apps/web/src/widgets/{ThreadPanel,ComposerPreviewPanel,ConversationDropZone}`
 
 ---
 
-## Sector E · Workspace content & chrome · 22.8%
+## Sector E · Chat — channels and DMs · 9.6%
 
-What is in the workspace, and how you find it. Runs on lane E.
+The container a conversation lives in, how you get to it, and how the app tells you there is
+something new in it. Runs on lane E.
 
 **In scope**
-- Shell and navigation — sidebar, channel list, workspace switcher, rail, unread and badges,
-  notifications panel and bell, presence, connection status, reminders
-- Directories — people and channels tabs, filters, profile popups
-- Calendar — month/week views, event chips, create and edit meetings, invite responses,
-  scheduled meetings, reminders, join landing
-- Files — files browser, scopes and filters, upload, download, file viewer, lightbox
-- Search — global search, filters, tabs, sort, scope chips, in-channel search, recent searches
+- Channels — create, join, leave, archive and unarchive, members and the members modal, the
+  info panel and its About/Members/Files/Pinned tabs, mute, the header, the channel preview
+  popover, the archived-channels modal, the channel onboarding banner
+- Pinned messages — the bar and the all-pins modal
+- DMs — start, block and unblock, privacy gates, clear history, DM requests
+- **The unread and mention mechanism, whole** — sidebar badges and bold state,
+  `GET /workspaces/{ws}/unread`, `/w/{ws}/chat/mentions`, and the read-state that clears them
+- The sidebar's conversation navigation — channel list, channel sections, DM list, the channel
+  card menu including its mute submenu and delete confirm, the channel creation modal, the
+  new-DM picker
+- Call event message **rendering** in a channel
 
-**Owned by other sectors** — starting a scheduled meeting and everything after (sector B);
-files sent inside a conversation (sector C); notification *settings* (sector D).
+**Owned by other sectors** — the composer and everything you do to a message (D); the sidebar's
+own chrome — header, footer, resize, collapse, sections as a layout (H); global and in-channel
+search (H); channel-level permissions and roles (F); the numbers inside a call event message (A).
 
-**Setup** — mostly a single browser; a second one for presence and cross-user directory checks.
-Calendar chips below the fold need `scrollIntoViewIfNeeded()` before clicking.
+**Unread has exactly one owner, and that is deliberate.** The unread counter was published
+twice on 2026-08-26, independently by two sectors, and merged only in the consolidated report —
+the defect sat precisely on the old border. Sidebar badge, bold state, the unread endpoint, the
+mentions page and the read-state are all yours; H owns the list's chrome and nothing that
+counts.
 
-**Too wide for one box — take a named half.** At 22.8% this is five unrelated products, and
-whoever runs it otherwise chooses between breadth and depth on every surface. Take one half,
-say which in your session log's `## Current state`, and the next session takes the other:
-- **E1 · Shell, directories & search** (10.8%)
-- **E2 · Calendar & files** (12.0%)
+**Setup** — 3 browsers. `qa.dave@` is in the workspace and in **no channel** — the
+channel-authz negative case — and `qa.outsider@` is in the company but not the workspace.
 
-**Priority within a half** — shell & directories (8.7%) → calendar (6.4%) → files (5.6%) →
-search (2.1%). This ordering is by measured *share*, not by expected yield: search is last at
-2.1% and produced a High, while files at 5.6% produced nothing new. Do not read it as
-"least valuable last".
+**Priority if short** — channel management and the info panel → unread and mentions → DMs,
+requests, block and clear history → the sidebar conversation list → archive and unarchive →
+pinned messages
 
-**Internal seams worth crossing deliberately** — the best findings here sit between E's own
-areas, not inside them: notification → calendar (an invitation notification leading to a
-calendar card), and notification → files. If two surfaces disagree about the same object,
-that is a finding; log it and say so.
+**Entry** — `/w/{ws}/c/{channelId}`, `/w/{ws}/d/{dmId}`, `/w/{ws}/chat/mentions`
 
-**Entry** — `/w/{ws}/directories`, `/w/{ws}/calendar`, `/w/{ws}/files`
+**Source** — `packages/features/chat/ui-web/{ChannelHeader,PinnedMessages*}`;
+`apps/web/src/widgets/{ChannelInfoPanel,ChannelMembersModal,ChannelPreview,ArchivedChannelsModal,Mentions,ClearDmHistory}`;
+`apps/web/src/widgets/AppShell/{ChannelList,ChannelRow,ChannelSectionHeader,DmList,DmRow,DmRequestsModal,DmRequestList,ChannelCreationModal,channelCardMenu,NewDmPickerPopover}`
+
+---
+
+## Sector F · Admin and org · 12.2%
+
+What a company and a workspace are, who is in them, and what those people are allowed to do.
+Runs on lane F.
+
+**In scope**
+- Company — settings, dashboard, overview, the company switcher, company members, kick,
+  workspace access
+- Workspace — settings, danger zone, leave, avatar, quotas, recording quotas
+- Members — the admin members table and its virtualized rows, search, kick
+- Roles and permissions — both scopes (company and workspace), role create/edit/assign, the
+  permission checkbox groups, the channel default role confirmation
+- Invites — workspace invites and direct invites, the invite panels
+- Audit log and its table, filters and pagination
+- System settings — the panel, the raw editor, feature flags, user flag overrides
+- Search **reindex**, call ceilings
+
+**Owned by other sectors** — personal settings of every kind (G), even though they live in the
+same `features/settings/` tree; the notification panel (H); guest join links (A).
+
+**Border with G** — the split is whose settings they are, not which route they are under.
+`/w/{ws}/settings/admin/*` and `/w/{ws}/settings/roles` are yours; `/w/{ws}/settings/{account,
+profile,privacy,notifications,appearance,security,sessions,about}` are G's. `company` and
+`workspace` under plain settings are yours.
+
+**Border with H** — triggering a search reindex is yours; whether search then finds anything
+is H's.
+
+**This is the most backend-heavy sector on the map** (census range 6.2–15.9%: heavy server,
+thin UI), so the strongest findings here are usually a response that disagrees with the screen.
+Note also that the org-administration screens physically live in `features/settings/`, not
+`features/admin/` — a directory-based reading mis-assigns them.
+
+**Setup** — 4 browsers: owner, admin, `qa.outsider@` (in the company, not the workspace) and
+`qa.guest@`. `seed.sh` repairs `company_members` and `workspace_members`, so a kick is
+reversible with one `seed/seed.sh --lanes F`.
+
+**Priority if short** — roles and permissions → members and kick → invites → company and
+workspace settings → audit log → system settings and flags → quotas and ceilings
+
+**Entry** — `/w/{ws}/settings/admin/{company,members,invites,workspaces,audit-log,system-settings}`,
+`/w/{ws}/settings/roles?scope=company|workspace`, `/w/{ws}/settings/{company,workspace}`
+
+**Source** — `apps/web/src/features/admin`; `apps/web/src/features/settings/admin`;
+`apps/web/src/features/settings/roles`; `apps/web/src/features/settings/{CompanySettings*,WorkspaceSettings*,CompanyMembersSection,CompanyKickConfirmModal,CompanyWorkspaceAccess,WorkspaceDangerSection,WorkspaceQuotaPanel,WorkspaceRecordingsQuotaPanel}`
+
+---
+
+## Sector G · Identity and access · 11.1%
+
+Who you are, how you prove it, and everything the app keeps about you personally.
+Runs on lane G.
+
+**In scope**
+- Account and profile — account settings, avatar and crop, profile, availability, quick status
+  and the status grid, deactivate
+- Privacy — encryption, data export, login privacy, messaging privacy, visibility, online status
+- Notification **settings** — the panel, do-not-disturb schedule, keyword chips
+- Appearance settings and the theme preview card
+- Security — 2FA, change password, sessions and "sign out other sessions"
+- Blocked users
+- About
+- **Language and locale end to end** — the switcher, the locale cookie, the server-rendered
+  locale, the system fallback, and what four dictionaries (en, ru, uz, uz-cyrl) do to layout
+  and string length across the app
+- Auth — login, the 2FA challenge, reactivate prompt, invite login guidance, signup, email
+  verification and resend, magic link request and verify, forgot password, reset password,
+  Google sign-in button
+- Invite accept, and its error, loading and invalid states
+- Onboarding — the name onboarding modal and its gate, company create
+
+**Owned by other sectors** — company, workspace, roles, members and invites *administration*
+(F); the notification **panel** and bell (H); the Tweaks overlay (H); `/w/{ws}/settings/calls`
+(C, despite the route).
+
+**Border with H** — notification *settings* are yours, the notification *panel* is H's.
+Appearance settings are yours; the Tweaks overlay reached with Cmd/Ctrl+Shift+T is H's, and
+whether the two write the same store is H's question to answer.
+
+**Setup** — 3 browsers, and **one of them kept deliberately signed out** for `/signup`, email
+verification, magic link and reset password as an anonymous visitor. That window is working as
+intended: do not "repair" it, and do not point `ensure.sh` at it. Signing out other sessions
+logs out every browser on that account — expect to re-login.
+
+Signup, email verification and invite-accept cannot be tested without creating an account —
+a deliberate exception to the fixtures rule. Create one, mark it clearly, log it under Cleanup.
+
+**Priority if short** — auth and the state machine behind it (2FA, magic link, reset, signup,
+verification — the 08-26 pass reached none of these) → sessions and security → privacy →
+account and profile → language and locale → notification settings → appearance → blocked users
+
+**Entry** — `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/magic-link`,
+`/auth/verify-email`, `/invite?token=`, `/company/create`, `/w/{ws}/settings/{account,profile,
+privacy,notifications,appearance,security,sessions,about}`
+
+**Source** — `apps/web/src/features/settings` (root, `privacy`, `blocked-users`);
+`apps/web/src/features/{login,signup,verify-email,magic-link,forgot-password,reset-password,
+invite-accept,name-onboarding,company-onboarding}`;
+`apps/web/src/providers/{I18nRoot,DocumentLocaleSync,SystemLocaleFallback,AuthenticatedLocaleSync}`;
+`apps/web/src/i18n`
+
+---
+
+## Sector H · Shell, people and discovery · 8.8%
+
+The frame around everything else, the people in it, and how you find anything. Runs on lane H.
+
+**In scope**
+- Rail and its buttons; sidebar chrome — header, footer, resize, collapse, tooltips, the
+  search pill, main nav; the workspace layout shells
+- Workspace switcher, create workspace, pending invites, workspace bootstrap and its error and
+  loading states
+- Notifications — the panel, the bell and popover, notification items, the permission banner,
+  the new-message toast, **web push and the notification service worker**
+- Presence, the presence dot, and how presence is displayed
+- **The user profile popup** — header, actions, info, common channels, custom status line,
+  the block action, and the profile share modal
+- Directories — people and channels tabs, filters, person and channel rows, the remove modal,
+  the directories onboarding
+- **Search** — global search (Cmd/Ctrl+K), its input, filters, tabs, results, sort control,
+  scope chips, date segment, recent searches; and in-channel message search
+- **The Tweaks panel** (Cmd/Ctrl+Shift+T) — theme, accent, density, font scale — and whether
+  it and Settings → Appearance are two front doors to one store
+- The help popover and the three global chords (Cmd/Ctrl+K, Cmd/Ctrl+N, Cmd/Ctrl+Shift+T)
+- Connection status, offline behaviour, the sync queue, cross-tab locks and replay
+- **Failure screens** — the root error boundary and fallback, the segment error fallbacks, the
+  eight per-section `error.tsx`, the root and workspace 404s, the workspace catch-all route
+- `/docs`
+- **Negative checks that belong to nobody else** — `/w/{ws}/ai`, `/w/{ws}/phone` and
+  `/w/{ws}/apps` must 404 and must have no rail tab; the Calls debug surfaces must not be
+  reachable as an ordinary user. A debug panel a user can open is a finding
+
+**Owned by other sectors** — the channel list, DM list and everything that counts unread (E);
+notification *settings* (G); appearance *settings* (G); the files page (I); triggering a
+search reindex (F).
+
+**Border with E** — you own the sidebar as a container: ordering, sections, resize, collapse,
+drag. The conversation lists inside it and every badge on them are E's.
+
+**Seeded fixtures are invisible to global search, and it looks exactly like a product bug.**
+The seeder writes straight to Postgres; the OpenSearch indices are fed by Kafka from the
+services and there is no CDC on that path, so a seeded channel or account is never indexed.
+Messages and files are fine, because they were posted through the app. Get a positive control
+by creating the thing through the UI first. Lane E carries a permanent one, channel
+`e-search-control`; make one on lane H before writing any "search does not find X" finding.
+
+**Setup** — 3 browsers: one to drive, a second for presence and cross-user directory checks,
+a third when a profile popup has to be seen from two sides.
+
+**Priority if short** — search → the profile popup and custom status → notifications and the
+bell → directories → the shell and sidebar chrome → connection status and offline → the Tweaks
+panel and appearance's second front door → failure screens and 404s → the gated-route negative
+checks
+
+**Entry** — `/w/{ws}/directories?tab=people|channels`, `/w/{ws}/c/{id}/search`, `/docs`,
+anywhere with Cmd/Ctrl+K
+
+**Source** — `apps/web/src/widgets/AppShell` (rail, sidebar chrome, workspace switcher, layout
+shells, shortcuts); `apps/web/src/widgets/{NotificationsPanel,NotificationPermissionBanner,NewMessageToast,ProfilePopup,GlobalSearch,MessageSearch,TweaksPanel,HelpPopover,DocsPage,ConnectionStatusIndicator}`;
+`packages/features/search`; `apps/web/src/features/directories`;
+`apps/web/src/providers/{SyncEngineProvider,GlobalSearchHotkey}`;
+`apps/web/app/{not-found.tsx,global-error.tsx}` and the per-section `error.tsx`;
+`apps/web/src/lib/unreleasedSections.ts`
+
+---
+
+## Sector I · Calendar and files · 12.0%
+
+Two products that share a sector because each is half a box on its own, and neither belongs
+anywhere else. Runs on lane I.
+
+**In scope**
+- Calendar — month, week and day views, the header, event chips, create and edit event modals,
+  the participants section and field, repeat, reminders select, delete confirm, event detail
+  panel and popover, event search, the month overflow popover, upcoming and scheduled-today
+  lists, location section, skeletons
+- Meeting invitations — the panel, form and trigger; RSVP; scheduled meeting access section;
+  the meeting settings section as it appears in the calendar
+- **Reminders end to end**, including the reminder toast and its queue
+- The join landing — `/calendar/join`, `/calendar/join/{token}`, the guest form and password
+  form on it
+- Files — the browser, left rail, header, grid and list views, scopes and facets, sort, view
+  modes, selection bar and actions, upload modal, dropzone and upload queue, share selection
+  and the recipient picker, delete, the storage widget, the deep-link alert, the attach picker
+- The file viewer — preview dialog, shell, toolbar, zoom, page nav, more menu, the image
+  lightbox, and all seven renderers (pdf, docx, spreadsheet, markdown, text, video, audio)
+
+**Owned by other sectors** — starting a scheduled meeting and everything after (A); an
+attachment inside a message and the lightbox opened from one (D); the files tab of a channel's
+info panel (E).
+
+**Border with A** — creating and editing a scheduled meeting is yours; pressing Start, and
+everything that follows, is A's.
+
+**Border with D** — the same file, reached two ways. An attachment in a message is D's; the
+same file on `/w/{ws}/files` is yours. If the two disagree about it, that is a finding.
+
+**A trap specific to this sector** — calendar event chips for later in the day sit below the
+fold: the locator finds them but the click never lands and no dialog opens. Call
+`scrollIntoViewIfNeeded()` first. A chip that "does nothing" is usually off-screen, not broken.
+
+**Some defects here are invisible unless local and UTC dates disagree.** The team runs on +05,
+so that window is 00:00–05:00 local and a daytime box never crosses it. Do not wait for the
+hour — CDP `Emulation.setTimezoneOverride` puts them on opposite sides of midnight at any time
+of day, and comparing two zones that agree against one that diverges, at the same instant, is
+what turns a suspicious reading into a demonstration.
+
+**Setup** — 3 browsers: one to drive, a second to receive an invitation or a shared file, a
+third when an RSVP has to be seen from a third seat.
+
+**Priority if short** — create and edit events → invitations and RSVP → the file viewer and its
+renderers → upload and share → views and navigation → reminders → the join landing → facets
+and sort
+
+**Entry** — `/w/{ws}/calendar`, `/w/{ws}/calendar/{eventId}`, `/w/{ws}/files`, `/calendar/join`
+
+**Source** — `packages/features/calendar/ui-web`; `apps/web/src/features/calendar` (including
+`join/`); `apps/web/src/features/files`; `apps/web/src/features/file-viewer`;
+`apps/web/src/widgets/ReminderToast`
+
+---
+
+## Your dedup targets in `reports/`
+
+**A report already published for your ground is a dedup target, and a closer one than Jira.**
+We never file without being asked, so `reports/` is where findings actually live and ALK holds
+only the subset someone later chose to file. The letters were re-dealt, so the old reports do
+**not** line up with your letter — this table is what replaces reading the letter:
+
+| your sector | old reports covering your ground |
+|---|---|
+| **A** | `aloqa-calls-around-qa-*`, `aloqa-calls-entry-qa-*`, `aloqa-calls-record-qa-*`, and the pre-map `aloqa-calls-qa-*` |
+| **B** | `aloqa-calls-inside-qa-*`, `aloqa-calls-floor-qa-*`, part of `aloqa-calls-media-qa-*` |
+| **C** | `aloqa-calls-inside-qa-*`, `aloqa-calls-collab-qa-*`, part of `aloqa-calls-media-qa-*`, the recording half of `aloqa-calls-record-qa-*` |
+| **D** | `aloqa-chat-qa-*` |
+| **E** | `aloqa-chat-qa-*`, the sidebar and unread parts of `aloqa-workspace-qa-*` |
+| **F** | `aloqa-org-qa-*` |
+| **G** | `aloqa-org-qa-*` |
+| **H** | `aloqa-workspace-qa-*` |
+| **I** | `aloqa-workspace-qa-*` |
+
+Plus `reports/aloqa-consolidated-2026-08-26.html`, which is every sector's verified set for
+that day in one file, and any report published by **your own sector today** — check the
+directory, not `reports/README.md`, because the index is appended once at the end of a run by
+design and mid-run is guaranteed incomplete.
+
+**Reading a document is not checking a claim against it.** A session that had read the sibling
+report, re-verified all five of its findings and quoted the colliding one twice still published
+the duplicate, because it sat in memory as context rather than as a dedup target. It needs its
+own pass.
 
 ---
 
 ## Files each session writes
 
-`<area>` is fixed per sector so parallel sessions never collide or drift apart. `<date>` is
-today, `<lane>` the fixture lane letter (see `CLAUDE.md` for the full conventions).
+`<area>` is fixed per sector so parallel sessions never collide or drift apart, and so nothing
+this map writes can collide with a file from either retired map. `<date>` is today, `<lane>`
+the fixture lane letter — which on this map is the sector letter.
 
-**A second run of the same sector on the same lane and date** appends `-2`, `-3` and so on
-to both the log and the report basename. Check whether a report already exists for your
-sector today before you start — if one does, read it: a same-day predecessor has usually
-already settled a chunk of your surface, and two findings have shared a root cause across
-such a pair.
+**A second run of the same sector on the same lane and date** appends `-2`, `-3` and so on to
+both the log and the report basename. Check whether a report already exists for your sector
+today before you start — if one does, read it: a same-day predecessor has usually already
+settled a chunk of your surface, and two findings have shared a root cause across such a pair.
 
 | sector | session log | report source |
 |---|---|---|
-| A | `logs/AIRION-QA-<date>-<lane>-calls-inside.md` | `reports/aloqa-calls-inside-qa-<date>-<lane>.html` |
-| B | `logs/AIRION-QA-<date>-<lane>-calls-around.md` | `reports/aloqa-calls-around-qa-<date>-<lane>.html` |
-| C | `logs/AIRION-QA-<date>-<lane>-chat.md` | `reports/aloqa-chat-qa-<date>-<lane>.html` |
-| D | `logs/AIRION-QA-<date>-<lane>-org.md` | `reports/aloqa-org-qa-<date>-<lane>.html` |
-| E | `logs/AIRION-QA-<date>-<lane>-workspace.md` | `reports/aloqa-workspace-qa-<date>-<lane>.html` |
+| A | `logs/AIRION-QA-<date>-<lane>-calls-lifecycle.md` | `reports/aloqa-calls-lifecycle-qa-<date>-<lane>.html` |
+| B | `logs/AIRION-QA-<date>-<lane>-calls-room.md` | `reports/aloqa-calls-room-qa-<date>-<lane>.html` |
+| C | `logs/AIRION-QA-<date>-<lane>-calls-studio.md` | `reports/aloqa-calls-studio-qa-<date>-<lane>.html` |
+| D | `logs/AIRION-QA-<date>-<lane>-chat-messages.md` | `reports/aloqa-chat-messages-qa-<date>-<lane>.html` |
+| E | `logs/AIRION-QA-<date>-<lane>-chat-spaces.md` | `reports/aloqa-chat-spaces-qa-<date>-<lane>.html` |
+| F | `logs/AIRION-QA-<date>-<lane>-admin-org.md` | `reports/aloqa-admin-org-qa-<date>-<lane>.html` |
+| G | `logs/AIRION-QA-<date>-<lane>-identity.md` | `reports/aloqa-identity-qa-<date>-<lane>.html` |
+| H | `logs/AIRION-QA-<date>-<lane>-shell.md` | `reports/aloqa-shell-qa-<date>-<lane>.html` |
+| I | `logs/AIRION-QA-<date>-<lane>-calendar-files.md` | `reports/aloqa-calendar-files-qa-<date>-<lane>.html` |
 
-Driver snippets go to `scripts/callrig/snip/<lane>-<name>.mjs` — the lane letter, not the
+Driver snippets go to `scripts/callrig/snip/<lane>-<name>.mjs` — the **lane** letter, not the
 sector, because that is what keeps two browsers apart. Append your row to `reports/README.md`
 once, at the end of the run.
 
@@ -261,17 +718,26 @@ The timebox will not release you, and padding with repeat passes over what alrea
 the lowest-value thing available. In rough order of what has paid off:
 
 1. **Go deeper on state, not wider on surface** — the same screen after a reload, as a
-   different role, in a channel with history, on a slow network, with the window narrow.
+   different role, as a guest, in a channel or call with history, on a slow network, after a
+   recovery, in another language.
 2. **Re-verify your own findings.** Run each one again from a fresh page before it reaches the
    report; roughly a quarter of findings from a long unattended pass have not survived this.
-3. **Re-verify the previous session's report for your sector** — `/verify-bugs` does this as
-   its own pass: reproduce each finding on today's build, and where it does not reproduce,
-   check `git log` for a fix before calling it a false positive.
+3. **Take the surfaces nobody counted seriously** — the guest client (A's door and C's client),
+   the profile popup, the Tweaks panel, the failure screens, offline and cross-tab. They are
+   under-tested because no measurement ever sized them, not because they are unimportant.
+4. **Re-verify a retired map's report for your surfaces** — `/verify-bugs` does this as its own
+   pass: reproduce each finding on today's build, and where it does not reproduce, check
+   `git log` for a fix before calling it a false positive.
 
 ## Not allocated
 
-- **Calls debug surfaces** (~2.1%) — developer instrumentation.
-- **AI, Telephony, Marketplace** — design mock-ups reading from a static fixture module,
-  no API calls behind them. Re-check whether they have been wired up before writing them off
-  in a later session.
-- **Mobile and desktop apps** — the web app is what these sectors cover.
+- **Calls debug surfaces** (~2.1% of the app) — developer instrumentation
+  (`packages/features/calls/debug`, `apps/web/src/lib/callDebug`, `widgets/CallDebugMount`).
+  Sector H checks once per pass that they are not reachable by an ordinary user, which *is*
+  in scope.
+- **AI, Telephony, Marketplace** — fully built, and gated to a 404 at the deployed sha
+  (`apps/web/src/lib/unreleasedSections.ts`), with no rail tab and no API calls behind them.
+  Sector H owns the negative check. Re-check whether they have been wired up before writing
+  them off in a later session.
+- **Mobile and desktop clients** — `ui-mobile` and `ui-desktop` exist in the feature packages
+  and `apps/mobile` has 353 components; the web app is what these sectors cover.

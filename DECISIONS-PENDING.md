@@ -203,3 +203,13 @@ one session happened to inspect its own sample count.
 
 **Where the change would go** · `scripts/callrig/launch.sh`, `MAX_TOTAL` default (currently 20). If
 you pick option 4 it is not a code change at all, just how many sessions you start.
+
+**RESOLVED 2026-08-30 by the nine-sector repartition — option 4, and further than it proposed.**
+The map moved to nine sectors A–I on nine lanes A–I, with **three sessions running at once**
+rather than five. The per-sector caps (A4 B4 C4 D3 E3 F4 G3 H3 I3) are now a ceiling rather
+than a budget: the three heaviest sectors that can run together want **12** windows, and every
+other combination is smaller. `QA_MAX_BROWSERS` is left at 20 deliberately — at three sessions
+it can no longer be reached, so it goes back to being a backstop instead of a live constraint,
+and lowering it would only be able to refuse a launch nobody was going to make. The 16-window
+measurement above stands as the reason the ceiling exists; nothing on the new map approaches it.
+The arithmetic check (`samples * interval ≈ durMs`) stays worth running regardless.

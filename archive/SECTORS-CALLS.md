@@ -1,3 +1,14 @@
+> **RETIRED 2026-08-30 — superseded by `SECTORS.md`.**
+>
+> This was the second of two sector maps: five sectors K-O covering Calls only, run on
+> lanes A-E. Both maps were replaced by the single nine-sector map in `SECTORS.md`, where
+> Calls gets sectors **A, B and C** and the sector letter is always the lane letter.
+>
+> Nothing here is current. It is kept because `logs/AIRION-QA-2026-08-30-*` and
+> `reports/aloqa-calls-{entry,media,floor,collab,record}-qa-*` are indexed by its letters,
+> and a later session reading those files needs to know what K-O meant. `SECTORS.md`
+> carries an old-to-new mapping table for exactly that.
+
 # Test sectors — Calls only
 
 **This file is the second sector map, and it replaces `SECTORS.md` for the day rather than

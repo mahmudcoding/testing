@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """UserPromptSubmit hook: expand a bare sector letter into its actual scope.
 
-`/run-until 14:00 A` carries one character of meaning. This reads the sector maps
+`/run-until 14:00 G` carries one character of meaning. This reads the sector map
 and puts that sector's section straight into the session's context, so the scope
 does not depend on CLAUDE.md being loaded, read and correctly decoded.
 
-Two maps, and they are alternatives rather than layers:
-  SECTORS.md        sectors A-E, the whole product, lane = sector
-  SECTORS-CALLS.md  sectors K-O, Calls only, lanes A-E paired by position
+One map: SECTORS.md, sectors A-I, and the sector letter is the lane letter. There
+used to be a second, Calls-only map with sectors K-O on lanes A-E; it is retired to
+archive/ and is not read from here. A letter it defined now reads as "no sector
+assigned", which is correct: those letters no longer name anything current.
 
 Silent unless the prompt actually names a sector. Fails open, always.
 """
@@ -19,10 +20,6 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
 SECTORS = os.path.join(REPO, "SECTORS.md")
-SECTORS_CALLS = os.path.join(REPO, "SECTORS-CALLS.md")
-# Order matters: the first map holding the letter answers. They use disjoint
-# letters today, so this only decides behaviour if that ever stops being true.
-MAPS = (SECTORS, SECTORS_CALLS)
 
 # Only an actual invocation counts, same reasoning as the run-until hook: match
 # the expanded command body or an explicit "sector X", never loose prose.
@@ -36,6 +33,11 @@ SECTOR_WORD = re.compile(r"^\s*(?:/[\w-]+\s+)?(?:QA\s+)?sector\s+([A-Za-z])\b", 
 RELAY = re.compile(r"<cross-session-message", re.I)
 LANE_WORD = re.compile(r"\blane\s+([A-Za-z])\b", re.I)
 TRAILING_LETTER = re.compile(r"\b([A-Za-z])\s*$")
+# The heading that opens the shared filename table. read_files_row scopes itself to
+# what follows, because the map holds other tables keyed on a bare sector letter and
+# an unscoped search matched the first of those instead -- silently handing a session
+# a dedup list where it expected its own filenames.
+FILES_HEADING = re.compile(r"^## Files each session writes\b", re.M)
 
 
 def emit(obj):
@@ -57,18 +59,17 @@ def find_invocation(prompt):
     return None
 
 
-def read_map(path):
+def read_map():
     try:
-        with open(path, encoding="utf-8") as fh:
+        with open(SECTORS, encoding="utf-8") as fh:
             return fh.read()
     except (OSError, UnicodeDecodeError):
-        # A map that cannot be read must not take the other one down with it.
         return None
 
 
-def letters_in(path):
-    """Sector letters a map defines, in the order they appear in the file."""
-    text = read_map(path)
+def letters_in(text=None):
+    """Sector letters the map defines, in the order they appear in the file."""
+    text = read_map() if text is None else text
     if not text:
         return []
     seen, out = set(), []
@@ -81,65 +82,48 @@ def letters_in(path):
 
 
 def sectors_available():
-    """Every letter that has a section, named by the map it lives in."""
-    parts = []
-    for path in MAPS:
-        found = letters_in(path)
-        if not found:
-            continue
-        contiguous = all(ord(b) - ord(a) == 1 for a, b in zip(found, found[1:]))
-        span = ("%s-%s" % (found[0], found[-1])) if contiguous and len(found) > 2 else ", ".join(found)
-        parts.append("%s in %s" % (span, os.path.basename(path)))
-    return "; ".join(parts)
+    """Every letter that has a section, as a span when they are contiguous."""
+    found = letters_in()
+    if not found:
+        return ""
+    contiguous = all(ord(b) - ord(a) == 1 for a, b in zip(found, found[1:]))
+    span = ("%s-%s" % (found[0], found[-1])) if contiguous and len(found) > 2 \
+        else ", ".join(found)
+    return "%s in %s" % (span, os.path.basename(SECTORS))
 
 
-def read_files_row(path, letter):
-    """The sector's row from that map's "Files each session writes" table.
+def read_files_row(letter):
+    """The sector's row from the "Files each session writes" table.
 
     Lives in a shared section, so injecting the sector's own section alone leaves a
     session to invent its own filename — which is exactly what the table exists to stop.
+
+    Scoped to that section on purpose: other tables in the map are keyed on the same
+    bare letter, and `[^|]` matches a newline, so an unscoped search will happily run a
+    two-cell row into the row below it and return a plausible-looking wrong answer.
     """
-    text = read_map(path)
+    text = read_map()
     if not text:
         return None
-    m = re.search(r"^\|\s*%s\s*\|([^|]+)\|([^|]+)\|" % re.escape(letter), text, re.M)
+    h = FILES_HEADING.search(text)
+    if not h:
+        return None
+    section = text[h.end():]
+    m = re.search(r"^\|\s*%s\s*\|([^|\n]+)\|([^|\n]+)\|" % re.escape(letter),
+                  section, re.M)
     if not m:
         return None
     return m.group(1).strip(), m.group(2).strip()
 
 
 def read_sector(letter):
-    """(section body, map path) for the first map defining this letter."""
-    for path in MAPS:
-        text = read_map(path)
-        if not text:
-            continue
-        pat = re.compile(r"^## Sector %s\b.*?(?=^## |\Z)" % re.escape(letter), re.M | re.S)
-        m = pat.search(text)
-        if m:
-            return m.group(0).rstrip(), path
-    return None, None
-
-
-def default_lane(path, letter):
-    """Which lane this sector runs on when the prompt does not say.
-
-    On SECTORS.md the letters are the lanes. On the Calls map they are not, and
-    getting this wrong is the failure the pairing exists to prevent: there are no
-    lanes K-O — they are unseeded, and their ports sit outside the 9220-9319 window
-    launch.sh counts, so a browser there escapes the global cap entirely.
-
-    Derived from position rather than a hardcoded table, so adding a sector to the
-    map cannot leave this behind.
-    """
-    if path == SECTORS:
-        return letter
-    order = letters_in(path)
-    if letter in order:
-        i = order.index(letter)
-        if i < 26:
-            return chr(ord("A") + i)
-    return None
+    """The map section for this letter, or None."""
+    text = read_map()
+    if not text:
+        return None
+    pat = re.compile(r"^## Sector %s\b.*?(?=^## |\Z)" % re.escape(letter), re.M | re.S)
+    m = pat.search(text)
+    return m.group(0).rstrip() if m else None
 
 
 def main():
@@ -159,30 +143,22 @@ def main():
             emit({})
         sector = m2.group(1).upper()
 
-    body, path = read_sector(sector)
+    body = read_sector(sector)
     if not body:
         # Lanes run past the sectors: only some letters have a scope assigned, the rest
         # are free lanes for other work. Say so plainly instead of reading like an error.
+        extra = ""
+        if sector in ("K", "L", "M", "N", "O"):
+            extra = (" K-O named the retired Calls-only map's sectors; Calls is now "
+                     "sectors A, B and C.")
         emit({"systemMessage":
-              "%s has no sector assigned (%s). "
+              "%s has no sector assigned (%s).%s "
               "Fine for non-sector work; check the letter if you meant a QA sector."
-              % (sector, sectors_available() or "no sector map readable")})
+              % (sector, sectors_available() or "no sector map readable", extra)})
 
+    # The letters are the lanes on this map. A prompt may still pair them differently.
     lm = LANE_WORD.search(value)
-    if lm:
-        lane = lm.group(1).upper()
-    else:
-        lane = default_lane(path, sector)
-
-    calls_map = path == SECTORS_CALLS
-    warn = ""
-    if lane is None:
-        # Only reachable if the Calls map became unreadable between read_sector and
-        # here. Refuse to guess a lane rather than silently pairing K with lane K.
-        lane = "?"
-        warn = ("\n\n**Could not resolve this sector's lane** — read the pairing table at the "
-                "top of %s and set `QA_LANE` by hand before launching anything."
-                % os.path.basename(SECTORS_CALLS))
+    lane = lm.group(1).upper() if lm else sector
 
     framing = (
         "**The bullets below are the sector's territory, not a list of things to test.** They "
@@ -190,24 +166,17 @@ def main():
         "regression checklist: anything a user can reach inside that territory is yours, "
         "including surfaces not named. Working down the list is the wrong shape of pass — pick "
         "targets the way %s describes under \"Choosing what to hit inside your sector\", "
-        "and go where coverage is thin." % os.path.basename(path))
+        "and go where coverage is thin." % os.path.basename(SECTORS))
 
     header = "Read as **sector %s on lane %s**." % (sector, lane)
-    if calls_map:
+    if lane != sector:
         header += (
-            " This is the **Calls-only map** (`%s`), which replaces `SECTORS.md` for the day "
-            "rather than adding to it — sector letters are K-O and lanes are A-E, so they are "
-            "*meant* to differ. There are no lanes K-O: they are unseeded and sit outside the "
-            "port range `launch.sh` counts for its global browser cap.\n\n"
-            "**Export both** at the start of the session — `launch.sh` reads the sector off the "
-            "lane letter unless you say otherwise, and would hand you the wrong browser cap:\n\n"
-            "```bash\nexport QA_LANE=%s QA_SECTOR=%s\n```"
-            % (os.path.basename(SECTORS_CALLS), lane, sector))
-    elif lane != sector:
-        header += (" These differ, which is deliberate: test sector %s's scope while running on "
-                   "lane %s's fixtures and ports." % (sector, lane))
+            " These differ, which is not the default on this map: sector letters *are* lane "
+            "letters here. Test sector %s's scope while running on lane %s's fixtures and "
+            "ports, and export both so `launch.sh` gives you the right browser cap:\n\n"
+            "```bash\nexport QA_LANE=%s QA_SECTOR=%s\n```" % (sector, lane, lane, sector))
 
-    files = read_files_row(path, sector)
+    files = read_files_row(sector)
     files_note = ""
     if files:
         log, report = files
@@ -217,16 +186,17 @@ def main():
                       "with `<date>` today and `<lane>` = %s." % (log, report, lane))
 
     note = ("\n\nThis is the sector's own section of %s. Read the rest of that file for the "
-            "shared parts — how to choose targets within the sector, and what to do if it runs "
-            "dry." % os.path.basename(path))
+            "shared parts — the old-to-new letter mapping, which published reports are your "
+            "dedup targets, how to choose targets within the sector, and what to do if it runs "
+            "dry." % os.path.basename(SECTORS))
 
     emit({
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
-            "additionalContext": header + warn + "\n\n" + framing + "\n\n" + body + files_note + note,
+            "additionalContext": header + "\n\n" + framing + "\n\n" + body + files_note + note,
         },
         "systemMessage": "sector %s on lane %s — scope loaded from %s"
-                         % (sector, lane, os.path.basename(path)),
+                         % (sector, lane, os.path.basename(SECTORS)),
     })
 
 

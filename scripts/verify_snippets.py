@@ -155,4 +155,4 @@ def main(lanes):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:] or ["A", "B", "C", "D", "E"]))
+    sys.exit(main(sys.argv[1:] or ["A", "B", "C", "D", "E", "F", "G", "H", "I"]))

@@ -63,19 +63,23 @@ SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
 # One report per lane. PINNED is the set someone chose; discovery only overrides
 # a pin when it finds something STRICTLY newer, so a new report is picked up
 # without a code change and today's set can never be silently swapped for a
-# different one. That distinction is load-bearing: lane A has two reports of the
-# same date with no revision suffix — nine findings and one — separated only by
-# mtime, which a git checkout rewrites. Ranking alone would coin-flip between
+# different one. That distinction is load-bearing: lane A once had two reports of
+# the same date with no revision suffix — nine findings and one — separated only
+# by mtime, which a git checkout rewrites. Ranking alone would coin-flip between
 # them, and a wrong auto-pick looks exactly like a right one from inside the app.
-PINNED = {
-    "A": "reports/aloqa-calls-inside-qa-2026-08-26-A.html",
-    "B": "reports/aloqa-calls-around-qa-2026-08-26-B.html",
-    "C": "reports/aloqa-chat-qa-2026-08-26-C-2.html",
-    "D": "reports/aloqa-org-qa-2026-08-26-D-2.html",
-    "E": "reports/aloqa-workspace-qa-2026-08-26-E-2.html",
-}
-LANE_NAMES = {"A": "Calls · inside", "B": "Calls · around", "C": "Chat",
-              "D": "Org · identity", "E": "Workspace · calendar"}
+#
+# EMPTY ON PURPOSE since 2026-08-30. The sector letters were re-dealt for the
+# nine-sector map, so every report on disk sits under a lane letter that now names
+# a different sector: pinning lane C to a chat report would put chat findings in
+# front of someone judging Calls · studio, labelled as theirs. An empty pin means
+# discovery-by-newest, which is correct until the first nine-sector reports land —
+# at which point pin them here again, one line per lane, and the coin-flip
+# protection comes back with them.
+PINNED = {}
+LANE_NAMES = {"A": "Calls · lifecycle", "B": "Calls · room", "C": "Calls · studio",
+              "D": "Chat · messages", "E": "Chat · spaces", "F": "Admin & org",
+              "G": "Identity & access", "H": "Shell & discovery",
+              "I": "Calendar & files"}
 # aloqa-<area>-qa-<YYYY-MM-DD>-<LANE>[-<rev>].html
 REPORT_RE = re.compile(
     r"aloqa-(?P<area>.+)-qa-(?P<date>\d{4}-\d{2}-\d{2})-(?P<lane>[A-Z])(?:-(?P<rev>\d+))?\.html$")
@@ -84,6 +88,28 @@ REPORT_RE = re.compile(
 def _rank(path):
     m = REPORT_RE.search(os.path.basename(path))
     return (m["date"], int(m["rev"] or 0)) if m else None
+
+
+# Area tokens written under the two retired sector maps. A lane letter no longer
+# names the sector it named when these were published, so labelling one of them with
+# the lane's current sector name puts, say, chat findings in front of someone judging
+# Calls and tells them they are theirs. Name it by what it actually is instead.
+RETIRED_AREAS = {
+    "calls-inside": "Calls · inside", "calls-around": "Calls · around",
+    "chat": "Chat", "org": "Org · identity", "workspace": "Workspace · calendar",
+    "calls-entry": "Calls · getting in", "calls-media": "Calls · media",
+    "calls-floor": "Calls · floor", "calls-collab": "Calls · collab",
+    "calls-record": "Calls · record",
+}
+
+
+def _lane_name(lane, rel):
+    """What to call this lane in the app, given the report actually chosen for it."""
+    m = REPORT_RE.search(os.path.basename(rel))
+    area = m["area"] if m else None
+    if area in RETIRED_AREAS:
+        return "%s (retired map)" % RETIRED_AREAS[area]
+    return LANE_NAMES.get(lane, lane)
 
 
 def _pick_reports(log=print):
@@ -105,12 +131,18 @@ def _pick_reports(log=print):
             chosen, why = pin, ""
         elif newest:
             chosen = newest
-            why = ("  <- newer than the pinned %s" % os.path.basename(pin)) if pin_ok \
-                  else "  <- pinned report is missing"
+            if pin_ok:
+                why = "  <- newer than the pinned %s" % os.path.basename(pin)
+            elif pin:
+                why = "  <- pinned report is missing"
+            else:
+                # No pin at all is the current state and it is deliberate, so say
+                # that rather than "missing", which reads as something broken.
+                why = "  <- no pin, newest wins"
         else:
             log(f"  lane {lane}: no report found, skipping")
             continue
-        out.append((lane, LANE_NAMES.get(lane, lane), chosen))
+        out.append((lane, _lane_name(lane, chosen), chosen))
         log(f"  lane {lane}: {os.path.basename(chosen)}{why}")
     return out
 
