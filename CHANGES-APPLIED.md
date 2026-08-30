@@ -3379,3 +3379,49 @@ or policy row, so the default is the product's, not seeded state. (4) taken as r
 enumeration on lane B); not independently re-measured, since it needs that lane's browser.
 
 **Reverted?** · No. Backup at `/tmp/SELECTORS.md.bak`.
+
+## `SELECTORS.md` screen-share bullet — correction HELD pending one measurement
+
+**Status** · **Not applied.** Recorded here so it is not lost if this session ends.
+
+**What is disputed** · The "Calls — state that gates a control" bullet (added `8c1be6b`, 2026-08-27)
+says a per-participant device permission does **not** lift a meeting's `on_request` screen-share
+mode — "the dialog reads `Currently Allowed` while the button stays a request". Lane C measured the
+opposite on rc.7: host sets Allow, `PUT /participants/<id>/permissions` → 200 with effective
+`screen_share:true`, and the member's toolbar flips `Request to share` → `Share screen` with no
+reload, dialog agreeing. Three independent signals, internally consistent.
+
+**Why it is held rather than written** · There are two corrections and they contradict each other.
+The 2026-08-26 log that fed the original note records a camera `Block` reaching the participant's
+toolbar **"за ~13 с"** — thirteen seconds. If the 08-27 author saved and re-read immediately, the
+note is a propagation-delay artifact and the correct bullet is *"it lifts, but allow ~15s"* — which
+is a materially different instruction from *"it lifts"*, because someone polling once at t+1s would
+get the old wrong answer back. Asked lane C for their elapsed time; that single number decides which
+version gets written. Writing the wrong one replaces a stale trap with a new one.
+
+**Cause investigated and REJECTED** · `37af8393c fix(calls): let approved guest device permissions
+take effect (ALK-3142)` sits in the rc.5→rc.7 range and has exactly the right shape. It is **not**
+the cause: its own commit message states *"the effective-permissions route is member-only"*, so the
+freeze it fixes was guest-only, and both the 08-27 note and lane C's measurement are on members. Its
+file list is guest paths plus 8 shared lines in `packages/core/src/realtime/events.ts`. Recorded
+because a plausible-but-wrong cause is worth naming once so nobody re-derives it. The backend has no
+deploy stamp, so a backend change remains possible and invisible.
+
+**Reverted?** · N/A — never applied.
+
+## Cross-sector results routed this round (no file changes)
+
+- **ALK-3492 confirmed FIXED on rc.7** by lane C: a banned participant now renders `Cannot be
+  invited` with the checkbox disabled. The rc.5 finding "Ведущий может пригласить в звонок того,
+  кого сам заблокировал" does not reproduce. Told lanes A and D, because the rc.5 reports are the
+  closest dedup targets for all of them and are 105 commits behind — a finding suppressed against a
+  since-fixed report is a finding nobody sees.
+- **~13s permission propagation** broadcast to lanes A, B and D as a poll-don't-sample-once rule.
+  Safe under both explanations above, and it prevents the false finding where "did not apply" and
+  "has not arrived yet" are indistinguishable at t+1s.
+- **Member/guest permission split** routed: members refresh effective permissions over REST, guests
+  only on realtime frames (member-only route). Same visible control, two code paths — a timing result
+  on one does not transfer to the other.
+- **Guest device-request control is new-at-this-build** (shipped, pulled under ALK-3028, restored in
+  `37af8393c`). Routed to sector M as the moderation surface, flagged to K as fresh rather than
+  long-standing. Given as a where-to-look pointer with no expected behaviour attached.
