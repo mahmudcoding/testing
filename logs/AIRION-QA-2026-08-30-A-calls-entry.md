@@ -12,6 +12,8 @@ Browsers: alice 9222, bob 9223, carol 9224.
   ran on **rc.5 `c4b5386b4a3a`** — 105 commits behind. That report is my closest dedup target
   and it covers a lot of sector K already (password gate, participant limit, call waiting,
   waiting-room rejoin, guest dead link, no-answer ringing).
+**ПРОГОН ЗАВЕРШЁН** — отчёт опубликован, см. «Итог прогона» в конце файла.
+
 - Plan: go where rc.5 could not have looked, then where the rc.5 pass was thin.
   1. **Entry gates changed by this deploy** — `ALK-3490` "Who can join" (new
      `MeetingWhoCanJoinControl.tsx`, commit `8baa0166f`) and `ALK-3489` invite re-entry fence
@@ -423,4 +425,99 @@ docText целиком: "Join as a guest
 **Причина сбоя моего собственного прогона — мой снипет, не продукт.** `a-k30-ring.mjs` начинается
 с «чистого листа», который завершает все активные встречи воркспейса, и он погасил звонок,
 который я в этот момент использовал. Отсюда же `input[type=text]` → 0 на гостевой странице.
+
+### BUG-3 — уточнение причины: сравнение фронтового маршрута и бэкендового эндпоинта
+
+Гостевой лендинг зовёт `POST /api/guest/preview` (маршрут Next.js в самом веб-приложении,
+`apps/web/app/api/guest/preview/route.ts`), который проксирует бэкендовый
+`POST /api/v1/meeting/guest/preview`. Оба вызваны **без авторизации** (`auth/me` → 401)
+из чистого контекста, один и тот же токен, подряд:
+
+```
+POST /api/v1/meeting/guest/preview   200
+  {"valid":true,"meeting_name":"QA device check","password_protected":false,"requires_approval":false}
+
+POST /api/guest/preview              200
+  {"status":"valid","meetingName":"QA device check","passwordProtected":false,"requiresApproval":false}
+```
+
+Соответствие **один в один**, только переименование в camelCase. **Фронт ничего не теряет** —
+поля о записи нет уже в проекции бэкенда. Это и есть узкая граница: не «клиент не отрисовал»,
+а «значения не существует в том, что клиенту отдают». Поэтому находка помечена `[backend]`,
+хотя чинить придётся обе половины (поле в проекции + строка на экране).
+
+**Проекция не заморожена — её уже расширяли.** `ALK-1727` [Task/TESTING], тикет, которым этот
+эндпоинт создавали, специфицирует ответ как:
+
+> Response (всегда 200 при валидном JSON): `{ "valid": true, "meeting_name": "Weekly Sync" }`
+> или `{ "valid": false }`. `meeting_name` только при `valid:true`.
+
+То есть изначально было **два** поля. Сейчас их четыре: `password_protected` и
+`requires_approval` добавлены после. Условия входа в эту проекцию добавляют по мере надобности;
+запись в их число не попала.
+
+**Критерии готовности `ALK-1727`** — «лендинг делает preview на входе; мёртвая ссылка fail-fast
+без формы; валидная показывает имя встречи; токен только в теле; тесты». Про запись — ничего.
+Разработчик, закрывающий этот тикет по его чек-листу, моей находки не коснулся бы.
+
+### Дедуп BUG-2 по всем статусам (не только открытым)
+
+- `ALK-1433` [Bug/**TESTING**] «Device Settings Modal Contains Incorrect Labeling and
+  Non-Functional Device Selectors in Meeting Pre-Join Screen». Его Expected result: «modal should
+  display correct field labels: Microphone, Speaker, and Camera», «clicking each selector should
+  open a dropdown or device list», «user should be able to select and apply preferred devices».
+  **Все три выполнены на rc.7** — заголовки секций `MICROPHONE / SPEAKER / CAMERA` есть, списки
+  открываются, выбор применяется и переживает перезагрузку (мой замер выше). Ни один критерий не
+  про то, **какое устройство показано как текущее**. Не дубликат.
+- `ALK-817` [Task/TESTING] «Device settings v2… pre-join picker». Критерий: «Lobby lets you choose
+  all three devices before joining (persisted)» — выполнен. Про состояние по умолчанию ничего.
+- `ALK-3445` [TESTING] — кнопка проверки динамиков навсегда застревает на `Playing…`. **На rc.7 не
+  воспроизводится**: у меня кнопка возвращается из `Playing…` в `Test audio` (замер выше).
+- `ALK-3706` [Backlog] — длинные названия устройств обрезаются без многоточия в **дропдауне**.
+  Другое: там значение есть и обрезано, у меня значения нет вовсе.
+- 188 открытых багов прочитаны; `REVIEW` (55 записей) просмотрен отдельно — совпадений нет.
+
+
+## Итог прогона
+
+**Опубликовано:** https://claude.ai/code/artifact/7216bbe7-baf9-44f0-924d-eb9bffcdfe60
+Файл: `reports/aloqa-calls-entry-qa-2026-08-30-A.html`. Строка в `reports/README.md` дописана.
+
+**2 находки** — 1 High (backend), 1 Medium (frontend). Сборка одна на весь прогон:
+`v0-61-0-rc-7-10a407a46be1`.
+
+**Проверки перед публикацией:**
+- `scripts/verify_report.py` → `ALL CHECKS PASS` (заголовки, соответствие строк таблицы статьям,
+  секции, важности, утечки, баланс тегов; объём прозы 170 и 164 слова при бюджете 120–180).
+- `scripts/check_repro.py` → `2/2 findings have a block`.
+- `scripts/verify_snippets.py A` → **`2/2 reach their screen`**, оба `ready=true`,
+  `steps` совпадает с числом `progress()`.
+- Цитата одна, проверена: `git cat-file -e 10a407a46be1:apps/web/app/api/guest/preview/route.ts`
+  → EXISTS. Бэкендовых цитат нет намеренно (у бэкенда нет стампа сборки).
+- Строки «не сломать» в разделах **Проверка** — обе проверены на живой сборке **сегодня**, а не
+  написаны из ожидания: поле пароля и строка одобрения на гостевом экране; сохранение явного
+  выбора устройства, индикатор уровня и `Test audio` в выбранный динамик.
+
+**Главное методическое за прогон.** Собственная находка снята перед публикацией: «до входа
+нигде не сказано, что идёт запись» для участника-члена оказалась **специфицированным** поведением
+(`ALK-1888`, TESTING) поверх уже заведённого механизма (`ALK-1847`, BLOCKED). Оба невидимы для
+`jira_cache.py list --open-bugs` — 188 открытых багов прочитаны целиком и не дали совпадений,
+а один `grep 'consent'` по всему зеркалу нашёл оба за секунду. Моё наблюдение «компонент
+уведомления не отрисовывается нигде» было не мёртвым кодом, а **реализацией** удаления.
+Гостевая половина при этом выжила и усилилась: критерии приёмки обоих тикетов называют только
+lobby участника и чекбокс, `/join/<token>` не называет ни один, а у гостевого пути **своя**
+неавторизованная проекция, что снимает аргумент «pre-join принципиально не может знать».
+
+**Стенд на выходе:** alice 9222, bob 9223, carol 9224 — все подписаны своими аккаунтами
+(`ensure.sh A alice bob carol` → ready), активных встреч нет. Фикстуры лейна A не трогались.
+Гостевые контексты создавались через `browser.newContext()` и умирают вместе с CDP-соединением —
+следов не оставляют.
+
+**Не пройдено, с причиной:**
+- Переключение камеры между устройствами — на стенде один `videoinput` (`fake_device_0`).
+- Лайфцикл дозвона 1-to-1 (исходящий/входящий/decline/no answer): контрол вызова в заголовке DM
+  не нашёлся, инструмент не доведён. Не «сломано» — **не проверено**. В rc.5 этот путь пройден
+  целиком и признан рабочим.
+- Лимит участников у двери и запуск запланированной встречи — покрыты проходом rc.5, сюда не
+  дублировал.
 

@@ -8,12 +8,34 @@
 
 ## Current state
 
-Setup done: fixtures verified (8/8 users, 7/7 workspace members, 4 channels), build stamp recorded,
-Jira mirror synced (3771 issues), four browsers up.
+**Session ended early — the timebox was cancelled by the user at ~14:40 +05, mid-run.**
+Everything below is measured and logged. No report has been published yet.
 
-Next: locate/clear any leftover active meeting on lane B, then start a 4-party call and work the
-priority order — mic/camera + devices → grid/tiles/pagination → quality → PiP/fullscreen/pinning →
-network + error banners → personal call settings → guest.
+Findings ready to report: BUG-1 (Low), BUG-2 (Low), BUG-4 (Medium).
+BUG-3 measured in full but deliberately **not** for the report — no reproducible trigger.
+
+**Left in flight when the session stopped:**
+- Guest client. An anonymous guest ("Guest Lane B") joined via
+  `https://airion-cargo.store/guest/c/<token>` (which redirects to `/join/<token>`) in a **second
+  browser context inside dave's rig browser** (`browser.newContext()` works over CDP, giving a
+  clean cookie jar without another window). It is still in call `V4P254XBZ5W3KPN` and will show as
+  a 5th participant until dave's browser is restarted. First read of the guest surface was
+  captured: guest toolbar carries `mic-control-pair`, `cam-control-pair`,
+  `call-controls-screen-share`, `call-controls-live-reaction`, `call-controls-people-toggle`,
+  `call-controls-chat-toggle`, `call-controls-breakout-rooms`, `call-controls-leave` — i.e. no
+  view toggle, no minimize/PiP, no fullscreen, no meeting settings, no add-to-call; its own tile
+  carries `participant-tile-guest-badge`; 1 outbound audio, 3 inbound audio + 3 inbound video
+  (`framesDecoded` ~170 each), 3 `<video>` at 480x270 and 3 `<audio>`. **Not analysed** — whether
+  the missing PiP/fullscreen/view-toggle controls are deliberate for guests is unanswered, and
+  that is the obvious next question.
+- The call `L media 074933` (`V4P254XBZ5W3KPN`) is still active with alice, bob, carol, dave and
+  the guest. `max_video_height` restored to 1080; carol's call volume restored to 100; alice's
+  Push to talk off; dave's `aloqa.calls.nerd-stats` left **on** (localStorage, per-device).
+
+**Untested inside sector L when the session stopped:** grid pagination and the filmstrip beyond
+what the spotlight layout showed (needs more than 4 bodies); device hot-plug; the `Fit to tile`
+tile action; `Will be right back`; the guest's own device handling and error banners; the
+`CallConnectionRecoveryBanner` / lifecycle-error path.
 
 ## Dedup targets identified at start
 
@@ -305,3 +327,125 @@ can pick it up rather than rediscover it.
 **Side observation from the same reload:** a freshly reloaded client resumes publishing at
 **320x180** and the hour-old client had been at 480x270 (and 1920x1080 before that), so the publish
 ladder starts low after a rejoin and ramps. Recorded, not investigated.
+
+### Verified working — fullscreen and its auto-hiding toolbar
+
+`Enter fullscreen` sets `document.fullscreenElement` to `HTML`, flips the label to `Exit fullscreen`
+and `aria-pressed` false→true; the button toggles back correctly. In fullscreen the toolbar
+auto-hides: idle → `[data-testid="call-toolbar"]` slides from y=984 to y=1062 with effective
+opacity 0 (own `opacity` stays 1, `display:flex` — it is translated off, not unmounted); a pointer
+move brings it back to y=984, opacity 1, 23 visible buttons including `Mute` and `Leave call`; it
+hides again ≤1.5 s after the pointer stops.
+**Keyboard users are not locked out:** with the pointer still and the toolbar hidden, `Tab` reveals
+it on the first press (opacity 0→1) and focus walks into it — all 17 toolbar buttons are
+`tabIndex=0`, and by tab 9-11 `document.activeElement` was `Mute`, `Select microphone`,
+`Turn camera off`.
+**Rig note:** `page.keyboard.press('Escape')` does NOT leave fullscreen — that is a browser-level
+UA action Playwright cannot send. `document.exitFullscreen()` works. Not a product defect.
+
+### Verified working — "Stop watching" / "Resume watching"
+
+bob → carol's tile → `Stop watching`: the tile's `<video>` is removed, `participant-placeholder`
+replaces it and the tile reads **"You stopped watching QA Carol"**; held across 6 samples / 15 s.
+The menu correctly re-reads `Resume watching`, and picking it re-subscribes:
+`totalVideoFrames` 48 → 98 → 148 → 198 → 248 → 299 → 349 → 399 over 8 samples at 2.5 s (≈20 fps).
+
+### Verified working — Call volume slider (audio mix), including for late joiners
+
+`[data-testid="audio-mix-slider-main"]`, native `input[type=range]` 0-100. Setting 25 puts both
+remote `<audio>` elements at `.volume = 0.25`; five `ArrowLeft` presses (the control takes focus)
+take it to 20 / `0.2`; restoring 100 gives `1`. The popover label tracks it ("Call volume 25%").
+**Applies to someone who joins afterwards:** with carol at 30, dave left (2-step leave:
+`call-controls-leave` then `call-leave-confirm-submit`) and rejoined; carol's audio element count
+went 2 → 1 → 2 and the new element came up at `0.3`, not `1`.
+
+### Verified working — camera that cannot be opened
+
+With `navigator.mediaDevices.getUserMedia({video:true})` rejecting `NotAllowedError` (positive
+control: a direct call from the page returned `NotAllowedError` at the same moment), pressing
+`Turn camera on`:
+```
+t+946 ms  toast: "Call media issue — Camera or microphone is unavailable.
+                  Check browser permissions and selected devices.  Dismiss"
+          camera button STAYS "Turn camera on"   (state not falsely flipped)
+          senders: audio:true, video:false        (audio unaffected)
+t+9.5 s   toast gone
+```
+Polled at 500 ms from before the click, 32 samples. The two identical notice entries are one toast
+matched by both `[data-sonner-toast]` and `[role=alert]`, not a duplicate toast.
+
+**Rig trap worth recording:** CDP `Browser.setPermission {name:'camera', setting:'denied'}` reports
+`navigator.permissions.query({name:'camera'}).state === 'denied'` **but gUM still succeeds** —
+`--use-fake-ui-for-media-stream` grants it regardless. Without a direct-gUM positive control this
+reads exactly like "the app ignores a revoked camera permission", which would have been a false
+High. Permission denial is not testable on this rig; simulate at the gUM boundary instead.
+
+### BUG-4 [Medium] [frontend] Меню устройств не отмечает используемое устройство, пока его не сменишь вручную
+
+In-call `Select microphone` popover (mic + speaker lists) and `Select camera` popover.
+
+**Measured on three clients, same build, same call:**
+```
+dave  — has never opened a device picker in this session
+  live tracks   audio: "Fake Default Audio Input"      video: "fake_device_0"
+  audio elements sinkId: "(default)"  x2
+  microphone rows  Fake Default Audio Input / System default device   NOT marked
+                   Fake Audio Input 1                                 NOT marked
+                   Fake Audio Input 2                                 NOT marked
+  speaker rows     Fake Default Audio Output / System default device  NOT marked
+                   Fake Audio Output 1 / Fake Audio Output 2          NOT marked
+  camera rows      fake_device_0                                      NOT marked
+```
+So every list contains the device that is live, and marks none of them.
+
+**Positive control inside the same popover** — carol, at one instant, after picking a speaker
+earlier in the session and never picking a mic or camera:
+```
+  speaker  Fake Audio Output 2   MARKED   background oklab(0.501154 -0.0199705 -0.207887 / 0.1)
+                                          color rgb(36, 84, 216)
+           (audio elements sinkId b662491f9d35 == that row's "Device ID b662...6cc8")
+  mic      Fake Default Audio Input (live) NOT marked   background rgba(0, 0, 0, 0)
+                                                        color rgb(17, 20, 26)
+  camera   fake_device_0 (live)            NOT marked   background rgba(0, 0, 0, 0)
+```
+Three lists, one popover, identical markup — the one the user picked is marked, the two that are
+merely *in use* are not. So the picker can mark a row; it simply never marks the starting device.
+
+Reproduced on bob independently: all six audio rows unmarked at first open; picking
+`Fake Audio Input 1` marked that row immediately.
+
+**Consequence:** to find out which microphone or camera the call is using, the only move available
+is to select one — which changes it.
+
+**Second defect in the same markup, kept as a note not a separate finding:** the mark is carried
+only by background and text colour. Every row has `role=null`, `aria-checked=null`,
+`aria-selected=null`, `data-state=null` and contains no icon (`svgCount 0`), so the selection is
+conveyed by colour alone and not exposed to assistive technology at all.
+
+**Dedup:** the published sibling `reports/aloqa-calls-inside-qa-2026-08-26-A.html` carries
+"Выбор микрофона в звонке не переключает микрофон… а в списке отмеченным остаётся прежний" — that
+is about a *picked* microphone not taking effect. **I re-measured that and it still holds on rc.7:**
+bob's sender track label stayed `Fake Default Audio Input` after picking `Fake Audio Input 1`
+(before and after both `['Fake Default Audio Input']`), while the picked row became marked. That
+finding is theirs and stays theirs. Mine is the disjoint case — *nothing* picked, *nothing* marked,
+in all three lists including camera and speaker, which that finding does not reach. Nothing in
+`--open-bugs` matches; `jira_cache.py grep` over `microphone`, `camera`, `device` returned no ticket
+about the initial marking.
+
+### Verified working — speaker selection and Maximum video quality
+
+- **Speaker:** picking `Fake Audio Output 1` set every `<audio>` element's `sinkId` to
+  `16fc45a52982d404`, matching that row's "Device ID 16fc...3c51"; picking Output 2 moved it to
+  `b662491f9d35a136`. So the speaker half of the picker genuinely switches output.
+- **Maximum video quality** (Meeting settings → `meeting-settings-video-quality-slider`, values
+  180p / 360p / 720p / 1080p): set to `Minimal — 180p`, `GET /meeting/<id>/settings` returned
+  `max_video_height: 180`, and within 5 s **all three** publishing clients went 480x270 → 320x180
+  and held there for 40 s / 8 samples. Restored to 1080p, `max_video_height: 1080`.
+
+### ALK-3369 is FIXED on rc.7 — keyboard on the Maximum video quality slider
+
+The ticket (TESTING) says the slider "reacts only to the first arrow press, then focus leaves it".
+Measured now: `ArrowRight, ArrowRight, ArrowRight, ArrowLeft` moved the value 0→1→2→3→2 with
+`document.activeElement === slider` **true after every press**, and the slider is reachable by Tab
+in 5 presses from the top of the panel (`meeting-settings-entry-open` → name → password → max
+participants → guest-link visibility → slider). No regression.

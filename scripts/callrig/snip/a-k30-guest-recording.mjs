@@ -34,7 +34,7 @@ export default async ({ page, progress }) => {
   await page.waitForTimeout(4000);
   await page.locator('[data-testid="calls-hub-start-now"]').click();
   await page.waitForTimeout(2000);
-  await page.locator('input[aria-label="Call name"]').first().fill('QA recording repro');
+  await page.locator('input[aria-label="Call name"]').first().fill('QA entry check');
   await page.locator('[data-testid="calls-start-entry-open"]').click();
   await page.waitForTimeout(600);
   await page.locator('[data-testid="calls-start-submit"]').click();
@@ -114,7 +114,11 @@ export default async ({ page, progress }) => {
     probeWorks_findsWordInvited: landing.controlInvited,
   };
 
-  const ok = /\/join\//.test(landing.url) && authed === 401 && landing.nameField === 1 && landing.controlInvited;
+  // NOTE: the call name must never contain the word this probe searches for.
+  // Naming it 'QA recording repro' made mentionsRecording true off the heading alone,
+  // and the snippet passed while measuring nothing.
+  const ok = /\/join\//.test(landing.url) && authed === 401 && landing.nameField === 1
+          && landing.controlInvited && !landing.mentionsRecording && landing.recordingAttrs === 0;
   if (!ok) {
     out.leftToDo = 'The signed-out window did not reach the guest invite page (or the probe could not '
                  + 'read it) — do not judge this screen. Re-run, then ./ensure.sh A carol.';

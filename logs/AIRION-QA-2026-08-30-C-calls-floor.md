@@ -251,3 +251,109 @@ contradicts the screen it did not touch.
 - Creating a room auto-joins the creator and sets focus to `side_room`. `Close room` is
   `[data-testid="side-room-close"]`, **icon-only with `aria-label`** — a text match finds nothing.
 - New Side Room dialog: `Create room` is enabled with an empty ROOM NAME (untested what it creates).
+
+---
+
+## Session state @15:15 (timebox cancelled mid-measurement)
+
+### CAND-5 [High] [frontend] After the host moves someone into a Side Room, their microphone control stops working — and it is not yet established whether they are actually muted
+
+**Reproduced twice, on a freshly reloaded client, with the voluntary-join control run between the two.**
+
+Sequence, `POST /api/v1/meeting/<id>/breakout-rooms/move {"user_id":"<bob>","target_breakout_room_id":"<alpha>"}` → 200:
+
+    run 1  before the move   button "Mute"   aria-pressed false   (unmuted)
+           after the move    button "Unmute" aria-pressed true    title "Toggle mute (⌘D)"
+           safeClick on it   {ok:true, self:true, top:"path", name:"Unmute"}  -> state unchanged
+           Meta+D            20 samples over 8 s, timeline ["Unmute/true"]     -> state unchanged
+           after page reload button "Unmute" title "Live in the side room"
+           safeClick again   {ok:true, self:true}  -> button "Mute" aria-pressed false   WORKS
+
+    control: Bob leaves the room, is "Mute"/false in the main call, then JOINS SR Alpha
+           himself -> button "Mute" aria-pressed false, title "Live in the side room".
+           A voluntary join does not do this.
+
+    run 2  Bob back in main, "Mute"/false. Host moves him again ->
+           "Unmute"/true, title "Toggle mute (⌘D)".
+           safeClick #1 {ok:true} -> unchanged.  safeClick #2 -> unchanged.
+
+Nothing blocks him: `my-permissions` → `role:"participant"`; the host's read of
+`GET …/participants/<bob>/permissions` → `effective {"mic":true,"camera":true,"screen_share":false}`;
+meeting `settings` → `mic_mode:"allowed_all"`, `mute_on_join:false`.
+
+**The title is the tell.** After a *voluntary* join the mic control's `title` is
+`"Live in the side room"`; after a *forced move* it is `"Toggle mute (⌘D)"`, the main-call title —
+i.e. the control appears not to have followed him into the room. That is a boundary observation,
+not a mechanism.
+
+**UNRESOLVED, and it decides both the severity and the wording — do not write this up before
+settling it.** Two readings of the same moment disagree:
+
+- Bob's own control says he is muted (`Unmute`, `aria-pressed true`).
+- Alice, the only other person in that room, shows **no `Muted` marker** on his row
+  (`QB QA Bob || ['Camera off']`, against the host's panel earlier rendering
+  `QA QA Alice || ['Camera off','Muted']` for a genuinely muted person).
+- One `getStats` read taken while his button said `Unmute` showed a peer connection with
+  `outDelta {audio: 48947 bytes / 8 s}` — a live publication, not DTX silence (a second PC on the
+  same client showed 80 bytes / 8 s, which is what a muted track looks like).
+
+If he is in fact still transmitting, the finding is far worse than "the button is stuck": the
+participant is told they are muted and is heard anyway. **The measurement that settles it was
+about to run and did not:**
+
+1. `GET /api/v1/meeting/<id>/participants` → the `focus` field per person, to establish that the
+   main call has **zero** publishers, so any audio Alice receives can only be Bob.
+2. `m-rtcdelta` on **Alice** — inbound audio bytes rising on her room PC would mean Bob is
+   transmitting while his own client says muted.
+3. Positive control for Alice's roster marker: have Alice mute *herself* and confirm Bob's panel
+   renders `Muted` for her, so that the absent marker on Bob's row means something.
+4. Then have the host mute Bob for real and confirm Alice's inbound drops.
+
+Until 1–4 are done this is "the control is inert after a forced move" (High on its own) plus an
+open question about what the audio is actually doing. **Do not merge the two claims.**
+
+### Related, from the same runs
+
+- **The forced move IS announced** — toast **"You were moved to a Side Room"**, t+6703 → t+11572 ms
+  (9 of 75 samples, healthy). **My overlay-scoped watcher missed it completely** while the
+  body-scoped one caught it: `[data-testid="call-overlay-expanded"]` does not contain the toast
+  layer. I had a finding half-written ("moved with no notice, against four in-product controls that
+  do announce") and the instrument killed it. **Any absence claim in this log taken with
+  `snip/m-watch2.mjs` covers stage prompts and panels only, never toasts.**
+- **"Ask to return to main room" re-checked with the body-scoped watcher**: `POST …/return-request`
+  → 204, Alice **83 / 83 samples over 50.2 s, healthy, nothing appeared**. Positive controls in the
+  same window and same instrument: `QA Bob unmuted` arrived as a live line, and 15 minutes earlier
+  the invite prompt landed on this client at t+9.9 s and stayed 29.3 s. So the earlier
+  overlay-scoped result holds for the right reason now. Still a duplicate of the rc.5 finding.
+- **A side-room transition is announced to the main call as leaving/joining the call.** Bob's
+  main-call view gained `QA Owner left the call` when the owner moved into SR Gamma, and had shown
+  `QA Owner joined the call` before. Same family as the rc.5 finding about room transitions being
+  announced as call join/leave.
+- `Leave room` and `Leave Side Room` **do** work; both go through a confirmation
+  (`"Leave SR Alpha? You will return to QA-M-1, and your audio will switch to the main room.
+  SR Alpha will remain available."` → `[data-testid="side-room-confirm-submit"]`). An earlier
+  "these controls do nothing" reading was mine: the open side panel puts
+  `DIV.aloqa-modal-backdrop` over the toolbar and a plain `page.mouse.click` lands on the backdrop.
+  `safeClick` reports it correctly as `{ok:false, reason:"covered", top:"DIV.aloqa-modal-backdrop"}`.
+
+### State left on the rig
+
+Call **QA-M-1** `V4P254PE9AE0LTC` still **active**, host qa.c.owner.
+- **SR Alpha** `BR4P2600CH6XV3X0` (public): Alice, Bob. **Bob is in the defective mic state** — do
+  not reload that tab if the unresolved measurement above is to be finished from where it stands.
+- **SR Gamma** `BR4P27DDK9B8SMEC` (private): owner (focus main), Carol.
+- SR Beta closed. No bans outstanding (`GET …/bans` → `{"bans":[]}` after the unban).
+- No device-permission overrides left set: Alice and Bob both restored to Inherit
+  (`effective {"mic":true,"camera":true,"screen_share":false}`, the `screen_share:false` being the
+  meeting's `on_request` default, not an override).
+- Bob is `role:"participant"` — every co-host grant made this session was reverted.
+- `PATCH /meeting/<id> {"requires_approval":false}` was set at the start for setup and never
+  restored; the call was created with `requires_approval:true`.
+- Snippets written this session, all lane-prefixed `m-*` under `scripts/callrig/snip/`:
+  `m-look m-panel m-panel2 m-panel3 m-rowmenu m-rowact m-rowicons m-devperm m-blocked-vis
+  m-dialogs m-tip m-selfmic m-toolbar m-watch m-watch2 m-pollbtn m-addtocall m-invitetry
+  m-sidepanel m-sidenew m-sidejoin m-roomctl m-addpeople m-chat m-chatprobe m-react m-rtc
+  m-rtcdelta m-audioel m-mainaudio m-mainaudio-set m-header m-people m-overlay m-clickbtn
+  m-clicktid m-safeclick m-reload m-key`.
+  **None is a repro snippet yet** — none follows `_repro-template.mjs`, none returns
+  `{ready, asserted, stepsDone, leftToDo}`. No report was published.

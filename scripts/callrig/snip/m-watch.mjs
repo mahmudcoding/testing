@@ -53,5 +53,8 @@ export default async ({page}) => {
   // collapse the control trace to transitions only
   const trans = []; let prev = null;
   for (const c of ctrl) { const k = JSON.stringify([c.vis,c.mic,c.micP,c.cam,c.url]); if (k !== prev) { trans.push(c); prev = k; } }
-  return { samples: ctrl.length, durMs: Date.now()-t0, appeared, vanished, ctrlTransitions: trans };
+  const dur = Date.now()-t0;
+  return { samples: ctrl.length, durMs: dur, expectedSamples: Math.round(ms/every),
+           healthy: ctrl.length >= Math.round(ms/every)*0.6,
+           appeared, vanished, ctrlTransitions: trans };
 };

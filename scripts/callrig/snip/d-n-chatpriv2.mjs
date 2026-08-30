@@ -11,7 +11,8 @@ export default async ({page}) => {
     return cands.map(m=>({role:m.getAttribute('role'),tid:m.dataset.testid||null,txt:(m.innerText||'').replace(/\s+/g,' ').slice(0,150)}));
   });
   // click the item by visible text with a real mouse click
-  const item = page.locator(`text=${target} (member)`).last();
+  const suffix = process.env.QA_SUFFIX || '(member)';
+  const item = page.locator(`text=${target} ${suffix}`).last();
   out.itemCount = await item.count();
   if (out.itemCount) {
     const box = await item.boundingBox();
@@ -24,7 +25,7 @@ export default async ({page}) => {
     return {to:(p.querySelector('button[aria-label="To"]')?.innerText||'').trim(), ph:ta?.placeholder,
       panelHead:(p.innerText||'').replace(/\s+/g,' ').slice(0,120)};
   });
-  if (!/Bob/.test(out.composerState.to)) { out.abort='recipient not set'; return out; }
+  if (!new RegExp(target.split(' ')[0]).test(out.composerState.to)) { out.abort='recipient not set'; return out; }
   const ta = page.locator('[data-testid="in-call-chat-panel"] textarea').first();
   await ta.click(); await ta.fill(''); await ta.type(TXT,{delay:15});
   await page.waitForTimeout(200);

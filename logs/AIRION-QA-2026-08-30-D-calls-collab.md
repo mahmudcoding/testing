@@ -176,3 +176,99 @@ STEP5 (+15 с)    alice tracks 3 (обе)  bob tracks 3 (обе)  carol tracks 3
   плюс видимый тост 352×77 «Your request to share was declined» (жил ~8.7 с).
 - Одобрение: кнопка становится `Share screen`, тост «You can now share your screen»,
   дальше `Stop sharing` и тайлы `screen-share-track` / `share-thumbnail` «QA Bob's screen» у всех.
+
+### BUG-4 [Low] [frontend] Настройка «In-call chat» лежит в MEMBER PERMISSIONS и подписана «members», но отключает чат и самому ведущему
+Секция `MEMBER PERMISSIONS` панели Meeting settings, дословно (перечислены видимые листовые узлы секции):
+```
+"MEMBER PERMISSIONS"
+"In-call chat"   "When disabled, members can read the history but cannot send messages."
+"Reactions"      "When off, no one can send live emoji reactions."
+"MICROPHONE"     Allowed | On request | Blocked
+"CAMERA"         Allowed | On request | Blocked
+"SCREEN SHARE"   Allowed | On request | Blocked
+```
+Ведущий выключает `In-call chat` → у него самого:
+```
+textarea.disabled = true,  placeholder "Message everyone"
+Send.disabled = true,  плашка "Chat is disabled for this call"
+[data-testid="ic-message-react-trigger"] : 0
+```
+**Два положительных контроля на том же экране, в той же секции, в той же сессии:**
+1. `MICROPHONE = Blocked` (`mic_mode: "blocked_all"` подтверждён ответом сервера) — у участника
+   `Unmute` `disabled: true` и пропадает `Select microphone`, **у ведущего `Mute` и
+   `Select microphone` остаются `disabled: false`**. То есть member-only тут работает как написано.
+2. Соседний тумблер `Reactions` подписан «no one» — и действительно снимает контрол у всех, включая
+   ведущего. Продукт различает две формулировки в одной секции намеренно.
+Значит расходится именно `In-call chat`: подпись говорит «members», поведение задевает ведущего.
+
+### Verified working — политика записи, гостевая ссылка, глубина истории чата, гость
+- `recording_enabled: false` → у ведущего исчезает `[data-testid="recording-start-access-trigger"]`,
+  а прямой `POST /meeting/<id>/recording/start` отвечает
+  `400 {"key":"REALTIME_RECORDING_DISABLED","message":"recording is disabled in this meeting's settings"}`.
+  Энфорсмент с обеих сторон. (Тумблера для этой настройки в панели нет — только при создании/по API.)
+- `who_can_see_guest_link`: при `host_only` у участника **нет кнопки `Add to call` вовсе**; при
+  `everyone` она появляется, и диалог содержит только гостевую ссылку
+  (`guest-links-view-only`, без `add-to-call-members`/`workspace-member-picker`). Т.е. настройка
+  прячет диалог, в котором участнику всё равно нечего было бы делать, — расхождения нет.
+- Глубина истории Call chat: 128 сообщений в звонке (120 доставлены через API как setup),
+  панель после холодной загрузки рендерит **127** строк у участника — ровно все, кроме одного
+  приватного, адресованного гостю. Прокрутка вверх ничего не догружает, потому что всё уже есть.
+  `GET /meeting/<id>/messages?limit=100` отдаёт 100 + `next_cursor`; UI дочитывает.
+- Гость (по guest-ссылке, без аккаунта): панель Call chat есть, история до входа видна (только
+  публичное), есть `Thread` и `React`, есть селектор получателя `To`, отправка работает — строка
+  подписана `Guest Visitor D (Guest)`. Живые реакции: 6 эмодзи, отправляются.
+- Приватное сообщение **ведущий → гость** видно ведущему («Private to …», статус `Read`) и гостю,
+  и **не видно** второму участнику-члену. Список `To` у ведущего: `Everyone`,
+  `Guest Visitor D (guest)`, `QA Bob (member)`.
+- Политика `chat_enabled: false` доходит до **гостя** за 355 мс (опрос 300 мс, health 305 мс/сэмпл),
+  и **сохраняется после перезагрузки** и у гостя, и у участника — fail-open при холодной загрузке
+  нет ни на одном из двух путей.
+- Живая реакция: `[data-testid="participant-reaction-burst"]` 72×56, у другого участника видна
+  ~2.85 с (t+7145…t+9996 мс при опросе 250 мс), позиция стабильна.
+- Лимит участников в панели: ввод меньше числа присутствующих отклоняется с текстом
+  «The limit cannot be lower than the number of people already in the call.», сервер не меняется
+  (`max_participants` остаётся 0), поле откатывается. Значение, равное числу присутствующих, сохраняется.
+- Длина сообщения Call chat: жёсткий предел 500 символов со счётчиком «500/500»; попытка вставить
+  4200 обрезается до 500, отправка проходит.
+
+### Инструментальные ошибки этого прогона (для себя и для PITFALLS)
+- Срез `String(i.value).slice(0,90)` при чтении гостевой ссылки обрезал URL ровно на 90 символах
+  (реальная длина 104). Обрезанная ссылка открывает страницу **«This invite link is no longer valid»** —
+  то есть выглядит как настоящий дефект гостевой ссылки. Читал бы дальше — написал бы ложный баг.
+- Клик по радио `meeting-settings-mic-mode-blocked_all` по `boundingBox()` без
+  `scrollIntoViewIfNeeded` не долетел: `aria-checked` не изменился, `mic_mode` на сервере остался
+  `allowed_all`, а участник сохранил микрофон — читается как «настройка не применяется».
+  Поймано только сверкой с `GET /meeting/<id>/settings`.
+- Селектор `text=${target} (member)` в сниппете приватной отправки не находил гостя, который
+  подписан `(guest)`; результат был `abort: recipient not set`, а не ложный вывод.
+
+### BUG-5 (кандидат, Medium) [frontend] Вариант доступа к записи по умолчанию подписан «Everyone in the meeting», а по описанию — шире встречи
+Диалог `Recording access`, открывается по `Record` до старта записи. Полный текст диалога (474 символа,
+перечислены все видимые листовые узлы, срезов нет):
+```
+"Recording access"
+"Who can view this recording?"
+[выбран по умолчанию] "Everyone in the meeting"
+                      "Everyone who can see this call, including people who never joined it."
+                      "People who joined the call"
+                      "Only those who actually entered the call, plus the recording author and the meeting owner."
+                      "Private"
+                      "The recording author, meeting owner, and selected viewers can view the recording."
+[data-testid="recording-access-broad-audience-warning", видим]
+                      "Choosing this option lets everyone who can see the call view its recording,
+                       whether or not they joined."
+"Cancel"  "Start recording"
+```
+Название первого варианта — «Everyone **in the meeting**» — описывает более узкую группу, чем то, что
+он делает по собственному описанию и по собственному предупреждению: «including people who never
+joined it» / «whether or not they joined». Группу «в встрече» на самом деле означает **второй**
+вариант, «People who joined the call». Самый широкий вариант при этом выбран по умолчанию.
+Положительный контроль в том же диалоге: два других варианта подписаны согласованно со своими
+описаниями. Нужен дедуп-грep по `recording access` перед публикацией — не выполнен.
+
+## Итог прогона (таймбокс снят досрочно)
+Найдено: BUG-1 (Medium), BUG-2 (Low), BUG-3 (Low, ALK-2769 закрыт но воспроизводится),
+BUG-4 (Low), BUG-5 (кандидат, дедуп не доделан). Плюс кандидат про «X is typing…» (~4 с после доставки).
+Снято два ложных кандидата, оба из-за долгоживущей вкладки.
+Отчёт `reports/aloqa-calls-collab-qa-2026-08-30-D.html` НЕ написан и НЕ опубликован.
+Репро-сниппеты для findings НЕ оформлены по контракту `_repro-template.mjs`.
