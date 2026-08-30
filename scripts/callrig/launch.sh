@@ -107,9 +107,21 @@ fi
 TOTAL="$(count_live 9220 9319)"
 if [ "$TOTAL" -ge "$MAX_TOTAL" ]; then
   echo "refusing: $TOTAL rig browsers running across all lanes (cap $MAX_TOTAL)." >&2
-  echo "  At ~470 MB each that is the point this machine starts swapping." >&2
+  echo "  At ~1.3 GB each (measured, Aloqa app loaded) this machine swaps well before here." >&2
   echo "  Override only if you know the RAM is there: QA_MAX_BROWSERS=$((MAX_TOTAL+4)) $0 $*" >&2
   exit 1
+fi
+
+# Headroom check. The caps above bound how many browsers may run; this bounds
+# nothing -- it reports what starting one more will cost. A swap-thrashed browser
+# produces timing readings that look exactly like product defects (see PITFALLS.md),
+# so the number is worth seeing before the run, not after a false positive.
+FREE_G=$(vm_stat | awk '/Pages free/{gsub(/\./,"",$3); printf "%.1f", $3*16384/1073741824}')
+COMP_G=$(vm_stat | awk '/occupied by compressor/{gsub(/\./,"",$5); printf "%.1f", $5*16384/1073741824}')
+if [ "$(echo "$FREE_G < 1.5" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+  echo "warning: ${FREE_G}G free, ${COMP_G}G already compressed." >&2
+  echo "  A rig browser costs ~1.3 GB with the app loaded, so this one will swap." >&2
+  echo "  Free some: ./stop.sh <lane> <account>, or scripts/testing-mode.sh on" >&2
 fi
 
 DIR="$HOME/.cache/aloqa-callrig/$NAME"
