@@ -38,10 +38,22 @@ fi
 # below what the widest sector needs and the slack lives in the global pool.
 # Both are deliberate to exceed, never accidental:
 #   QA_MAX_PER_LANE=4 ./launch.sh A dave   # a genuine 4-participant call
-# Per-SECTOR caps, sized from each sector's own setup line in SECTORS.md rather
+# Per-SECTOR caps, sized from each sector's own setup line in its map rather
 # than one number for everyone — a flat cap pinches the sectors that genuinely
-# need windows while leaving the single-browser sectors' slack unused. They sum
-# to 15, which keeps the machine off swap with room for one spare.
+# need windows while leaving the single-browser sectors' slack unused.
+#
+# Two maps, and only one runs on a given day (both use lanes A-E):
+#   A-E  SECTORS.md        the whole product
+#   K-O  SECTORS-CALLS.md  Calls only, sector K on lane A .. O on lane E
+#
+# The two are budgeted differently, on purpose. A-E sum to 19 against a global
+# cap of 16: they over-subscribe, because only A and B want the call rig and the
+# five never reach their ceilings together — MAX_TOTAL is the backstop. K-O sum
+# to exactly 15, because there ALL FIVE want the rig, and an over-subscribed
+# Calls day would have the global cap refuse a browser mid-run in whichever
+# session happened to ask last. That is arbitrary from inside the session and
+# reads like a rig fault. So on the Calls map the per-sector budgets are the
+# real allocation: do not raise one without lowering another.
 sector_cap() {
   case "$1" in
     # Counted from the accounts each sector's repro blocks actually name. No one
@@ -53,6 +65,13 @@ sector_cap() {
     C) echo 4 ;;   # chat: alice, bob, carol, dave
     D) echo 4 ;;   # org/identity: alice, carol, owner, outsider
     E) echo 3 ;;   # workspace: alice, bob, and a slot spare
+    # Calls-only map (SECTORS-CALLS.md). All five want the rig, so these are a
+    # budget rather than a ceiling: 3+4+4+2+2 = 15.
+    K) echo 3 ;;   # calls, getting in: caller, callee, + waiting room or guest
+    L) echo 4 ;;   # calls, media: grid pagination and filmstrip need bodies
+    M) echo 4 ;;   # calls, floor: a host and three targets, or a side room split
+    N) echo 2 ;;   # calls, collab: one acting, one observing
+    O) echo 2 ;;   # calls, record: one producing calls, one inspecting
     *) echo 3 ;;   # free lanes carrying no sector
   esac
 }

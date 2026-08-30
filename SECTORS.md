@@ -4,6 +4,13 @@ Scope allocation for parallel QA sessions — **which part of the product a sess
 covers**. Weights come from `reports/aloqa-module-scope-census.html`
 (published: https://claude.ai/code/artifact/9cba3e8e-ffda-4623-9821-14cf0cf9b3f3).
 
+**There is a second map, and the two are alternatives.** This file is the product-wide map:
+five sectors A-E across everything, of which Calls gets two. `SECTORS-CALLS.md` is the
+Calls-only map: five sectors **K-O** that between them cover Calls and nothing else, for the
+days when the goal is to exhaust the module rather than sweep the product. Both run on lanes
+A-E, so one map runs on a given day. Sector letters do not overlap, so a log, a handoff or a
+relayed message naming a sector is unambiguous about which map it means.
+
 **A sector is not a lane.** A *lane* (`QA_LANE`, `seed.sh --lanes`, `rigmap`) is the
 isolated fixture set and browser port block a session runs on. A *sector* is what that
 session tests. Sector letters are aligned to lane letters — sector A is meant to run on
