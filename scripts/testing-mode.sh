@@ -27,14 +27,6 @@ AGENTS=(
 STATE="$HOME/.cache/aloqa-qa/testing-mode.state"
 mkdir -p "$(dirname "$STATE")"
 
-mem() {
-  vm_stat | awk '
-    /Pages free/           {gsub(/\./,"",$3); f=$3}
-    /Pages active/         {gsub(/\./,"",$3); a=$3}
-    /Pages wired/          {gsub(/\./,"",$4); w=$4}
-    /occupied by compressor/ {gsub(/\./,"",$5); c=$5}
-    END { printf "%.1f", (f+ (0)) * 16384/1073741824 }'
-}
 report() {
   vm_stat | awk -v tag="$1" '
     /Pages free/             {gsub(/\./,"",$3); f=$3}
