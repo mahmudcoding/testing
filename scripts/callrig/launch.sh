@@ -137,13 +137,33 @@ rm -rf "$DIR/Default/Sessions" \
 EXTRA=()
 # per-profile fake media sources, if provided (distinguishable audio/video per user)
 [ -f "$DIR/audio.wav" ] && EXTRA+=(--use-file-for-fake-audio-capture="$DIR/audio.wav%noloop")
-[ -f "$DIR/video.y4m" ] && EXTRA+=(--use-file-for-fake-video-capture="$DIR/video.y4m")
+# QA_FAKE_CAMERAS=N gives this browser N selectable fake cameras instead of one, which is
+# what makes camera *switching* testable -- Chrome's fake device set is otherwise exactly
+# one videoinput against three audioinputs, and a picker with nothing to switch to reads
+# as a product defect. Measured: device-count=2 and =3 both enumerate, and getUserMedia
+# with an exact deviceId returns the device asked for.
+#
+# It is opt-in because it is mutually exclusive with per-user video: --use-file-for-fake-
+# video-capture collapses enumeration back to a single device (the file becomes the only
+# camera, labelled with its own path) whatever device-count says. So this browser trades
+# its distinguishable video feed for a second camera; the others keep theirs. Setting both
+# would silently leave one camera, which looks exactly like the flag not working.
+if [ -n "${QA_FAKE_CAMERAS:-}" ]; then
+  FAKE_DEV="--use-fake-device-for-media-stream=device-count=${QA_FAKE_CAMERAS}"
+  if [ -f "$DIR/video.y4m" ]; then
+    echo "note: ignoring $DIR/video.y4m -- a fake video file and multiple fake cameras" >&2
+    echo "  cannot coexist; this window gets ${QA_FAKE_CAMERAS} cameras and the default feed." >&2
+  fi
+else
+  FAKE_DEV="--use-fake-device-for-media-stream"
+  [ -f "$DIR/video.y4m" ] && EXTRA+=(--use-file-for-fake-video-capture="$DIR/video.y4m")
+fi
 # Chrome flags are the same either way; only how we start it differs.
 FLAGS=(
   --user-data-dir="$DIR"
   --remote-debugging-port="$PORT"
   --use-fake-ui-for-media-stream
-  --use-fake-device-for-media-stream
+  "$FAKE_DEV"
   --auto-select-desktop-capture-source="Entire screen"
   --autoplay-policy=no-user-gesture-required
   --allow-http-screen-capture

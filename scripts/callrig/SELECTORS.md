@@ -254,10 +254,15 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
   participants; this is the specific class where skipping it manufactures a
   finding rather than merely adding noise. **Reload before measuring anything of
   the form "X should stop / clear / disappear".**
-- **The rig's fake-device set has exactly one videoinput** (`fake_device_0`), against three
-  audioinputs and three audiooutputs. So "the camera picker offers nothing to switch to" is the
-  launch flags, not the product -- camera *switching* is not exercisable on the rig as
-  `launch.sh` starts Chrome. Mic and speaker switching are (3 each).
+- **The rig's fake-device set has exactly one videoinput by default** (`fake_device_0`), against
+  three audioinputs and three audiooutputs. So "the camera picker offers nothing to switch to" is
+  the launch flags, not the product. Mic and speaker switching are exercisable as-is (3 each);
+  for camera switching, launch that window with `QA_FAKE_CAMERAS=2 ./launch.sh <lane> <account>`,
+  which enumerates `fake_device_0` and `fake_device_1` and lets `getUserMedia` select either.
+  The host's real camera is **not** the way in: `--use-fake-device-for-media-stream` replaces
+  real devices rather than adding to them, so a FaceTime or virtual camera is invisible to a rig
+  browser. Note the trade -- a fake video *file* collapses enumeration back to one device
+  whatever the count says, so a window with two cameras does not carry its per-user video feed.
 
 ## Calls — state that gates a control
 
