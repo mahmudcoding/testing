@@ -52,3 +52,79 @@ cost more than the risk currently justifies. Worth your explicit yes or no rathe
 because it is a decision to leave part of a sector untested.
 
 **Where the change would go** · `scripts/callrig/launch.sh` (flags) if option 2; nothing if option 1.
+
+## 2026-08-30 · Two ALK tickets contradict each other on the call recording-consent gate
+
+**What is being asked** · Someone with product authority should decide which of two tickets is live.
+I am not filing or commenting on either — that needs your say-so.
+
+**The contradiction** · Both were found by lane A while deduping a recording-consent finding.
+
+- **ALK-1888** *[Bug / TESTING — i.e. closed]* "Remove the recording/transcription consent checkbox
+  that gates joining a call". Verbatim: *"Expected: Do not require the recording/transcription
+  acknowledgement checkbox to join a call. Fix location: CallDeepLinkLobby.tsx (stop passing
+  actionNotice + stop gating canJoin)."*
+- **ALK-1847** *[Bug / BLOCKED]* carries as acceptance criteria *"Consent требуется только когда
+  recording enabled"* — i.e. it repairs the very gate ALK-1888 had removed.
+
+So one closed ticket took the gate out, and one blocked ticket is specified to fix it. A developer
+picking up ALK-1847 would re-introduce what ALK-1888 deliberately deleted.
+
+**Why it needs you** · It is a product decision about which behaviour is wanted, and acting on it
+means writing to Jira, which I never do unasked.
+
+**What it already cost** · Lane A had a High written up — a call being recorded with no notice on
+either pre-join surface, three instruments each with a positive control — and was one step from
+publishing. ALK-1888 makes that measured state *specified*, so publishing would have sent a
+developer to re-add a deliberately removed control. They suppressed correctly and logged it in full
+with the key, per the rule.
+
+**Options** · (1) Leave it; the contradiction sits in the backlog and whoever picks up ALK-1847
+discovers it. (2) You decide which is live and I draft a comment for your approval before anything
+is posted. (3) Ask the team.
+
+**Recommendation** · Option 2. The cost of leaving it is that ALK-1847 is a trap for whoever takes
+it, and the finding it blocks is real work someone will redo. But nothing goes to Jira without you.
+
+**Where the change would go** · Jira only. No repo change either way.
+
+---
+
+## 2026-08-30 · Proposed CLAUDE.md line: grep all ticket statuses before writing up
+
+**What is being asked** · Your explicit yes or no to adding one line to `CLAUDE.md`. Queued rather
+than applied because it is a rule about the reporting process, and the standing rule is that nothing
+constraining what future sessions do enters that file without you.
+
+**The gap it closes** · `CLAUDE.md` already requires the check — *"Before calling a measured state a
+defect, check whether some ticket **specifies** it"* — but the only tool it names for dedup,
+`jira_cache.py list --open-bugs`, structurally cannot perform it. Measured today: that list shows
+**188** Bugs and hides **1466** (TESTING 1259, BLOCKED 194, REVIEW 13). It surfaces 11% of the Bug
+population, and the excluded statuses are exactly where a *specified* state lives.
+
+**Exact wording proposed** (in the Reporting section, after the existing dedup bullets):
+
+> - **`list --open-bugs` is the dedup scope, not the whole mirror — it hides the statuses where a
+>   *specified* state lives.** TESTING is closed and BLOCKED is outside the rule, so neither appears,
+>   and both are where a ticket that makes your measured state deliberate will be. Before writing a
+>   finding up, also run `jira_cache.py grep '<the noun of your finding>'`, which searches summaries
+>   and descriptions across every status. Reading the open list is not this step.
+
+**What it already cost** · The near-miss above. Lane A read all 188 open rows, matched nothing —
+correctly — and the two tickets that owned the finding were invisible to that command. One keyword
+grep found both in seconds.
+
+**Already applied without waiting** (tooling, reversible, no rule change): `jira_cache.py list
+--open-bugs` now prints to stderr how many Bugs sit outside the scope and by which status, that a
+ticket outside it can still *specify* the measured state, and the grep to run. Negative-controlled —
+silent without the flag, and no row added or lost. That delivers most of the benefit at the point of
+failure, which is why this line is a genuine choice rather than urgent.
+
+**Options** · (1) Add the line as worded. (2) Reword it. (3) Decline — the tool warning stands alone
+and `CLAUDE.md` is unchanged.
+
+**Recommendation** · Option 1, but weakly. The tool warning is the better mechanism because it fires
+where the mistake happens; the `CLAUDE.md` line matters mainly for a session that deduped some other
+way. Declining costs little.
+
+**Where the change would go** · `CLAUDE.md`, Reporting section. Nothing else.
