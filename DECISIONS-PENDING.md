@@ -86,6 +86,14 @@ is posted. (3) Ask the team.
 **Recommendation** · Option 2. The cost of leaving it is that ALK-1847 is a trap for whoever takes
 it, and the finding it blocks is real work someone will redo. But nothing goes to Jira without you.
 
+**A second instance, found later the same day — the pattern is not a one-off** · Lane E reports
+**ALK-1927** *[Bug/BLOCKED]* whose three acceptance criteria **all now pass on rc.7** (Recording shows
+Available, participants are listed). So the BLOCKED queue contains at least one ticket describing a
+state the build no longer produces, alongside the TESTING/BLOCKED contradiction above. Two instances
+in one afternoon, both found only because sessions started grepping outside the dedup scope. If the
+BLOCKED queue is stale generally, every session's dedup work is being done against a picture of the
+product that is out of date — which is a bigger question than either ticket, and also yours.
+
 **Where the change would go** · Jira only. No repo change either way.
 
 ---
