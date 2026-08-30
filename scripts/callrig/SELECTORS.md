@@ -230,6 +230,18 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
   nodes under `[data-radix-popper-content-wrapper]`. `window.__qa.popperPick()`
   handles the walk-up.
 
+- **Tab age changes a state-clearing measurement by 40x, and nothing on the page
+  shows it.** Two clients in the same call, same account type, same
+  `visibilityState`, differing only in how long the tab had been open: a host
+  stopping a recording cleared the badge on one at +508 ms and on the other at
+  **+20603 ms**, with the stale client getting no stop notice at all. After
+  reloading that client and rejoining, both cleared at +516 ms and the
+  `recording_stopped` WS frame was applied in 144 ms. So the defect was the tab,
+  not the product — and it failed **toward a positive**: a state that should
+  clear appearing not to. `CLAUDE.md` already says to reload long-lived call
+  participants; this is the specific class where skipping it manufactures a
+  finding rather than merely adding noise. **Reload before measuring anything of
+  the form "X should stop / clear / disappear".**
 - **The rig's fake-device set has exactly one videoinput** (`fake_device_0`), against three
   audioinputs and three audiooutputs. So "the camera picker offers nothing to switch to" is the
   launch flags, not the product -- camera *switching* is not exercisable on the rig as
@@ -248,6 +260,10 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
   participant's button flips `Request to share` → `Share screen` with no reload,
   **measured 351 ms** (poller at 300 ms started before the host acted, epoch
   stamps both sides, so bounded above by one interval).
+  A second, independent propagation figure: `PATCH /meeting/<id>/settings
+  {"chat_enabled":false}` from the host's toggle reached the participant's
+  disabled composer and "Chat is disabled for this call" plaque in **311 ms**,
+  same order as the grant. No long settle is needed for either.
   **Still poll rather than sampling once.** 351 ms is a screen-share *grant*; an
   earlier build recorded a camera *revoke* taking ~13 s to reach the toolbar —
   different field, different direction, not measured on rc.7. At t+1s "the

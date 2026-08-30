@@ -3461,3 +3461,55 @@ Confirmed the stale string is gone (0 matches), the surrounding `allowed_all` gu
 field list survive, and headings remain unique.
 
 **Reverted?** · No. Backup at `/tmp/SELECTORS.md.bak2`.
+
+## `jira_cache.py` disclosure — the guard was watched to fire, on both outcomes
+
+**What** · Recorded here because `CLAUDE.md` says a guard nobody has watched fail is a guard nobody
+has tested. This one fired twice within the hour, in opposite directions.
+
+- **Killed a wrong finding.** Lane E had measured — with a complete enumeration of every
+  owner-visible surface, not a slice — that a call rating is collected and its aggregate displayed
+  nowhere. **ALK-2203** *[Task/TESTING]* specifies exactly that: no user sees any rating but their
+  own, not the average, not the rater count, not the organiser. Measurement correct, finding wrong.
+  Invisible to `--open-bugs`; one `grep 'rating'` found it.
+- **Sharpened a right one.** Lane E's ended-summary duration finding matches **ALK-2809**
+  *[Bug/TESTING]* word for word, including its confirmed cause. But that ticket's repro *ends* at the
+  call-detail page, and that page is now correct on rc.7 (3:26, 1:23 against an overlay claiming 7:47,
+  6:17). The overlay one screen earlier still carries the old computation.
+
+**The generalisation, which is lane E's and is now propagated to all five lanes** · A ticket outside
+the dedup scope has three outcomes, not one: it *specifies* the state (finding dead), it is a plain
+duplicate, or **it names the surface that was fixed while yours still fails — in which case the
+ticket is the finding's best evidence.** "Another screen disagrees" becomes "the screen this was
+fixed on disagrees". Read where a ticket's repro ends and what its criteria enumerate, not its title.
+
+**A bias I introduced and had to repair** · My own broadcast said only that an out-of-scope ticket
+"can SPECIFY what you measured — and a specified state is not a defect". One-directional, and it
+would have had four lanes reading TESTING hits as stop signs for the rest of the day. Corrected to
+all five, credited to lane E.
+
+## `SELECTORS.md` — tab age, and a second propagation figure
+
+**What** · Two additions, 16 lines, 0 deletions.
+
+1. *Other measurement traps* — **tab age changes a state-clearing measurement by 40x with nothing on
+   the page to show it.** Lane D had "the Recording badge keeps saying the call is being recorded for
+   ~20 s after it stopped", reproduced twice (+508 ms on one client, **+20603 ms** on the other, the
+   stale client getting no stop notice at all). After reloading that client: both +516 ms, the
+   `recording_stopped` frame applied in 144 ms. Two clients, same call, same account type, same
+   `visibilityState`, differing only in tab age. The product was never involved.
+2. The screen-share bullet gains a second, independent propagation number: `chat_enabled:false`
+   reached the participant's disabled composer in **311 ms**, the same order as the 351 ms grant.
+
+**Why the first one earns its place** · `CLAUDE.md` already says to reload long-lived call
+participants, framed as drift and noise. This is the class where skipping it **manufactures a
+finding**: the failure is toward a *positive* — a state that should clear appearing not to — which
+is the direction that reaches a developer. The note says to reload before measuring anything shaped
+"X should stop / clear / disappear".
+
+**Verified** · Both taken as reported with their measurements quoted; the recording one carries its
+own control (the same clients agreeing at +516 ms after reload), which is what makes it conclusive
+rather than suggestive. Not independently re-measured — both need a live call in another lane's
+browsers.
+
+**Reverted?** · No. Backup at `/tmp/SELECTORS.md.bak3`.
