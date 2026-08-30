@@ -15,6 +15,7 @@ it is live before showing the hook survives it.
 
     python3 scripts/verify_sector_hook.py
 """
+import glob
 import json
 import os
 import re
@@ -33,11 +34,22 @@ SECTORS = [
     ("D", "chat-messages"), ("E", "chat-spaces"), ("F", "admin-org"),
     ("G", "identity"), ("H", "shell"), ("I", "calendar-files"),
 ]
-# Everything the two retired maps wrote under, so nothing new can land on a file
-# that already exists in reports/ or logs/.
-RETIRED_AREAS = {"calls-inside", "calls-around", "chat", "org", "workspace",
-                 "calls-entry", "calls-media", "calls-floor", "calls-collab",
-                 "calls-record"}
+REPORT_RE = re.compile(r"aloqa-(?P<area>.+)-qa-\d{4}-\d{2}-\d{2}-[A-Z](?:-\d+)?\.html$")
+
+
+def published_areas():
+    """Area tokens already used by a report on disk.
+
+    Read rather than hardcoded: a sector writing under a token that already exists
+    lands its report beside an unrelated one, and every glob over reports/ then
+    returns both. Scanning the directory cannot go stale the way a list can.
+    """
+    out = set()
+    for path in glob.glob(os.path.join(REPO, "reports", "aloqa-*.html")):
+        m = REPORT_RE.search(os.path.basename(path))
+        if m:
+            out.add(m["area"])
+    return out
 
 FAILURES = []
 CHECKS = 0
@@ -95,12 +107,15 @@ for letter, area in SECTORS:
     check("bare %s injects a real scope, not just a heading" % letter,
           "**In scope**" in body and len(body) > 1500, "len=%d" % len(body))
 
-# --- filenames cannot collide, with each other or with the retired maps ------
+# --- filenames cannot collide, with each other or with what is on disk -------
 print("\nFilenames")
 areas = [a for _, a in SECTORS]
 check("the nine area tokens are distinct", len(set(areas)) == 9, str(areas))
-check("...and none reuses a retired map's token",
-      not (set(areas) & RETIRED_AREAS), str(set(areas) & RETIRED_AREAS))
+on_disk = published_areas()
+check("the directory scan finds the tokens already published",
+      len(on_disk) >= 3, str(sorted(on_disk)))
+check("...and no sector writes under one of them",
+      not (set(areas) & on_disk), str(set(areas) & on_disk))
 logs = set()
 reports = set()
 for letter, _ in SECTORS:
@@ -127,13 +142,14 @@ check("lane J says 'no sector assigned' plainly", "no sector assigned" in msg, m
 check("...and names where the sectors are", "A-I in SECTORS.md" in msg, msg)
 check("...and injects nothing", not ctx(out))
 
-for letter in "KLMNO":
+for letter in "KZ":
     out = run("/run-until 14:00 %s" % letter)
     msg = out.get("systemMessage", "")
-    # The failure this exists for: a session started with a letter off the retired
-    # Calls map, silently getting nothing and testing whatever it felt like.
-    check("retired letter %s says so and points at A/B/C" % letter,
-          "no sector assigned" in msg and "retired" in msg and "A, B and C" in msg, msg)
+    # The failure this exists for: a session handed a letter the map does not define,
+    # silently getting no scope and testing whatever it felt like.
+    check("undefined letter %s refuses rather than going quiet" % letter,
+          "no sector assigned" in msg and "A-I in SECTORS.md" in msg, msg)
+    check("...and injects nothing for %s" % letter, not ctx(out))
 
 # The failure this exists for: a relayed peer message re-scoping a running session.
 out = run("<cross-session-message from=\"sector A\">\nRUNUNTIL=14:00 F\n</cross-session-message>")
@@ -214,7 +230,7 @@ m = re.search(r'MAX_TOTAL="\$\{QA_MAX_BROWSERS:-(\d+)\}"', src)
 total = int(m.group(1)) if m else 0
 letters = [L for L, _ in SECTORS]
 check("every sector has a cap", all(L in caps for L in letters), str(sorted(caps)))
-check("no cap left behind for a retired sector",
+check("no cap left behind for a letter the map does not define",
       not (set(caps) & set("KLMNO")), str(sorted(set(caps) & set("KLMNO"))))
 # Three sessions run at once. The binding number is the worst three, not the sum:
 # that is what makes nine sectors fit where five did not.

@@ -5,10 +5,9 @@
 and puts that sector's section straight into the session's context, so the scope
 does not depend on CLAUDE.md being loaded, read and correctly decoded.
 
-One map: SECTORS.md, sectors A-I, and the sector letter is the lane letter. There
-used to be a second, Calls-only map with sectors K-O on lanes A-E; it is retired to
-archive/ and is not read from here. A letter it defined now reads as "no sector
-assigned", which is correct: those letters no longer name anything current.
+One map: SECTORS.md, sectors A-I, and the sector letter is the lane letter. Any
+other letter reads as "no sector assigned" -- lanes run past the sectors, and a lane
+carrying no scope is free for non-sector work rather than an error.
 
 Silent unless the prompt actually names a sector. Fails open, always.
 """
@@ -147,14 +146,10 @@ def main():
     if not body:
         # Lanes run past the sectors: only some letters have a scope assigned, the rest
         # are free lanes for other work. Say so plainly instead of reading like an error.
-        extra = ""
-        if sector in ("K", "L", "M", "N", "O"):
-            extra = (" K-O named the retired Calls-only map's sectors; Calls is now "
-                     "sectors A, B and C.")
         emit({"systemMessage":
-              "%s has no sector assigned (%s).%s "
+              "%s has no sector assigned (%s). "
               "Fine for non-sector work; check the letter if you meant a QA sector."
-              % (sector, sectors_available() or "no sector map readable", extra)})
+              % (sector, sectors_available() or "no sector map readable")})
 
     # The letters are the lanes on this map. A prompt may still pair them differently.
     lm = LANE_WORD.search(value)
@@ -186,9 +181,9 @@ def main():
                       "with `<date>` today and `<lane>` = %s." % (log, report, lane))
 
     note = ("\n\nThis is the sector's own section of %s. Read the rest of that file for the "
-            "shared parts — the old-to-new letter mapping, which published reports are your "
-            "dedup targets, how to choose targets within the sector, and what to do if it runs "
-            "dry." % os.path.basename(SECTORS))
+            "shared parts — how to dedup against what is already published, how to choose "
+            "targets within the sector, and what to do if it runs dry."
+            % os.path.basename(SECTORS))
 
     emit({
         "hookSpecificOutput": {

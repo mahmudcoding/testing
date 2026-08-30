@@ -68,13 +68,10 @@ SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
 # by mtime, which a git checkout rewrites. Ranking alone would coin-flip between
 # them, and a wrong auto-pick looks exactly like a right one from inside the app.
 #
-# EMPTY ON PURPOSE since 2026-08-30. The sector letters were re-dealt for the
-# nine-sector map, so every report on disk sits under a lane letter that now names
-# a different sector: pinning lane C to a chat report would put chat findings in
-# front of someone judging Calls · studio, labelled as theirs. An empty pin means
-# discovery-by-newest, which is correct until the first nine-sector reports land —
-# at which point pin them here again, one line per lane, and the coin-flip
-# protection comes back with them.
+# EMPTY means discovery-by-newest, and that is the current state: nothing has been
+# pinned for the nine-sector map yet. Pin a lane here — one line, lane to path — as
+# soon as two reports could plausibly compete for it, which is what brings the
+# coin-flip protection above back into play.
 PINNED = {}
 LANE_NAMES = {"A": "Calls · lifecycle", "B": "Calls · room", "C": "Calls · studio",
               "D": "Chat · messages", "E": "Chat · spaces", "F": "Admin & org",
@@ -90,26 +87,22 @@ def _rank(path):
     return (m["date"], int(m["rev"] or 0)) if m else None
 
 
-# Area tokens written under the two retired sector maps. A lane letter no longer
-# names the sector it named when these were published, so labelling one of them with
-# the lane's current sector name puts, say, chat findings in front of someone judging
-# Calls and tells them they are theirs. Name it by what it actually is instead.
-RETIRED_AREAS = {
-    "calls-inside": "Calls · inside", "calls-around": "Calls · around",
-    "chat": "Chat", "org": "Org · identity", "workspace": "Workspace · calendar",
-    "calls-entry": "Calls · getting in", "calls-media": "Calls · media",
-    "calls-floor": "Calls · floor", "calls-collab": "Calls · collab",
-    "calls-record": "Calls · record",
-}
-
-
 def _lane_name(lane, rel):
-    """What to call this lane in the app, given the report actually chosen for it."""
+    """What to call this lane in the app, given the report actually chosen for it.
+
+    Named from the report's own `<area>` token rather than from the lane letter. The
+    letter says which fixtures produced a report, not what is inside it, and a report
+    older than the sector it now shares a letter with would otherwise be announced as
+    someone else's work -- which from inside the app looks exactly like the truth.
+    LANE_NAMES is the fallback for a filename that does not parse.
+    """
     m = REPORT_RE.search(os.path.basename(rel))
     area = m["area"] if m else None
-    if area in RETIRED_AREAS:
-        return "%s (retired map)" % RETIRED_AREAS[area]
-    return LANE_NAMES.get(lane, lane)
+    if not area:
+        return LANE_NAMES.get(lane, lane)
+    head, _, tail = area.partition("-")
+    return "%s · %s" % (head.capitalize(), tail.replace("-", " ")) if tail \
+        else head.capitalize()
 
 
 def _pick_reports(log=print):

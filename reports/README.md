@@ -1,16 +1,5 @@
 # Published reports
 
-> **The sector letters were re-dealt on 2026-08-30.** Every row below this note was
-> written under one of the two retired maps — five sectors A-E across the product, or
-> five sectors K-O inside Calls — so a lane letter in an older filename does **not** name
-> the sector that letter names today. Read the `<area>` token in the filename instead:
-> `calls-inside`, `calls-around`, `chat`, `org`, `workspace` are the old product map;
-> `calls-entry`, `calls-media`, `calls-floor`, `calls-collab`, `calls-record` are the old
-> Calls map. The nine current tokens are `calls-lifecycle`, `calls-room`, `calls-studio`,
-> `chat-messages`, `chat-spaces`, `admin-org`, `identity`, `shell`, `calendar-files`.
-> `SECTORS.md` carries the old-to-new mapping and tells each sector which of these older
-> reports are its dedup targets.
-
 | file | artifact URL | session |
 |---|---|---|
 | `aloqa-calls-qa-2026-08-23.html` | https://claude.ai/code/artifact/a85a9d05-a32e-4642-b008-bcdc27628d79 | 2026-08-23, звонки |

@@ -5,38 +5,9 @@ Nine sectors, **A–I**: three for Calls, six for everything else. Weights come 
 `reports/aloqa-module-scope-census.html`
 (published: https://claude.ai/code/artifact/9cba3e8e-ffda-4623-9821-14cf0cf9b3f3).
 
-**This is the only sector map.** There were two — `SECTORS.md` with five sectors A–E across
-the whole product, and `SECTORS-CALLS.md` with five sectors K–O inside Calls alone — and they
-were alternatives, so only one ran on a given day. Both are retired; `SECTORS-CALLS.md` now
-lives in `archive/` and is kept only so the logs indexed by its letters stay readable. Nothing
-should be read out of either for scope again.
-
-**Three sessions run at once, not five.** That is what made nine sectors possible: the old maps
-were sized by what the rig could survive rather than by where the product's seams are. At three
-concurrent sessions the heaviest three sectors want twelve browsers against a global cap of
-twenty, so load stops being the constraint and the cut can follow the product.
-
----
-
-## The letters were re-dealt on 2026-08-30
-
-Nine sectors need nine letters, so A–E no longer mean what they meant in `logs/` and
-`reports/` before this date. **This is a live dedup trap** — a new sector-D session listing
-`reports/aloqa-*qa-*-D-*.html` finds the old org reports, which are nothing to do with it.
-Use the `<area>` token in a filename, never the letter, to tell what a historical file covers.
-
-| before 2026-08-30 | covered | now covered by |
-|---|---|---|
-| A (old) · calls-inside | in-call media, tiles, participants, side rooms, in-call chat | B and C |
-| B (old) · calls-around | entry, lobby, ringing, hub, history, detail, guest, meeting settings | A and C |
-| C (old) · chat | all of chat | D and E |
-| D (old) · org | admin, roles, personal settings, auth | F and G |
-| E (old) · workspace | shell, directories, calendar, files, search | H and I |
-| K (old) · calls-entry | getting in | A |
-| L (old) · calls-media | media, devices, tiles, PiP | B and C |
-| M (old) · calls-floor | participants, moderation, side rooms | B |
-| N (old) · calls-collab | in-call chat, share, recording, meeting settings | C |
-| O (old) · calls-record | leaving, ended, hub, detail, recordings | A and C |
+**Three sessions run at once**, so the map is sized by where the product's seams are rather
+than by what the rig can survive: the three heaviest sectors want twelve browsers against a
+global cap of twenty, and load is not the constraint on how the work divides.
 
 ---
 
@@ -104,8 +75,7 @@ taken at the deployed sha agree with it.
 | **H** · Shell, people and discovery | 8.8% | H | 3 | `shell` |
 | **I** · Calendar and files | 12.0% | I | 3 | `calendar-files` |
 
-Sum 97.8%, plus Calls debug surfaces at 2.1% which stay unallocated. Mean 10.9%, spread
-8.8–12.2 — against 15.7–23.3 on the map this replaces.
+Sum 97.8%, plus Calls debug surfaces at 2.1% which stay unallocated. Mean 10.9%, spread 8.8–12.2.
 
 **Scope is not effort.** In-call work costs roughly 1.45× per unit of scope — three or four
 browsers, real media, multi-participant state, timing-sensitive checks — and reading records
@@ -120,30 +90,30 @@ The three-way is cut along **measured import edges** at the deployed sha, not by
 facts that decided it:
 
 - `CallSurface.tsx` is 1,798 lines and imports sixteen children plus thirty model files. Every
-  in-call cluster meets there and nowhere else. It was unowned in both old maps; it is **B's**.
+  in-call cluster meets there and nowhere else, so whichever sector owns it absorbs regressions
+  from the other two. It is **B's**, which mounts the most of its children.
 - **Hub, history and the post-call detail page have zero import edges into the `CallSurface`
   subtree** — different routes, different data plane. Cleanest seam in the module, and it is
   the A/B border.
 - Grid, tiles, screen-share rendering and filmstrip are **one subtree of 42 files**
   (`ParticipantGrid` imports `ScreenShareTrack`, `ShareThumbnailTile`, `CallFilmstrip`,
-  `ParticipantTile` directly). Both old maps cut through that parent-to-child edge. This one
-  does not.
+  `ParticipantTile` directly). No sector line cuts through that parent-to-child edge.
 - Grid and participants both project from `model/roster/`, and `useCallSurfaceModerationActions`
   acts on tiles *and* rows — pin-for-everyone is a moderation action whose effect is a layout
   change. They stay together.
 - `activeContext` (side rooms) is read by the participants panel, the header tabs, PiP and
   minimize. Breakout is a cross-cutting dimension, not a leaf feature.
-- Recording and meeting settings have **zero** edges between them, and recording-during splits
-  cleanly from recording-as-artifact. So C owns recording end to end — which **deletes** the
-  border both old maps flagged as the one most often crossed by accident.
+- Recording and meeting settings have **zero** edges between them, and recording is
+  self-contained enough that "during the call" and "the artifact afterwards" could be split.
+  They are not: C owns recording end to end, so no sector border runs through it.
 
 ### Where the non-Calls cut falls, and why
 
-Chat is 18.8% against a 10.9% target, so it has to divide. The census argued against dividing
-it and named the cost exactly: the border between message actions and channel management is
-soft enough that each sector keeps wandering into the other. The answer is a **hard** border —
-**the message, versus the container it lives in.** D never opens a channel's info panel;
-E never opens the composer. Everything else follows the census's own module boundaries.
+Chat is 18.8% against a 10.9% target, so it has to divide, and the census warns why that is
+risky: the border between message actions and channel management is soft enough that each half
+keeps wandering into the other. So the border is a **hard** one — **the message, versus the
+container it lives in.** D never opens a channel's info panel; E never opens the composer.
+Everything else follows the census's own module boundaries.
 
 ---
 
@@ -224,11 +194,9 @@ door → hub, history and the detail page → waiting room and approval → pass
 **Entry** — `/w/{ws}/calls`, `/w/{ws}/call/{id}`, `/w/{ws}/calls/{id}`, `/join/{token}`
 
 **Source** — `packages/features/calls/ui-web/{Lobby*,IncomingCall*,OutgoingCall*,Create*,WaitingRoomList,CallEnded*,CallLeave*,CallConnectionRecoveryBanner,CallsHomePage,CallsHomeHeader,CallCard,RecentCallRow*,RecentsLoadMore,CallDurationBadge,CallEndForEveryoneDialog}`;
-**`apps/web/app/w/[wsId]/call/[callId]/`** (21 files, the join state machine — unowned in both
-old maps); `apps/web/src/widgets/CallBridges/`;
+**`apps/web/app/w/[wsId]/call/[callId]/`** (21 files — the join state machine); `apps/web/src/widgets/CallBridges/`;
 `apps/web/src/features/calls/{hub,ended,takeover,peer-disconnect,CallDetail,CallPasswordGate.tsx}`;
-**`apps/web/src/features/guest-entry/`** (26 files, one of them a 2,177-line hook — cited by
-neither old map)
+**`apps/web/src/features/guest-entry/`** (26 files, one of them a 2,177-line hook)
 
 ---
 
@@ -321,10 +289,10 @@ approval mode, participant limit); how a share renders in the grid, and the part
 (B); chat and reaction **isolation** between a side room and the main call (B); the guest door
 and the guest's arrival (A).
 
-**Recording is no longer split by moment.** Both old maps cut it between "during the call" and
-"the artifact afterwards", and both flagged that border as the one most often crossed by
-accident. There are no import edges between recording and meeting settings, and recording is
-self-contained, so it is yours whole. The rest of the detail page is A's.
+**Recording is not split by moment.** Starting it, the consent, the badge and the artifact
+afterwards are one feature and one sector's: there are no import edges between recording and
+meeting settings, and nothing in the recording code depends on the rest of the detail page,
+which is A's.
 
 **Setup** — 4 browsers: one acting, one observing, a third for two simultaneous screen shares
 and a guest window for the guest client. Most checks here work at two.
@@ -654,29 +622,26 @@ and sort
 
 ---
 
-## Your dedup targets in `reports/`
+## Dedup against `reports/` before Jira
 
 **A report already published for your ground is a dedup target, and a closer one than Jira.**
 We never file without being asked, so `reports/` is where findings actually live and ALK holds
-only the subset someone later chose to file. The letters were re-dealt, so the old reports do
-**not** line up with your letter — this table is what replaces reading the letter:
+only the subset someone later chose to file — an unfiled finding is invisible to a Jira dedup
+permanently.
 
-| your sector | old reports covering your ground |
-|---|---|
-| **A** | `aloqa-calls-around-qa-*`, `aloqa-calls-entry-qa-*`, `aloqa-calls-record-qa-*`, and the pre-map `aloqa-calls-qa-*` |
-| **B** | `aloqa-calls-inside-qa-*`, `aloqa-calls-floor-qa-*`, part of `aloqa-calls-media-qa-*` |
-| **C** | `aloqa-calls-inside-qa-*`, `aloqa-calls-collab-qa-*`, part of `aloqa-calls-media-qa-*`, the recording half of `aloqa-calls-record-qa-*` |
-| **D** | `aloqa-chat-qa-*` |
-| **E** | `aloqa-chat-qa-*`, the sidebar and unread parts of `aloqa-workspace-qa-*` |
-| **F** | `aloqa-org-qa-*` |
-| **G** | `aloqa-org-qa-*` |
-| **H** | `aloqa-workspace-qa-*` |
-| **I** | `aloqa-workspace-qa-*` |
+Check the **directory**, not `reports/README.md`: the index is appended once at the end of a
+run by design, so mid-run it is guaranteed incomplete and reads exactly like "no sibling
+exists". List the files, then read the titles:
 
-Plus `reports/aloqa-consolidated-2026-08-26.html`, which is every sector's verified set for
-that day in one file, and any report published by **your own sector today** — check the
-directory, not `reports/README.md`, because the index is appended once at the end of a run by
-design and mid-run is guaranteed incomplete.
+```bash
+ls reports/aloqa-*.html
+grep -o '<h2>.*</h2>' <report> | sed 's/<[^>]*>//g'
+```
+
+**Match on the titles, never on the lane letter in a filename.** A report covers whatever its
+`<area>` token says it covers, and a letter tells you which fixtures produced it, not what is
+inside. Reading the titles costs one `grep` per file and is the only thing that answers the
+question you are actually asking.
 
 **Reading a document is not checking a claim against it.** A session that had read the sibling
 report, re-verified all five of its findings and quoted the colliding one twice still published
@@ -687,9 +652,8 @@ own pass.
 
 ## Files each session writes
 
-`<area>` is fixed per sector so parallel sessions never collide or drift apart, and so nothing
-this map writes can collide with a file from either retired map. `<date>` is today, `<lane>`
-the fixture lane letter — which on this map is the sector letter.
+`<area>` is fixed per sector so parallel sessions never collide or drift apart. `<date>` is
+today, `<lane>` the fixture lane letter — which on this map is the sector letter.
 
 **A second run of the same sector on the same lane and date** appends `-2`, `-3` and so on to
 both the log and the report basename. Check whether a report already exists for your sector
@@ -725,7 +689,7 @@ the lowest-value thing available. In rough order of what has paid off:
 3. **Take the surfaces nobody counted seriously** — the guest client (A's door and C's client),
    the profile popup, the Tweaks panel, the failure screens, offline and cross-tab. They are
    under-tested because no measurement ever sized them, not because they are unimportant.
-4. **Re-verify a retired map's report for your surfaces** — `/verify-bugs` does this as its own
+4. **Re-verify an earlier report covering your surfaces** — `/verify-bugs` does this as its own
    pass: reproduce each finding on today's build, and where it does not reproduce, check
    `git log` for a fix before calling it a false positive.
 

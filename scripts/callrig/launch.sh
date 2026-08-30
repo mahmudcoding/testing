@@ -37,17 +37,15 @@ fi
 # dropping. Both caps are deliberate to exceed, never accidental:
 #   QA_MAX_PER_LANE=5 ./launch.sh A dave   # a genuine 5-participant call
 #
-# One map now: SECTORS.md, nine sectors A-I on nine lanes A-I, sector letter =
-# lane letter. (The Calls-only map's K-O are retired to archive/.) Caps are sized
-# from each sector's own setup line in that map rather than one number for
-# everyone -- a flat cap pinches the sectors that genuinely need windows while
-# leaving the cheap sectors' slack unused.
+# Sectors and their caps come from SECTORS.md: nine sectors A-I on nine lanes A-I,
+# sector letter = lane letter. Each cap is sized from that sector's own setup line
+# rather than one number for everyone -- a flat cap pinches the sectors that
+# genuinely need windows while leaving the cheap sectors' slack unused.
 #
 # THREE sessions run at once, not nine. So these nine numbers are a per-sector
 # ceiling, not a budget that has to sum to anything: the three heaviest sectors
 # that can run together want 4+4+4 = 12 against MAX_TOTAL=20, and every other
-# combination is smaller. That is why raising one no longer requires lowering
-# another, which it did on the old Calls map where all five sectors wanted the rig.
+# combination is smaller. Raising one therefore does not require lowering another.
 sector_cap() {
   case "$1" in
     # Counted from the accounts each sector's scope actually needs in one window
