@@ -1,5 +1,10 @@
 # Published reports
 
+The HTML sources were dropped on 2026-08-31 for a clean start on the nine-sector map.
+**The reports themselves are not gone** — every row below carries the artifact URL it was
+published to, and those still resolve; read one with the Artifact tool's `read` action when
+a finding needs checking. New rows go at the bottom as usual, one per run.
+
 | file | artifact URL | session |
 |---|---|---|
 | `aloqa-calls-qa-2026-08-23.html` | https://claude.ai/code/artifact/a85a9d05-a32e-4642-b008-bcdc27628d79 | 2026-08-23, звонки |

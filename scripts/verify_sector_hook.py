@@ -111,10 +111,16 @@ for letter, area in SECTORS:
 print("\nFilenames")
 areas = [a for _, a in SECTORS]
 check("the nine area tokens are distinct", len(set(areas)) == 9, str(areas))
+# reports/ can legitimately be empty, and an empty set makes the collision check
+# below vacuous -- it would pass for any token at all. So prove the scanner can
+# see a token before trusting it not to find one: positive control first, the
+# real question second. Same discipline as an empty grep needing one.
+control = REPORT_RE.search("aloqa-chat-messages-qa-2026-09-01-D.html")
+check("the report-name scanner can recognise a token at all",
+      bool(control) and control["area"] == "chat-messages",
+      control["area"] if control else "no match")
 on_disk = published_areas()
-check("the directory scan finds the tokens already published",
-      len(on_disk) >= 3, str(sorted(on_disk)))
-check("...and no sector writes under one of them",
+check("...and no sector writes under a token already on disk (%d found)" % len(on_disk),
       not (set(areas) & on_disk), str(set(areas) & on_disk))
 logs = set()
 reports = set()
