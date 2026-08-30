@@ -116,10 +116,16 @@ fi
 # nothing -- it reports what starting one more will cost. A swap-thrashed browser
 # produces timing readings that look exactly like product defects (see PITFALLS.md),
 # so the number is worth seeing before the run, not after a false positive.
-FREE_G=$(vm_stat | awk '/Pages free/{gsub(/\./,"",$3); printf "%.1f", $3*16384/1073741824}')
+AVAIL_G=$(vm_stat | awk '
+  /Pages free/     {gsub(/\./,"",$3); f=$3}
+  /Pages inactive/ {gsub(/\./,"",$3); i=$3}
+  END { printf "%.1f", (f+i)*16384/1073741824 }')
 COMP_G=$(vm_stat | awk '/occupied by compressor/{gsub(/\./,"",$5); printf "%.1f", $5*16384/1073741824}')
-if [ "$(echo "$FREE_G < 1.5" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
-  echo "warning: ${FREE_G}G free, ${COMP_G}G already compressed." >&2
+# free+inactive, not free: macOS keeps "free" near zero by design, so a guard on
+# free alone fires on a perfectly healthy machine and gets ignored. Inactive is
+# reclaimable, so free+inactive is what a new browser can actually draw on.
+if [ "$(echo "$AVAIL_G < 2.6" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+  echo "warning: ~${AVAIL_G}G available (free+inactive), ${COMP_G}G already compressed." >&2
   echo "  A rig browser costs ~1.3 GB with the app loaded, so this one will swap." >&2
   echo "  Free some: ./stop.sh <lane> <account>, or scripts/testing-mode.sh on" >&2
 fi
