@@ -127,7 +127,7 @@ COMP_G=$(vm_stat | awk '/occupied by compressor/{gsub(/\./,"",$5); printf "%.1f"
 if [ "$(echo "$AVAIL_G < 2.6" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
   echo "warning: ~${AVAIL_G}G available (free+inactive), ${COMP_G}G already compressed." >&2
   echo "  A rig browser costs ~1.3 GB with the app loaded, so this one will swap." >&2
-  echo "  Free some: ./stop.sh <lane> <account>, or scripts/testing-mode.sh on" >&2
+  echo "  Free a slot with ./stop.sh <lane> <account>, or quit an app you are not using." >&2
 fi
 
 DIR="$HOME/.cache/aloqa-callrig/$NAME"
