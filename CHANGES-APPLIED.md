@@ -3380,9 +3380,10 @@ enumeration on lane B); not independently re-measured, since it needs that lane'
 
 **Reverted?** · No. Backup at `/tmp/SELECTORS.md.bak`.
 
-## `SELECTORS.md` screen-share bullet — correction HELD pending one measurement
+## `SELECTORS.md` screen-share bullet — correction APPLIED (was held one round)
 
-**Status** · **Not applied.** Recorded here so it is not lost if this session ends.
+**Status** · **Applied.** Held for one round pending a single measurement; that measurement arrived
+and settled it. The hold is kept in this record because holding was the right call — see below.
 
 **What is disputed** · The "Calls — state that gates a control" bullet (added `8c1be6b`, 2026-08-27)
 says a per-participant device permission does **not** lift a meeting's `on_request` screen-share
@@ -3425,3 +3426,38 @@ deploy stamp, so a backend change remains possible and invisible.
 - **Guest device-request control is new-at-this-build** (shipped, pulled under ALK-3028, restored in
   `37af8393c`). Routed to sector M as the moderation surface, flagged to K as fresh rather than
   long-standing. Given as a where-to-look pointer with no expected behaviour attached.
+
+### Resolution of the held screen-share correction
+
+**The number** · Lane C re-measured with epoch stamps on both sides, after resetting Alice to
+`Inherit` and confirming her button had returned to `Request to share`. Poller on the participant at
+300 ms, started **before** the host touched anything:
+
+    t=2ms       epoch 1788077142056   'Request to share'
+    t=10952ms   epoch 1788077153006   'Share screen'
+    host saveClickEpoch               1788077152655
+    1788077153006 - 1788077152655  =  351 ms
+
+The sample 300 ms earlier still read `Request to share`, so the latency is bounded above by 351 ms
+and cannot exceed one poll interval. No reload; the poller never navigates.
+
+**So the hold was right, and for the reason given.** Lane C withdrew their first read unprompted: it
+was a separate `drive.mjs` invocation started after the previous one exited, somewhere in the 5–15 s
+range, and could not have discriminated between the two explanations. Had the correction been
+written from it, `SELECTORS.md` would have gained a new wrong claim in place of the old one.
+
+**What was written** · The old "does not lift" sentence is replaced by the measured behaviour, the
+method, and — at lane C's own suggestion — a caution against generalising it: **351 ms is a
+screen-share _grant_, while the ~13 s came from a camera _revoke_ on an earlier build.** Different
+field, different direction, not re-measured on rc.7, so the bullet keeps "poll rather than sampling
+once" for both. Also folded in the member/guest split (members refresh over REST, guests only on
+realtime frames) so a timing result is never read across the two paths.
+
+**Cause** · Still unestablished, and deliberately not asserted in the note. ALK-3142 was investigated
+and rejected above; the backend has no deploy stamp, so a backend change stays invisible.
+
+**Verified** · `git diff --numstat` → 19 added, 3 deleted — exactly the three lines of the old claim.
+Confirmed the stale string is gone (0 matches), the surrounding `allowed_all` guidance and settings
+field list survive, and headings remain unique.
+
+**Reverted?** · No. Backup at `/tmp/SELECTORS.md.bak2`.

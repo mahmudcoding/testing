@@ -230,9 +230,25 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
 - **A meeting is created with `screen_share_mode: "on_request"`**, so a
   participant's control reads `Request to share`, not `Share screen`, and a
   snippet matching the latter finds nothing and reports the participant never
-  shared. The per-participant device permission does **not** lift it — the
-  dialog reads `Currently Allowed` while the button stays a request. Set the
-  meeting's own mode first:
+  shared. **The per-participant device permission DOES lift it** (corrected
+  2026-08-30 on `v0.61.0-rc.7`; this bullet previously said it did not).
+  Host → row menu → `Device permissions` → Screen sharing → `Allow` → save:
+  `PUT /meeting/<id>/participants/<uid>/permissions {"screen_share":true}` → 200
+  `effective {"mic":true,"camera":true,"screen_share":true}`, and the
+  participant's button flips `Request to share` → `Share screen` with no reload,
+  **measured 351 ms** (poller at 300 ms started before the host acted, epoch
+  stamps both sides, so bounded above by one interval).
+  **Still poll rather than sampling once.** 351 ms is a screen-share *grant*; an
+  earlier build recorded a camera *revoke* taking ~13 s to reach the toolbar —
+  different field, different direction, not measured on rc.7. At t+1s "the
+  permission did not apply" and "it has not arrived yet" are the same
+  observation and only one is a finding; `waitForChange` (`snip/watch.mjs`)
+  returns `{changed:false, stableForMs, samples}` rather than throwing.
+  Note also that **a member refreshes effective permissions over REST while a
+  guest receives them only on realtime frames** (the effective-permissions route
+  is member-only), so a timing result on one does not transfer to the other —
+  say which you measured.
+  To set the meeting's own mode instead:
   `PATCH /api/v1/meeting/<id>/settings {"screen_share_mode":"allowed_all"}`.
   The full settings object also carries `mic_mode`, `camera_mode`,
   `who_can_open_rooms`, `who_can_see_guest_link`, `max_rooms`, `max_video_height`
