@@ -6,8 +6,10 @@ Nine sectors, **A–I**: three for Calls, six for everything else. Weights come 
 (published: https://claude.ai/code/artifact/9cba3e8e-ffda-4623-9821-14cf0cf9b3f3).
 
 **Three sessions run at once**, so the map is sized by where the product's seams are rather
-than by what the rig can survive: the three heaviest sectors want twelve browsers against a
-global cap of twenty, and load is not the constraint on how the work divides.
+than by what the rig can survive. Every sector may hold four browsers, so any three running
+together want twelve against a global cap of twenty, and load is not the constraint on how the
+work divides. Four is a ceiling, not a target — a sector's **Setup** line says what it actually
+needs, and a browser you are not driving is one the machine is still compositing.
 
 ---
 
@@ -68,12 +70,12 @@ taken at the deployed sha agree with it.
 | **A** · Calls — the door, the exit, the record | 12.1% | A | 4 | `calls-lifecycle` |
 | **B** · Calls — the room | 10.0% | B | 4 | `calls-room` |
 | **C** · Calls — the studio and the policy | 10.8% | C | 4 | `calls-studio` |
-| **D** · Chat — messages | 11.2% | D | 3 | `chat-messages` |
-| **E** · Chat — channels and DMs | 9.6% | E | 3 | `chat-spaces` |
+| **D** · Chat — messages | 11.2% | D | 4 | `chat-messages` |
+| **E** · Chat — channels and DMs | 9.6% | E | 4 | `chat-spaces` |
 | **F** · Admin and org | 12.2% | F | 4 | `admin-org` |
-| **G** · Identity and access | 11.1% | G | 3 | `identity` |
-| **H** · Shell, people and discovery | 8.8% | H | 3 | `shell` |
-| **I** · Calendar and files | 12.0% | I | 3 | `calendar-files` |
+| **G** · Identity and access | 11.1% | G | 4 | `identity` |
+| **H** · Shell, people and discovery | 8.8% | H | 4 | `shell` |
+| **I** · Calendar and files | 12.0% | I | 4 | `calendar-files` |
 
 Sum 97.8%, plus Calls debug surfaces at 2.1% which stay unallocated. Mean 10.9%, spread 8.8–12.2.
 
@@ -342,7 +344,8 @@ both, it belongs to whoever found it; note the border in your log.
 reached from the files page is I's. If the two disagree about the same file, that is a finding;
 log it and say so.
 
-**Setup** — 3 browsers. Alice owns `#qa-private` but not `#qa-general`, which is what exercises
+**Setup** — 4 browsers: a sender, two receivers and a fourth seat for receipts and reactions.
+Alice owns `#qa-private` but not `#qa-general`, which is what exercises
 the permission difference on her own messages inside a single account: Delete and Pin in the
 channel she owns, only "Hide for me" in the one she does not.
 
@@ -385,7 +388,7 @@ the defect sat precisely on the old border. Sidebar badge, bold state, the unrea
 mentions page and the read-state are all yours; H owns the list's chrome and nothing that
 counts.
 
-**Setup** — 3 browsers. `qa.dave@` is in the workspace and in **no channel** — the
+**Setup** — 4 browsers. `qa.dave@` is in the workspace and in **no channel** — the
 channel-authz negative case — and `qa.outsider@` is in the company but not the workspace.
 
 **Priority if short** — channel management and the info panel → unread and mentions → DMs,
@@ -479,7 +482,7 @@ Runs on lane G.
 Appearance settings are yours; the Tweaks overlay reached with Cmd/Ctrl+Shift+T is H's, and
 whether the two write the same store is H's question to answer.
 
-**Setup** — 3 browsers, and **one of them kept deliberately signed out** for `/signup`, email
+**Setup** — 4 browsers, and **one of them kept deliberately signed out** for `/signup`, email
 verification, magic link and reset password as an anonymous visitor. That window is working as
 intended: do not "repair" it, and do not point `ensure.sh` at it. Signing out other sessions
 logs out every browser on that account — expect to re-login.
@@ -546,8 +549,8 @@ Messages and files are fine, because they were posted through the app. Get a pos
 by creating the thing through the UI first. Lane E carries a permanent one, channel
 `e-search-control`; make one on lane H before writing any "search does not find X" finding.
 
-**Setup** — 3 browsers: one to drive, a second for presence and cross-user directory checks,
-a third when a profile popup has to be seen from two sides.
+**Setup** — 4 browsers: one to drive, a second for presence and cross-user directory checks,
+a third when a profile popup has to be seen from two sides, and a spare.
 
 **Priority if short** — search → the profile popup and custom status → notifications and the
 bell → directories → the shell and sidebar chrome → connection status and offline → the Tweaks
@@ -607,8 +610,8 @@ hour — CDP `Emulation.setTimezoneOverride` puts them on opposite sides of midn
 of day, and comparing two zones that agree against one that diverges, at the same instant, is
 what turns a suspicious reading into a demonstration.
 
-**Setup** — 3 browsers: one to drive, a second to receive an invitation or a shared file, a
-third when an RSVP has to be seen from a third seat.
+**Setup** — 4 browsers: one to drive, a second to receive an invitation or a shared file, a
+third when an RSVP has to be seen from a third seat, and a spare.
 
 **Priority if short** — create and edit events → invitations and RSVP → the file viewer and its
 renderers → upload and share → views and navigation → reminders → the join landing → facets

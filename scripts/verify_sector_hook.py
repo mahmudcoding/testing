@@ -230,24 +230,54 @@ print("\nBrowser budgets in launch.sh")
 launch = os.path.join(REPO, "scripts", "callrig", "launch.sh")
 with open(launch, encoding="utf-8") as fh:
     src = fh.read()
-caps = dict((m.group(1), int(m.group(2)))
-            for m in re.finditer(r"^\s*([A-Z])\)\s*echo\s+(\d+)\s*;;", src, re.M))
+
+
+def cap_for(letter):
+    """Ask launch.sh's own sector_cap rather than parsing the case statement.
+
+    Parsing the text cannot see a range pattern like [A-I], and would report "no
+    cap" for every sector the moment the branches are collapsed -- a failure about
+    the checker wearing the costume of a failure about the caps. Running the
+    function also covers branch ordering, which no regex can.
+    """
+    r = subprocess.run(
+        ["bash", "-c",
+         'eval "$(sed -n "/^sector_cap()/,/^}/p" "$0")"; sector_cap "$1"', launch, letter],
+        capture_output=True, text=True, timeout=15)
+    return int(r.stdout.strip() or 0)
+
+
+letters = [L for L, _ in SECTORS]
+caps = {L: cap_for(L) for L in letters}
 m = re.search(r'MAX_TOTAL="\$\{QA_MAX_BROWSERS:-(\d+)\}"', src)
 total = int(m.group(1)) if m else 0
-letters = [L for L, _ in SECTORS]
-check("every sector has a cap", all(L in caps for L in letters), str(sorted(caps)))
-check("no cap left behind for a letter the map does not define",
-      not (set(caps) & set("KLMNO")), str(sorted(set(caps) & set("KLMNO"))))
-# Three sessions run at once. The binding number is the worst three, not the sum:
-# that is what makes nine sectors fit where five did not.
-worst3 = sum(sorted((caps.get(L, 0) for L in letters), reverse=True)[:3])
-check("the three heaviest sectors fit under MAX_TOTAL (%d <= %d)" % (worst3, total),
+
+# Positive control: the function must be reachable at all, or every check below
+# passes on a uniform zero and says nothing.
+check("sector_cap is callable and answers", all(v > 0 for v in caps.values()), str(caps))
+check("every sector may hold four browsers", all(v == 4 for v in caps.values()), str(caps))
+check("a letter the map does not define gets the free-lane cap, not a sector's",
+      cap_for("Z") == 3 and cap_for("J") == 3, "Z=%d J=%d" % (cap_for("Z"), cap_for("J")))
+
+# Three sessions run at once, so the binding number is the worst three, never the
+# sum across nine. That is what lets every sector hold four.
+worst3 = sum(sorted(caps.values(), reverse=True)[:3])
+check("any three sectors at once fit under MAX_TOTAL (%d <= %d)" % (worst3, total),
       worst3 <= total)
 check("...with room for the free lane too (%d + 3 <= %d)" % (worst3, total),
       worst3 + 3 <= total)
-check("caps match the map's setup lines",
-      [caps.get(L) for L in letters] == [4, 4, 4, 3, 3, 4, 3, 3, 3],
-      str([caps.get(L) for L in letters]))
+
+# The map is where a person reads what a sector may have; the script is what
+# enforces it. Compare them rather than hardcoding the number in a third place --
+# a constant here would just be one more thing to forget to update.
+with open(os.path.join(REPO, "SECTORS.md"), encoding="utf-8") as fh:
+    map_src = fh.read()
+map_caps = {L: int(v) for L, v in re.findall(
+    r"^\|\s*\*\*([A-I])\*\*[^|]*\|[^|]*\|[^|]*\|\s*(\d+)\s*\|", map_src, re.M)}
+check("the map states a browser count for all nine sectors",
+      sorted(map_caps) == letters, str(sorted(map_caps)))
+check("...and launch.sh hands out exactly what the map promises",
+      map_caps == caps, "map=%s script=%s" % (map_caps, caps))
 
 print("\n%d checks, %d failed" % (CHECKS, len(FAILURES)))
 if FAILURES:

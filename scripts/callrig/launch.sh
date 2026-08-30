@@ -48,19 +48,14 @@ fi
 # combination is smaller. Raising one therefore does not require lowering another.
 sector_cap() {
   case "$1" in
-    # Counted from the accounts each sector's scope actually needs in one window
-    # each -- browsers accumulate as you work down a lane, so the cap has to cover
-    # the distinct accounts a sector touches, not the worst single finding.
-    A) echo 4 ;;   # calls, lifecycle: caller, callee, waiting room, guest window
-    B) echo 4 ;;   # calls, room: a host and three targets, or a side room split
-    C) echo 4 ;;   # calls, studio: acting, observing, a 2nd sharer, a guest
-    D) echo 3 ;;   # chat, messages: alice (owns #qa-private), bob, carol
-    E) echo 3 ;;   # chat, spaces: alice, bob, dave (in no channel)
-    F) echo 4 ;;   # admin/org: owner, admin, outsider, guest
-    G) echo 3 ;;   # identity: two signed in, one kept deliberately signed out
-    H) echo 3 ;;   # shell: driver, presence/directory peer, a 3rd for profiles
-    I) echo 3 ;;   # calendar/files: driver, invitee, a 3rd seat for RSVP
-    *) echo 3 ;;   # lane J and beyond: no sector, free work
+    # Four for every sector, uniformly. The per-sector numbers this replaced were
+    # sized from the accounts each sector names, and stopped earning their keep
+    # when the map went to three concurrent sessions: the binding number is the
+    # worst three at once (3 x 4 = 12) against MAX_TOTAL below, not the sum across
+    # nine. Which accounts a sector actually wants is still in its "Setup" line in
+    # SECTORS.md -- kept in one place so the two cannot drift.
+    [A-I]) echo 4 ;;   # every sector on the map
+    *)     echo 3 ;;   # lane J and beyond: no sector, free work
   esac
 }
 # 20 is a backstop, not an allocation. With three concurrent sessions the worst
