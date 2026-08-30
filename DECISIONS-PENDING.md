@@ -128,3 +128,59 @@ where the mistake happens; the `CLAUDE.md` line matters mainly for a session tha
 way. Declining costs little.
 
 **Where the change would go** · `CLAUDE.md`, Reporting section. Nothing else.
+
+## 2026-08-30 · The global browser cap is set beyond what this machine can serve, and it corrupted measurements
+
+**What is being asked** · Whether to lower the global rig cap (`QA_MAX_BROWSERS`, currently 20), and
+if so to what. Not changed mid-run: refusing launches five sessions are counting on would disrupt
+work in flight, and it reallocates capacity across sectors, which is yours to decide.
+
+**The measurement** · At **16** windows up — inside the cap — taken 2026-08-30 13:38 +05:
+
+    load averages: 81.40 82.01 63.73      on 8 cores (~10x oversubscribed)
+    vm.swapusage: used = 1890M / 3072M
+    top process: WindowServer  82.2% CPU   <- above any individual Chrome renderer
+    then Chrome renderers 33.8, 28.0, 17.9, 15.9, 15.1 ...
+    coreaudiod 18.3%
+
+The dominant cost is **compositing, not computation** — 16 maximized windows each painting live video
+grids. That is why the machine sits at load 81 while the browsers look idle.
+
+**What it already cost** · Lane C's `waitForTimeout(300)` poller degraded to **one sample per 10.6 s**
+— `samples: 6` over `durMs: 63640`, overrunning its own deadline by 40%. Transient prompts in that
+sector live 2–9 s, so a window that size can miss one entirely and return a confident empty result.
+**The false finding it produces is an absence** ("the participant is never prompted"), which is the
+direction nobody re-checks, and it is indistinguishable from the real thing. Lane C caught it,
+discarded the affected measurement and re-ran. All five lanes have been told the arithmetic check
+(`samples * interval ≈ durMs`), which is free and needs no new tooling.
+
+**Why the obvious remedies do not work** · Shrinking, minimising or occluding windows reduces
+compositing but an occluded rig window reports `document.visibilityState: hidden`, and the app
+suppresses live UI when hidden — trading a slow poller for a client that never renders the thing,
+with `document.hasFocus()` staying `true` so nothing warns you. Maximised windows are also your
+standing preference. So the only real lever is **how many windows run at once**.
+
+**Context** · The cap was raised 16 → 20 in `3cdb0e9` on the reasoning that a Calls day would
+otherwise refuse a browser mid-run. That reasoning was about *sector need*; nothing measured whether
+the hardware could serve it. At 16 the machine is already 10x oversubscribed, so 20 is well past the
+point where measurements stop meaning anything.
+
+**Options**
+
+1. **Lower the global cap to 12** and let the per-sector caps arbitrate. Measurements stay
+   trustworthy; a five-lane Calls day with a four-party call in one sector would sometimes have to
+   queue. Sectors would need to hand windows back between checks rather than holding them.
+2. **Lower to 14–16.** Closer to today's behaviour, still oversubscribed; buys less.
+3. **Leave 20 and rely on the arithmetic check.** No disruption, and every session must verify
+   sample counts on every timing result forever — a discipline that works until someone forgets, and
+   the failure is silent.
+4. **Fewer concurrent sessions** rather than fewer windows — four lanes instead of five on Calls days.
+   Addresses the root cause most directly and costs a sector's worth of coverage per day.
+
+**Recommendation** · Option 1 for the next run, not this one. Twelve keeps the machine near 8 cores'
+worth of real work, and the per-sector caps already encode who needs the most. Option 3 alone is the
+weakest: it makes correctness depend on nobody forgetting a check, and today it was caught by luck —
+one session happened to inspect its own sample count.
+
+**Where the change would go** · `scripts/callrig/launch.sh`, `MAX_TOTAL` default (currently 20). If
+you pick option 4 it is not a code change at all, just how many sessions you start.
