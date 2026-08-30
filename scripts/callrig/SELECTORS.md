@@ -145,6 +145,16 @@ the call — no error, no visible change, `stillInCall: true`.
     snip/c-dmcall.mjs          QA_HANGUP=1 clicks Leave call, then only READS the dialog   → stays
     snip/leave-call.mjs        leaves AND ends the meeting
 
+**Drive it by testid, not by text.** The toolbar control is icon-only with
+`aria-label="Leave call"` on a *parent*, so `clickDeepest(/^(Leave call|Leave)$/)` returns
+`no match` against a control that is plainly there — the same signature as absence.
+
+    [data-testid="call-controls-leave"]        the toolbar control
+    [data-testid="call-leave-confirm-submit"]  Leave, in the confirm dialog
+
+Note `call-leave-confirm-submit` (leaving) and `call-end-confirm-submit` (ending the meeting) are
+different controls for different actions; both exist on the deployed build.
+
 Assert the state afterwards: the URL must no longer match `/call/`.
 
 **Navigating away does not leave a call** — the router returns you to `/call/<id>`. Only the

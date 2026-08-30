@@ -165,6 +165,22 @@ def main():
         for i in r:
             print(f"{i['key']}\t{i['type']}\t{i['status']}\t{i['summary']}")
         print(f"-- {len(r)} issue(s); cache synced {c['synced_at']}", file=sys.stderr)
+        if getattr(a, "open_bugs", False):
+            hidden = [i for i in c["issues"].values()
+                      if (i["type"] or "").lower() == "bug"
+                      and (i["status"] or "").lower() not in OPEN_BUG_STATUSES]
+            by = {}
+            for i in hidden:
+                by[i["status"] or "?"] = by.get(i["status"] or "?", 0) + 1
+            breakdown = ", ".join(f"{k} {v}" for k, v in sorted(by.items(), key=lambda kv: -kv[1]))
+            print(f"-- NOT SHOWN: {len(hidden)} Bug(s) outside this scope ({breakdown}).",
+                  file=sys.stderr)
+            print("--   This list is the DEDUP scope only. A ticket outside it can still SPECIFY "
+                  "what you", file=sys.stderr)
+            print("--   measured -- and a specified state is not a defect, however correct the "
+                  "measurement.", file=sys.stderr)
+            print("--   Before writing up:  jira_cache.py grep '<the noun of your finding>'   "
+                  "(all statuses)", file=sys.stderr)
     elif a.cmd == "grep":
         rx = re.compile(a.pattern, re.I)
         hits = [i for i in c["issues"].values()
