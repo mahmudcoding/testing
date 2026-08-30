@@ -22,7 +22,6 @@ AGENTS=(
   com.google.keystone.agent
   com.microsoft.EdgeUpdater.wake
   com.valvesoftware.steamclean
-  com.atlassian.twg.upkeep
 )
 
 STATE="$HOME/.cache/aloqa-qa/testing-mode.state"
