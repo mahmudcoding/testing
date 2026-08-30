@@ -19,20 +19,20 @@ import os, re, sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
 sys.path.insert(0, os.path.join(REPO, "scripts"))
+from findings import load_findings  # noqa: E402
 
 
-def blocks(path):
-    """(index, attrs) for every repro block, in document order."""
-    src = open(path, encoding="utf-8").read()
+def blocks(_unused=None):
+    """(id, title, repro) for every finding, from the source. No HTML anywhere.
+
+    This used to re-implement bench.py's regex over report HTML, with an index
+    into a differently-filtered split -- so a stray <h2 shifted every block onto
+    the wrong finding. A repro is a field on its finding now; the pairing cannot
+    come apart.
+    """
     out = []
-    for i, part in enumerate(re.split(r"(?=<h2)", src)):
-        if "<h2" not in part:
-            continue
-        m = re.search(r'<div class="block repro"([^>]*)>', part)
-        title = re.sub(r"<[^>]+>", "", re.search(r"<h2[^>]*>(.*?)</h2>", part, re.S).group(1)
-                       if re.search(r"<h2[^>]*>(.*?)</h2>", part, re.S) else "")
-        attrs = dict(re.findall(r'data-([a-z]+)="([^"]*)"', m.group(1))) if m else None
-        out.append((i, " ".join(title.split())[:70], attrs))
+    for f in sorted(load_findings().values(), key=lambda x: x["id"]):
+        out.append((f["id"], f["title"][:70], f["repro"]))
     return out
 
 
@@ -62,42 +62,26 @@ def check_snippet(name):
 
 
 def main(argv):
-    if argv:
-        reports = [os.path.abspath(a) for a in argv]
-    else:
-        import bench
-        reports = [os.path.join(REPO, r[2]) for r in bench.REPORTS]
-
-    problems = total = withblock = 0
-    for path in reports:
-        if not os.path.exists(path):
-            print(f"MISSING  {path}")
-            problems += 1
-            continue
-        rows = blocks(path)
-        named = [(t, a) for _, t, a in rows if a]
-        total += len(rows)
-        withblock += len(named)
-        print(f"\n{os.path.relpath(path, REPO)}  —  {len(named)}/{len(rows)} findings have a block")
-        for title, a in named:
-            name = a.get("snippet", "")
-            lane = a.get("lane", "")
-            errs = check_snippet(name) if name else ["block has no data-snippet"]
-            if name and lane and not name.lower().startswith(lane.lower() + "-"):
-                errs.append(f"name does not start with the lane ({lane})")
-            if not a.get("accounts"):
-                errs.append("no data-accounts")
-            if errs:
-                problems += len(errs)
-                print(f"  FAIL  {name or '(none)'}  — {title}")
-                for e in errs:
-                    print(f"          {e}")
-        for _, t, a in rows:
-            if not a:
-                print(f"  none  {t}")
-
-    print(f"\n{withblock} of {total} findings carry a runnable block")
-    print("PROBLEMS: %d" % problems if problems else "ALL BLOCKS OK")
+    rows = blocks()
+    named = [(i, t, a) for i, t, a in rows if a]
+    problems = 0
+    print("\n  %d of %d findings carry a runnable block\n" % (len(named), len(rows)))
+    for fid, title, a in named:
+        name, lane = a.get("snippet", ""), a.get("lane", "")
+        errs = check_snippet(name) if name else ["no snippet named"]
+        if name and lane and not name.lower().startswith(lane.lower() + "-"):
+            errs.append("snippet name does not start with the finding's lane (%s)" % lane)
+        if not a.get("accounts"):
+            errs.append("no accounts")
+        if errs:
+            problems += len(errs)
+            print("  FAIL  %s  — %s" % (name or "(none)", title))
+            for e in errs:
+                print("          %s" % e)
+    for fid, t, a in rows:
+        if not a:
+            print("  none  %-34s %s" % (fid, t))
+    print("\nPROBLEMS: %d" % problems if problems else "\nALL BLOCKS OK")
     return 1 if problems else 0
 
 

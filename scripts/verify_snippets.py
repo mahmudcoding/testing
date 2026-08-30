@@ -23,34 +23,28 @@ import os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
-import bench
+from findings import load_findings
 
-REPORT = {r[0]: os.path.join(REPO, r[2]) for r in bench.REPORTS}
+
+
+def _by_lane(lane):
+    return [f for f in load_findings().values()
+            if (f["lane"] or "").upper() == lane.upper() and f["snippet"]]
 
 
 def blocks(lane):
-    """[(snippet, driver_account)] in document order."""
-    src = open(REPORT[lane], encoding="utf-8").read()
-    out = []
-    for attrs in re.findall(r'<div class="block repro"([^>]*)>', src, re.S):
-        d = dict(re.findall(r'data-([a-z]+)="([^"]*)"', attrs))
-        snip = d.get("snippet", "")
-        acct = (d.get("accounts", "alice").split(",")[0] or "alice").strip()
-        if snip:
-            out.append((snip, acct))
-    return out
+    """[(snippet, driver_account)] for a lane, from the source.
+
+    Two regex scrapers over report HTML used to do this, keyed by snippet name --
+    so two findings sharing a snippet silently collapsed into one entry, and the
+    lane came from the command line while data-lane was parsed and ignored.
+    """
+    return [(f["snippet"], (f["accounts"] or ["alice"])[0]) for f in _by_lane(lane)]
 
 
 def _all_accounts(lane):
-    """{snippet: [every account its block names]} — a finding's other windows
-    have to be reset too, not just the one the snippet drives."""
-    src = open(REPORT[lane], encoding="utf-8").read()
-    out = {}
-    for attrs in re.findall(r'<div class="block repro"([^>]*)>', src, re.S):
-        d = dict(re.findall(r'data-([a-z]+)="([^"]*)"', attrs))
-        if d.get("snippet"):
-            out[d["snippet"]] = [a.strip() for a in d.get("accounts", "").split(",") if a.strip()]
-    return out
+    """{snippet: [every account the finding names]}"""
+    return {f["snippet"]: list(f["accounts"]) for f in _by_lane(lane)}
 
 
 def sh(cmd, **kw):

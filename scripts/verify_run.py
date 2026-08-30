@@ -10,7 +10,7 @@ Verdicts are written to verifications/verification-<lane>-<date>.md as a signed 
 """
 import sys, os, json, subprocess, datetime, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from verify_queue import parse, roles_needed, surface, preflight, ACCOUNT
+from findings import load_run, notes_for
 from collections import defaultdict
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,10 +29,15 @@ ROUTE = {
 def sh(cmd, **kw):
     return subprocess.run(cmd, cwd=REPO, text=True, capture_output=True, **kw)
 
-def accounts_for(roles):
+def accounts_for(accts):
+    """Dedupe, preserving order. Accounts are stated per finding now.
+
+    This used to map inferred role names through a prose->account table, because
+    the accounts were guessed from the report's Russian text. The table is gone
+    with the guessing.
+    """
     seen, out = set(), []
-    for r in roles:
-        a = ACCOUNT.get(r, 'alice')
+    for a in accts or ['alice']:
         if a not in seen:
             seen.add(a); out.append(a)
     return out
@@ -44,15 +49,19 @@ def main():
     only  = int(sys.argv[sys.argv.index('--group')+1]) if '--group' in sys.argv else None
     dry   = '--dry' in sys.argv
 
-    findings = parse(path)
-    notes = preflight(findings, REPO)
+    run = load_run(os.path.abspath(path))
+    findings = run["items"]
+    notes = {f["id"]: notes_for(f) for f in findings}
+    # Group by the setup a finding actually needs. Both halves of the key used to
+    # be guessed -- the surface by matching regexes against the title, the
+    # accounts by grepping Russian morphological stems -- and both are stated
+    # fields now, so two findings land in one group because they say so.
     groups = defaultdict(list)
     for f in findings:
-        f['roles'] = roles_needed(f); f['surface'] = surface(f)
-        groups[(f['surface'], tuple(f['roles']))].append(f)
+        groups[(f['surface'], tuple(f['accounts']))].append(f)
     # order by account set first, so groups sharing browsers run back to back
     order = sorted(groups.items(),
-                   key=lambda kv: (tuple(accounts_for(kv[0][1])), -len(kv[1]), kv[0][0]))
+                   key=lambda kv: (kv[0][1], -len(kv[1]), kv[0][0]))
 
     date = datetime.date.today().isoformat()
     outd = os.path.join(REPO, "verifications")
@@ -75,8 +84,8 @@ def main():
     print(f"  verdicts → {os.path.basename(outp)}\n")
 
     n, prev_accts = 0, None
-    for gi, ((surf, roles), items) in enumerate(order, 1):
-        accts = accounts_for(roles)
+    for gi, ((surf, accounts), items) in enumerate(order, 1):
+        accts = accounts_for(accounts)
         if only and gi != only:
             n += len(items); continue
         print(f"  ══ setup {gi}/{len(order)}: {surf} · {' + '.join(accts)} · {len(items)} finding(s)")
@@ -103,8 +112,8 @@ def main():
 
         for f in items:
             n += 1
-            print(f"  ── {n}. [{f['severity']}] {f['title']}")
-            for w in notes.get(f['title'], []):       print(f"     ⚠ {w}")
+            print(f"  ── {n}. [{f['sev']}] {f['title']}")
+            for w in notes.get(f['id'], []):       print(f"     ⚠ {w}")
             if f.get('table_drift'):                  print(f"     ⚠ summary row wording differs from this title")
             print(f"\n     Claim: {f.get('Фактический результат','')[:400]}\n")
             print("     Steps:")
@@ -115,7 +124,7 @@ def main():
             note = input("     note (enter to skip): ").strip() if v in ('y','n') else ''
             verdict = {'y':'CONFIRMED','n':'NOT A BUG','s':'skipped'}.get(v, v)
             rec(f"## {n}. {f['title']}\n\n"
-                f"- severity as reported: **{f['severity']}**\n"
+                f"- severity as reported: **{f['sev']}**\n"
                 f"- verdict: **{verdict}**\n"
                 + (f"- note: {note}\n" if note else "") + "\n")
             print()

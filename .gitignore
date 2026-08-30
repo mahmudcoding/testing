@@ -19,3 +19,4 @@ scripts/callrig/node_modules
 
 # macOS Finder leaves these in every folder it opens
 .DS_Store
+build/

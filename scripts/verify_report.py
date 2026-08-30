@@ -1,187 +1,170 @@
 #!/usr/bin/env python3
-"""Structural + content verification for a QA report. Titles first, then counts.
+"""Validate finding and run sources against the schema.
 
-    python3 scripts/verify_report.py reports/<file>.html      exit 0 = all checks pass
+    python3 scripts/verify_report.py                 # every source on disk
+    python3 scripts/verify_report.py reports/findings/<id>.md ...
 
-Prints every finding title before any count, because a substitution that swaps one finding for a
-copy of another leaves every count intact — that happened once and is why this exists.
+This used to parse published HTML with its own regexes -- a third independent
+parser, disagreeing with the other four about what an article is, which
+severities exist and whether a heading may carry attributes. Half of what it
+checked was that two hand-maintained views of the same data still agreed:
+the summary table against the articles, row chips against article chips, the
+spelled-out Russian count against the article count. All three are generated
+from one list now, so those checks have nothing left to catch and are gone.
 
-WHAT IT ASSUMES ABOUT A REPORT
-  - each finding is one <article>, its title in an <h2>
-  - a summary table near the top, one <tr> per finding, the title in the first <td>
-  - Russian section headings: Проблема / Как воспроизвести / Фактический результат /
-    Ожидаемый результат, plus at least one <pre> measurement block per finding
-  - severity chips "High" | "Medium" | "Low", area chips "backend" | "frontend"
-
-TWO TABLE CONVENTIONS ARE SUPPORTED. Some reports repeat the "[FE-WEB][MODULE]" tag in the summary
-row and add severity/area chips there; others carry the bare title and keep tags in the <h2> only.
-The layout is detected and printed; checks that cannot apply SKIP WITH A STATED REASON rather than
-failing, so a valid report in either convention exits 0.
-
-Its companion, verify_report_selftest.py, mutates a report once per check and requires exit 1 each
-time — asserting first that the mutation actually changed the file, because a mutation that
-silently does nothing reads exactly like a working check.
+What remains is what a generator cannot guarantee: that the content is right.
+Required fields and closed enums, the prose budget, fixture names that must not
+reach a published report, citations a reader can actually open, and repro
+attributes that match something on disk.
 """
-import io,re,sys
-from collections import Counter
-from html.parser import HTMLParser
-p=sys.argv[1] if len(sys.argv)>1 else 'reports/aloqa-workspace-qa-2026-08-26-E-2.html'
-s=io.open(p,encoding='utf-8').read()
-fail=[]
-# 1. TITLES FIRST — a substitution does not change a count
-titles=[re.sub(r'\s+',' ',re.sub(r'<[^>]+>','',m.group(1))).strip()
-        for m in re.finditer(r'<h2>(.*?)</h2>', s, re.S)]
-print('=== titles ===')
-for i,t in enumerate(titles,1): print(f'{i:2}  {t[:76]}')
-dupes=[t for t,c in Counter(titles).items() if c>1]
-if dupes: fail.append(f'DUPLICATE TITLES: {dupes}')
-# near-duplicates: same first 30 chars
-pref=Counter(t[:30] for t in titles)
-near=[k for k,c in pref.items() if c>1]
-if near: fail.append(f'NEAR-DUPLICATE TITLE PREFIXES: {near}')
-# --- summary-table rows, layout-agnostic -------------------------------------
-# Two conventions exist in this repo: some reports repeat the "[FE-WEB][MODULE]" tag in the
-# summary row, some carry the bare title and keep tags in the <h2> only. Parse the first <td>
-# of every <tr> and let the comparisons below cope with either.
-ROWS_HTML=[m.group(1) for m in re.finditer(r'<tr>\s*<td>(.*?)</td>', s, re.S)]
-_strip=lambda x: re.sub(r'\s+',' ',re.sub(r'<[^>]+>','',x)).strip()
-ROWS=[_strip(h) for h in ROWS_HTML]
-TAG_RE=re.compile(r'^(?:\[[^\]]+\])+\s*')
-ROWS_TAGGED=[bool(TAG_RE.match(r)) for r in ROWS]
-LAYOUT='tagged' if (ROWS and all(ROWS_TAGGED)) else ('untagged' if ROWS and not any(ROWS_TAGGED) else 'mixed')
-print(f'summary-table layout: {LAYOUT} ({len(ROWS)} rows)')
+import os
+import re
+import sys
 
-# 1b. TABLE ROWS must correspond to ARTICLE TITLES, in order (identity, not count)
-if LAYOUT=='untagged':
-    print('\nrow/article tag correspondence: skipped (this report keeps tags in the h2 only)')
-elif len(ROWS)==len(titles):
-    for i,(r,a) in enumerate(zip(ROWS,titles),1):
-        tr=r[:r.rfind(']')+1] if ']' in r else ''
-        ta=_strip(a); ta=ta[:ta.rfind(']')+1] if ']' in ta else ''
-        if tr!=ta:
-            fail.append(f'ROW/ARTICLE TAG MISMATCH at {i}: row={tr} article={ta}')
-    print('\nrow/article tag correspondence: checked')
-else:
-    print('\nrow/article tag correspondence: skipped (row count differs; see counts)')
-# 1c. each table row's TEXT must equal its article's title (one canonical string per finding)
-_norm=_strip
-_rowtxt=ROWS
-_ttl=[_norm(t) for t in titles]
-def _same(title,row):
-    return row==title or row==TAG_RE.sub('',title)
-_bad=[(i+1,a,b) for i,(a,b) in enumerate(zip(_ttl,_rowtxt)) if not _same(a,b)]
-if _bad:
-    fail.append(f'TITLE/ROW TEXT MISMATCH at {[i for i,_,_ in _bad]}')
-    print('title/row text: MISMATCH at', [i for i,_,_ in _bad])
-else:
-    print('title/row text: identical for all', len(_ttl))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REPO,  # noqa: E402
+                      REQUIRED_SECTIONS, SEVERITIES, SIDES, SNIP_DIR, SOURCE_DIRS,
+                      SOURCE_ERROR_HINT, SURFACES, STATUSES, SourceError,
+                      load_finding, load_findings, load_run, plain, split_front)
 
-# 2. counts
-n=len(titles)
-for label,cnt in [('articles',s.count('<article>')),('table rows',len(ROWS)),
-                  ('Проблема',s.count('>Проблема<')),('Как воспроизвести',s.count('>Как воспроизвести<')),
-                  ('Фактический результат',s.count('>Фактический результат<')),
-                  ('Ожидаемый результат',s.count('>Ожидаемый результат<'))]:
-    if cnt!=n: fail.append(f'{label}={cnt} != findings={n}')
-print(f'\ncounts: findings={n}, all section counts match' if not fail else '')
-# 2b. per-article content: every required section present AND non-empty, plus a measurement block
-arts=re.findall(r'  <article>.*?</article>\n', s, re.S)
-req=['Проблема','Как воспроизвести','Фактический результат','Ожидаемый результат','Проверка']
-for i,a in enumerate(arts,1):
-    miss=[r for r in req if f'>{r}<' not in a]
-    if miss: fail.append(f'article {i}: missing {miss}')
-    for r in req:
-        m=re.search(r'<h3>'+r+r'</h3>(.*?)</div>', a, re.S)
-        if m and len(re.sub(r'<[^>]+>',' ',m.group(1)).split())<6:
-            fail.append(f'article {i}: section "{r}" is thin')
-    if '<pre>' not in a: fail.append(f'article {i}: no measurement block')
-print('per-article sections: checked')
-# 3. severities — every article must carry exactly one, from the allowed set
-ALLOWED={'High','Medium','Low'}
-sev=Counter(re.findall(r'<article>\s*<div class="chips"><span class="chip sev">(\w+)', s))
-_areas=Counter(re.findall(r'<article>\s*<div class="chips">.*?<span class="chip area">(\w+)</span>', s, re.S))
-_bad=sorted(set(sev)-ALLOWED)
-if _bad: fail.append(f'UNKNOWN SEVERITY {_bad}; allowed {sorted(ALLOWED)}')
-if sum(sev.values())!=len(arts):
-    fail.append(f'SEVERITY CHIPS {sum(sev.values())} != articles {len(arts)}')
-if sum(_areas.values())!=len(arts):
-    fail.append(f'AREA CHIPS {sum(_areas.values())} != articles {len(arts)}')
-_badarea=sorted(set(_areas)-{'backend','frontend'})
-if _badarea: fail.append(f'UNKNOWN AREA {_badarea}')
-print('severities:', dict(sev), '| areas:', dict(_areas),
-      '| unknown:', _bad or 'none')
-# 3b. the summary table's own chips must match the article's, per position
-_rowchips=re.findall(r'<tr>\s*<td>.*?<span class="chip sev">(\w+)</span></td>\s*<td><span class="chip area">(\w+)</span>', s, re.S)
-_artchips=re.findall(r'<article>\s*<div class="chips"><span class="chip sev">(\w+)</span><span class="chip area">(\w+)</span>', s, re.S)
-if len(_rowchips)==0:
-    print('row/article chips: skipped (this report\'s table carries no chips)')
-elif len(_rowchips)!=len(arts) or len(_artchips)!=len(arts):
-    fail.append(f'CHIP PARSE: rows {len(_rowchips)}, articles {len(_artchips)}, expected {len(arts)}')
-    print(f'row/article chips: PARSE MISMATCH rows={len(_rowchips)} arts={len(_artchips)}')
-else:
-    _dis=[(i+1,a,b) for i,(a,b) in enumerate(zip(_artchips,_rowchips)) if a!=b]
-    if _dis:
-        fail.append(f'ROW/ARTICLE CHIP MISMATCH at {[i for i,_,_ in _dis]}')
-        print('row/article chips: MISMATCH at', [i for i,_,_ in _dis])
+# Fixture names, ids, ports and hosts that must never reach a published report.
+# Carried over unchanged -- this is a content rule, not a markup one.
+LEAKS = [
+    r'qa\.[a-z.]*@aloqa\.test', r'W4Q[A-Z0-9]', r'U4Q[A-Z0-9]', r'C4Q[A-Z0-9]',
+    r'C4O[A-Z0-9]', r'S4O[A-Z0-9]', r'F4O[A-Z0-9]', r'92[0-9][0-9]\b',
+    r'QA (Alice|Bob|Admin|Carol|Owner|Dave|Guest)',
+    r'qa-(general|private|empty|archived)',
+    r'zqrx|e2video|e2audio|e2arch|no-such-channel|NOTAREALTOKEN',
+    r'e-search-control|e-arch-probe|zx9probe|probe-pw|qa-e-note',
+    r'airion-cargo|aloqa\.test',
+]
+CITATION = re.compile(r'[A-Za-z0-9_/\[\].-]*\.(?:tsx?|json|go|py)+:[0-9-]+')
+BUDGET = 180          # words over Проблема + Фактический результат + Ожидаемый результат
+
+
+def check_finding(f, errs):
+    where = f["path"]
+
+    def bad(msg):
+        errs.append("%s: %s" % (where, msg))
+
+    for k in FIELDS_REQUIRED:
+        key = {"severity": "sev", "side": "side", "status": "status"}.get(k, k)
+        if not f.get(key):
+            bad("missing required field %r" % k)
+    for k in f["unknownFields"]:
+        bad("unknown frontmatter field %r (known: %s)" % (k, ", ".join(FIELDS_KNOWN)))
+
+    if f["sev"] and f["sev"] not in SEVERITIES:
+        bad("severity %r is not one of %s" % (f["sev"], ", ".join(SEVERITIES)))
+    if f["side"] and f["side"] not in SIDES:
+        bad("side %r is not one of %s" % (f["side"], ", ".join(SIDES)))
+    if f["status"] and f["status"] not in STATUSES:
+        bad("status %r is not one of %s" % (f["status"], ", ".join(STATUSES)))
+    if f["surface"] and f["surface"] not in SURFACES:
+        bad("surface %r is not one of %s" % (f["surface"], ", ".join(SURFACES)))
+    if f["id"] != os.path.splitext(os.path.basename(where))[0]:
+        bad("id %r does not match the filename" % f["id"])
+
+    for name in REQUIRED_SECTIONS:
+        body = f["sections"].get(name)
+        if not body:
+            bad("no %s section" % name)
+        elif len(plain(body).split()) < 6:
+            bad("%s is thin (under six words)" % name)
+    if f["status"] == "withdrawn" and not f["withdrawnBecause"]:
+        bad("withdrawn but no «Почему снято» — the measurement that killed it is "
+            "the whole value of keeping the finding")
+    if f["status"] == "duplicate" and not f["duplicateOf"]:
+        bad("duplicate but no duplicate-of")
+    if not f["measure"]:
+        bad("no measurement — Фактический результат needs a fenced block")
+    if not f["steps"]:
+        bad("Как воспроизвести has no numbered steps")
+    if not f["checks"]:
+        bad("Проверка has no items")
+
+    words = sum(len(plain(f["sections"].get(k, "")).split())
+                for k in ("Проблема", "Фактический результат", "Ожидаемый результат"))
+    if words > BUDGET:
+        bad("prose is %d words over budget (%d > %d) — check whether something is "
+            "misplaced rather than merely long" % (words - BUDGET, words, BUDGET))
+
+    text = open(os.path.join(REPO, where), encoding="utf-8").read()
+    for pat in LEAKS:
+        for m in set(re.findall(pat, text)):
+            bad("leaked test-setup name: %r" % (m if isinstance(m, str) else m[0]))
+    for c in sorted(set(CITATION.findall(text))):
+        if not (c.startswith("apps/") or c.startswith("packages/") or c.startswith("platform/")):
+            bad("citation %r is not a full path a reader can paste into git show" % c)
+
+    if f["snippet"]:
+        if not os.path.exists(os.path.join(SNIP_DIR, f["snippet"])):
+            bad("snippet %s is not on disk" % f["snippet"])
+        if f["lane"] and not f["snippet"].lower().startswith(f["lane"].lower() + "-"):
+            bad("snippet %s does not start with the finding's lane (%s)"
+                % (f["snippet"], f["lane"]))
+        if not f["accounts"]:
+            bad("a snippet but no accounts — the bench would not know what to launch")
+    if f["lane"] and not re.fullmatch(r"[A-J]", f["lane"]):
+        bad("lane %r is not a single letter A-J" % f["lane"])
+
+
+def check_run(run, errs):
+    where = run["path"]
+    if not run["heading"]:
+        errs.append("%s: no '# ' heading" % where)
+    for k in ("date", "lane", "area", "build", "sha"):
+        if not run.get(k):
+            errs.append("%s: missing %s" % (where, k))
+    if not run["items"]:
+        errs.append("%s: lists no findings" % where)
+
+
+def main(argv):
+    paths = [os.path.abspath(a) for a in argv if not a.startswith("-")]
+    errs = []
+    if paths:
+        for p in paths:
+            try:
+                if "/runs/" in p:
+                    check_run(load_run(p), errs)
+                else:
+                    check_finding(load_finding(p), errs)
+            except SourceError as e:
+                errs.append(str(e))
+        n_f, n_r = len([p for p in paths if "/runs/" not in p]), len([p for p in paths if "/runs/" in p])
     else:
-        print('row/article chips: agree for all', len(arts))
+        try:
+            index = load_findings(status=None)
+        except SourceError as e:
+            print("  %s" % e)
+            return 1
+        for f in index.values():
+            check_finding(f, errs)
+        runs = []
+        rd = os.path.join(REPO, "reports", "runs")
+        for n in sorted(os.listdir(rd)) if os.path.isdir(rd) else []:
+            if not n.endswith(".md"):
+                continue
+            try:
+                runs.append(load_run(os.path.join(rd, n)))
+            except SourceError as e:
+                errs.append(str(e))
+        for r in runs:
+            check_run(r, errs)
+        n_f, n_r = len(index), len(runs)
 
-# 4. prose budget
-parts=re.split(r'<h2>', s)[1:]
-def w(h):
-    h=re.sub(r'<pre>.*?</pre>','',h,flags=re.S); h=re.sub(r'<[^>]+>',' ',h); h=re.sub(r'&[a-z]+;',' ',h)
-    return len([x for x in re.split(r'\s+',h) if x.strip()])
-tots=[sum(w(m.group(1)) if (m:=re.search(r'<h3>'+k+r'</h3>(.*?)</div>', q, re.S)) else 0
-      for k in ('Проблема','Фактический результат','Ожидаемый результат')) for q in parts]
-over=[(i+1,t) for i,t in enumerate(tots) if t>180]
-print('prose words:', tots)
-if over: fail.append(f'OVER 180 WORDS: {over}')
-# 5. leaks
-pats=[r'qa\.[a-z.]*@aloqa\.test',r'W4Q[A-Z0-9]',r'U4Q[A-Z0-9]',r'C4Q[A-Z0-9]',r'C4O[A-Z0-9]',
-      r'S4O[A-Z0-9]',r'F4O[A-Z0-9]',r'926[0-9]',r'QA (Alice|Bob|Admin|Carol|Owner|Dave|Guest)',
-      r'qa-(general|private|empty|archived)',r'zqrx|e2video|e2audio|e2arch|no-such-channel|NOTAREALTOKEN',
-      r'e-search-control|e-arch-probe|zx9probe|probe-pw|qa-e-note',
-      r'airion-cargo|aloqa\.test']
-leaks={pt:len(re.findall(pt,s)) for pt in pats if re.findall(pt,s)}
-if leaks: fail.append(f'LEAKS: {leaks}')
-print('leaks:', leaks or 'none')
-# 6. citations
-cits=sorted(set(re.findall(r'[A-Za-z0-9_/\[\].-]*\.(?:tsx?|json|go|py)+:[0-9-]+', s)))
-bare=[c for c in cits if not (c.startswith('apps/') or c.startswith('packages/'))]
-if bare: fail.append(f'BARE CITATION PATHS: {bare}')
-print(f'citations: {len(cits)}, bare: {bare or "none"}')
-# 6b. every spelled-out finding count in the prose must match the article count
-WORDS={1:'Одна',2:'Две',3:'Три',4:'Четыре',5:'Пять',6:'Шесть',7:'Семь',8:'Восемь',9:'Девять',
- 10:'Десять',11:'Одиннадцать',12:'Двенадцать',13:'Тринадцать',14:'Четырнадцать',15:'Пятнадцать',
- 16:'Шестнадцать',17:'Семнадцать',18:'Восемнадцать',19:'Девятнадцать',20:'Двадцать',
- 21:'Двадцать одна',22:'Двадцать две',23:'Двадцать три',24:'Двадцать четыре',25:'Двадцать пять',
- 26:'Двадцать шесть',27:'Двадцать семь',28:'Двадцать восемь',29:'Двадцать девять',30:'Тридцать'}
-want=WORDS.get(len(arts))
-# stem is "наход" — "находок"/"находки"/"находка" all continue past it
-_alts=sorted(set(WORDS.values()), key=len, reverse=True)
-claims=re.findall(r'(' + '|'.join(_alts) + r')\s+наход', s)
-if not claims:
-    fail.append('PREAMBLE: no spelled-out finding count found')
-    print('spelled counts: NONE FOUND')
-elif want is None:
-    print(f'spelled counts: {claims} (no word for {len(arts)}, not checked)')
-else:
-    bad=[x for x in claims if x!=want]
-    if bad: fail.append(f'SPELLED COUNT {bad} != {want} ({len(arts)} findings)')
-    print(f'spelled counts: {len(claims)} found, {"all match" if not bad else "MISMATCH "+str(bad)} ({want})')
+    print("\n  %d finding(s), %d run(s) checked" % (n_f, n_r))
+    if errs:
+        for e in errs:
+            print("  FAIL  %s" % e)
+        print("\n  %d problem(s)" % len(errs))
+        return 1
+    print("  ALL CHECKS PASS")
+    return 0
 
-# 7. html
-VOID={'area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'}
-class V(HTMLParser):
-    def __init__(self): super().__init__(convert_charrefs=True); self.st=[]; self.err=[]
-    def handle_starttag(self,t,a):
-        if t not in VOID: self.st.append(t)
-    def handle_endtag(self,t):
-        if t in VOID: return
-        if self.st and self.st[-1]==t: self.st.pop()
-        else: self.err.append(t)
-v=V(); v.feed(s)
-if v.err or v.st: fail.append(f'UNBALANCED TAGS: {len(v.err)+len(v.st)}')
-print('unbalanced tags:', len(v.err)+len(v.st))
-print('\n' + ('ALL CHECKS PASS' if not fail else 'FAILURES:\n  ' + '\n  '.join(fail)))
-sys.exit(1 if fail else 0)
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

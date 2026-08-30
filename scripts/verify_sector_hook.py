@@ -15,7 +15,6 @@ it is live before showing the hook survives it.
 
     python3 scripts/verify_sector_hook.py
 """
-import glob
 import json
 import os
 import re
@@ -34,21 +33,23 @@ SECTORS = [
     ("D", "chat-messages"), ("E", "chat-spaces"), ("F", "admin-org"),
     ("G", "identity"), ("H", "shell"), ("I", "calendar-files"),
 ]
-REPORT_RE = re.compile(r"aloqa-(?P<area>.+)-qa-\d{4}-\d{2}-\d{2}-[A-Z](?:-\d+)?\.html$")
-
-
 def published_areas():
-    """Area tokens already used by a report on disk.
+    """Area tokens already used by a run on disk.
 
-    Read rather than hardcoded: a sector writing under a token that already exists
-    lands its report beside an unrelated one, and every glob over reports/ then
-    returns both. Scanning the directory cannot go stale the way a list can.
+    Read rather than hardcoded: a sector writing under a token that already
+    exists lands its report beside an unrelated one. Runs are source files now,
+    so the token is read from the `area:` field rather than parsed out of a
+    filename.
     """
     out = set()
-    for path in glob.glob(os.path.join(REPO, "reports", "aloqa-*.html")):
-        m = REPORT_RE.search(os.path.basename(path))
+    rd = os.path.join(REPO, "reports", "runs")
+    for name in sorted(os.listdir(rd)) if os.path.isdir(rd) else []:
+        if not name.endswith(".md"):
+            continue
+        with open(os.path.join(rd, name), encoding="utf-8") as fh:
+            m = re.search(r"^area:\s*(\S+)\s*$", fh.read(), re.M)
         if m:
-            out.add(m["area"])
+            out.add(m.group(1))
     return out
 
 FAILURES = []
@@ -111,17 +112,22 @@ for letter, area in SECTORS:
 print("\nFilenames")
 areas = [a for _, a in SECTORS]
 check("the nine area tokens are distinct", len(set(areas)) == 9, str(areas))
-# reports/ can legitimately be empty, and an empty set makes the collision check
-# below vacuous -- it would pass for any token at all. So prove the scanner can
-# see a token before trusting it not to find one: positive control first, the
+# reports/runs/ can legitimately be empty, and an empty set makes the collision
+# check below vacuous -- it would pass for any token at all. So prove the scanner
+# can see a token before trusting it not to find one: positive control first, the
 # real question second. Same discipline as an empty grep needing one.
-control = REPORT_RE.search("aloqa-chat-messages-qa-2026-09-01-D.html")
-check("the report-name scanner can recognise a token at all",
-      bool(control) and control["area"] == "chat-messages",
-      control["area"] if control else "no match")
+control = re.search(r"^area:\s*(\S+)\s*$", "date: 2026-09-01\narea: chat-messages\n", re.M)
+check("the run scanner can recognise an area token at all",
+      bool(control) and control.group(1) == "chat-messages",
+      control.group(1) if control else "no match")
 on_disk = published_areas()
-check("...and no sector writes under a token already on disk (%d found)" % len(on_disk),
-      not (set(areas) & on_disk), str(set(areas) & on_disk))
+# A run's area token IS its sector's token -- that is how a session's files are
+# named. So the question is not whether they collide (they must match) but
+# whether anything on disk was written under a token no sector owns, which is
+# how a run ends up invisible to every tool that looks by area.
+stray = on_disk - set(areas)
+check("every run on disk uses a sector's area token (%d run token(s))" % len(on_disk),
+      not stray, "not owned by any sector: %s" % sorted(stray))
 logs = set()
 reports = set()
 for letter, _ in SECTORS:

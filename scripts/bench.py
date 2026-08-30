@@ -8,15 +8,18 @@ browsers a finding needs, signs them in, runs the finding's repro snippet, and
 stops with the defect on screen. You judge. Verdicts are written to
 verifications/verification-<date>.md.
 
-A finding is reproducible when its report carries a repro block:
+A finding is reproducible when its source names a snippet:
 
-    <div class="block repro" data-lane="E" data-accounts="alice,bob"
-         data-snippet="e-calendar-stale.mjs">
-      <h3>Воспроизведение</h3>
-      <p><code>./d e:alice snip/e-calendar-stale.mjs</code></p>
-    </div>
+    reports/findings/<id>.md
+      lane: E
+      accounts: alice, bob
+      snippet: e-calendar-stale.mjs
 
 Findings without one still open positioned; the bench says what is left to do.
+
+Nothing here parses HTML. findings.py is the one parser, and a finding's id comes
+from its file rather than from a hash of its title -- so fixing a typo in a title
+no longer orphans the verdict somebody recorded against it.
 """
 import os, sys, re, json, glob, html, hashlib, shutil, subprocess, datetime, threading, time, webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -25,7 +28,7 @@ from urllib.parse import urlparse, parse_qs
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from verify_queue import parse, roles_needed, surface, preflight, ACCOUNT
+from findings import SourceError, bench_items, lane_name, load_runs
 
 def _repair_path():
     """Put node back on PATH.
@@ -72,217 +75,65 @@ SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
 # pinned for the nine-sector map yet. Pin a lane here — one line, lane to path — as
 # soon as two reports could plausibly compete for it, which is what brings the
 # coin-flip protection above back into play.
-PINNED = {}
-LANE_NAMES = {"A": "Calls · lifecycle", "B": "Calls · room", "C": "Calls · studio",
-              "D": "Chat · messages", "E": "Chat · spaces", "F": "Admin & org",
-              "G": "Identity & access", "H": "Shell & discovery",
-              "I": "Calendar & files"}
-# aloqa-<area>-qa-<YYYY-MM-DD>-<LANE>[-<rev>].html
-REPORT_RE = re.compile(
-    r"aloqa-(?P<area>.+)-qa-(?P<date>\d{4}-\d{2}-\d{2})-(?P<lane>[A-Z])(?:-(?P<rev>\d+))?\.html$")
-
-
-def _rank(path):
-    m = REPORT_RE.search(os.path.basename(path))
-    return (m["date"], int(m["rev"] or 0)) if m else None
-
-
-def _lane_name(lane, rel):
-    """What to call this lane in the app, given the report actually chosen for it.
-
-    Named from the report's own `<area>` token rather than from the lane letter. The
-    letter says which fixtures produced a report, not what is inside it, and a report
-    older than the sector it now shares a letter with would otherwise be announced as
-    someone else's work -- which from inside the app looks exactly like the truth.
-    LANE_NAMES is the fallback for a filename that does not parse.
-    """
-    m = REPORT_RE.search(os.path.basename(rel))
-    area = m["area"] if m else None
-    if not area:
-        return LANE_NAMES.get(lane, lane)
-    head, _, tail = area.partition("-")
-    return "%s · %s" % (head.capitalize(), tail.replace("-", " ")) if tail \
-        else head.capitalize()
-
-
-def _pick_reports(log=print):
-    """The newest report per lane, unless the pin is already at least that new."""
-    found = {}
-    for path in sorted(glob.glob(os.path.join(REPO, "reports", "aloqa-*.html"))):
-        rel = os.path.relpath(path, REPO)
-        m = REPORT_RE.search(os.path.basename(rel))
-        if m:
-            found.setdefault(m["lane"], []).append(rel)
-
-    out = []
-    for lane in sorted(set(PINNED) | set(found)):
-        cands = found.get(lane, [])
-        pin = PINNED.get(lane)
-        pin_ok = pin and os.path.exists(os.path.join(REPO, pin))
-        newest = max(cands, key=_rank, default=None)
-        if pin_ok and (not newest or _rank(newest) <= _rank(pin)):
-            chosen, why = pin, ""
-        elif newest:
-            chosen = newest
-            if pin_ok:
-                why = "  <- newer than the pinned %s" % os.path.basename(pin)
-            elif pin:
-                why = "  <- pinned report is missing"
-            else:
-                # No pin at all is the current state and it is deliberate, so say
-                # that rather than "missing", which reads as something broken.
-                why = "  <- no pin, newest wins"
-        else:
-            log(f"  lane {lane}: no report found, skipping")
-            continue
-        out.append((lane, _lane_name(lane, chosen), chosen))
-        log(f"  lane {lane}: {os.path.basename(chosen)}{why}")
-    return out
-
-
-REPORTS = _pick_reports(log=lambda *_: None)
-
-def repro_blocks(path):
-    """Pull the machine-readable repro block that follows each <h2>."""
-    s = open(path, encoding="utf-8").read()
-    out = []
-    for part in re.split(r'(?=<h2)', s):
-        if '<h2' not in part: continue
-        m = re.search(r'<div class="block repro"([^>]*)>', part)
-        if not m: out.append(None); continue
-        attrs = dict(re.findall(r'data-([a-z]+)="([^"]*)"', m.group(1)))
-        out.append(attrs or None)
-    return out
-
 _CACHE = {"items": None, "stamp": None, "meta": None}
 _LOAD_LOCK = threading.RLock()
+SRC_DIRS = [os.path.join(REPO, "reports", "findings"),
+            os.path.join(REPO, "reports", "runs")]
 
-def _stamp(reports):
+
+def _stamp():
+    """Every source file and its mtime, so an edit reloads without a restart."""
     out = []
-    for _, _, rel in reports:
-        p = os.path.join(REPO, rel)
-        out.append((rel, os.path.getmtime(p) if os.path.exists(p) else 0))
+    for d in SRC_DIRS:
+        if not os.path.isdir(d):
+            continue
+        for n in sorted(os.listdir(d)):
+            if n.endswith(".md"):
+                out.append((n, os.path.getmtime(os.path.join(d, n))))
     return tuple(out)
 
-def load():
-    """Parsed findings, cached until the report set or a report file changes.
 
-    Re-picks the reports on every call — a glob over reports/, cheap — so a
-    report published while the server runs is discovered without a restart.
-    The lock matters: the app's first ping and the boot thread used to parse
-    the same five reports concurrently, each with its own repo-wide grep."""
-    global REPORTS
+def load():
+    """Findings, cached until a source file changes.
+
+    The lock matters: the app's first ping and the boot thread used to parse the
+    same reports concurrently.
+    """
     with _LOAD_LOCK:
-        reports = _pick_reports(log=lambda *_: None)
-        st = _stamp(reports)
+        st = _stamp()
         if _CACHE["items"] is not None and _CACHE["stamp"] == st:
             return _CACHE["items"]
-        REPORTS = reports
-        items, meta, legacy = _load_uncached(reports)
+        meta = {"warnings": [], "reports": [], "tileLeft": int(TILE_LEFT)}
+        try:
+            runs = load_runs()
+        except SourceError as e:
+            meta["warnings"].append(str(e))
+            runs = []
+        items = bench_items(runs) if runs else []
+        for r in runs:
+            meta["reports"].append({
+                "lane": r["lane"], "laneName": lane_name(r),
+                "file": os.path.basename(r["path"]), "count": len(r["items"]),
+                "sha1": hashlib.sha1(open(os.path.join(REPO, r["path"]), "rb")
+                                     .read()).hexdigest()[:10],
+                "mtime": datetime.datetime.fromtimestamp(
+                    os.path.getmtime(os.path.join(REPO, r["path"]))
+                ).isoformat(timespec="seconds"),
+            })
+        if runs and not items:
+            meta["warnings"].append("runs found but no findings resolved — check "
+                                    "each run's `findings:` list")
+        items = _runnable_only(items, meta)
         _CACHE.update(items=items, stamp=st, meta=meta)
-        _migrate_state(legacy)
         return items
+
 
 def load_meta():
     load()
     return _CACHE["meta"] or {}
 
-def _fid(lane, title):
-    """Content id, stable across republishes while the title is stable.
 
-    The old positional id ("D:9") meant a republished report re-attached every
-    recorded verdict, priority and rewrite to whatever finding sat at that
-    index in the new file — silently, and the newest report is auto-picked."""
-    h = hashlib.sha1(re.sub(r"\s+", " ", title).strip().encode()).hexdigest()[:10]
-    return f"{lane}:{h}"
-
-def _load_uncached(reports):
-    items, n = [], 0
-    meta = {"tileLeft": int(TILE_LEFT), "reports": [], "warnings": []}
-    legacy = {}                     # old positional id -> content id
-    for lane, name, rel in reports:
-        path = os.path.join(REPO, rel)
-        if not os.path.exists(path): continue
-        try:
-            src = open(path, encoding="utf-8").read()
-            fs = parse(path); notes = preflight(fs, REPO); rb = repro_blocks(path)
-        except Exception as e:
-            # one unreadable report must not take the whole app down with a
-            # misleading "is bench.py running?" — skip the lane and say so
-            meta["warnings"].append(f"lane {lane}: {os.path.basename(rel)} could not be parsed "
-                                    f"({e.__class__.__name__}: {e}) — lane skipped")
-            continue
-        if not fs:
-            # a truncated or emptied file parses to zero findings and the lane
-            # would otherwise just vanish from the queue with no trace
-            meta["warnings"].append(f"lane {lane}: {os.path.basename(rel)} parsed to zero findings "
-                                    "— truncated or emptied file?")
-        unmatched = sum(1 for f in fs if f["severity"] == "?")
-        if unmatched:
-            meta["warnings"].append(f"lane {lane}: {unmatched} finding(s) have no matching summary-table "
-                                    "row — severity shows as ? in the app; fix the report's row wording")
-        meta["reports"].append({
-            "lane": lane, "laneName": name, "file": os.path.basename(rel),
-            "count": len(fs),
-            "sha1": hashlib.sha1(src.encode()).hexdigest()[:10],
-            "mtime": datetime.datetime.fromtimestamp(os.path.getmtime(path)).isoformat(timespec="seconds"),
-        })
-        for i, f in enumerate(fs):
-            fid = _fid(lane, f["title"])
-            legacy[f"{lane}:{i}"] = fid
-            roles = roles_needed(f); guessed = []
-            for r in roles:
-                a = ACCOUNT.get(r, 'alice')
-                if a not in guessed: guessed.append(a)
-            rep = rb[i] if i < len(rb) else None
-            # the block's data-accounts is authoritative — whoever wrote the
-            # snippet named the browsers it drives; the roles-derived guess is
-            # the fallback for findings with no block
-            block_accts = [a.strip() for a in (rep or {}).get("accounts", "").split(",") if a.strip()]
-            items.append({
-                "id": fid, "n": n, "lane": lane, "laneName": name,
-                "title": f["title"], "sev": f["severity"], "area": f["area"],
-                # reports tag the title [BE] or [FE-WEB]; that is where the
-                # finding says which side it lives on
-                "side": "backend" if "[BE]" in f["title"].split("]")[0] + "]"
-                        else "frontend",
-                "surface": surface(f), "roles": roles,
-                "accounts": block_accts or guessed,
-                "steps": f["steps"], "actual": f.get("Фактический результат",""),
-                "measure": f.get("Фактический результат_measure",""),
-                "expected": f.get("Ожидаемый результат",""),
-                "problem": f.get("Проблема",""), "drift": f.get("table_drift"),
-                "notes": notes.get(f["title"], []),
-                "repro": rep,
-            }); n += 1
-    return _runnable_only(items), meta, legacy
-
-def _migrate_state(legacy):
-    """Rewrite positional state keys ("D:9") to content ids, once, in place.
-
-    Runs under the load lock. Without this, verdicts recorded before the id
-    change would dangle while the same findings sat unjudged under new ids."""
-    if not legacy:
-        return
-    try:
-        st = json.loads(read_state() or "{}")
-    except ValueError:
-        return
-    changed = 0
-    for section in ("verdicts", "expected", "priority", "notes"):
-        m = st.get(section)
-        if not isinstance(m, dict):
-            continue
-        for old in list(m):
-            new = legacy.get(old)
-            if new and new != old and new not in m:
-                m[new] = m.pop(old)
-                changed += 1
-    if changed:
-        write_state(json.dumps(st, ensure_ascii=False))
-        print(f"  migrated {changed} state entries to content ids")
-
-def _runnable_only(items):
+def _runnable_only(items, meta=None):
     """Only findings whose repro script is actually on disk.
 
     A finding with no script is one the reader has to set up by hand, which is
@@ -290,12 +141,20 @@ def _runnable_only(items):
     """
     if os.environ.get("BENCH_ALL"):
         return items
-    keep = []
+    keep, dropped = [], []
     for it in items:
         rep = it.get("repro") or {}
         snip = rep.get("snippet")
         if snip and os.path.exists(os.path.join(REPO, "scripts", "callrig", "snip", snip)):
             keep.append(it)
+        else:
+            dropped.append("%s (%s)" % (it["id"], snip or "no snippet"))
+    # Silently dropping a finding whose snippet name has a typo is indistinguish-
+    # able, from inside the app, from the finding not existing. Say which went.
+    if dropped and meta is not None:
+        meta["warnings"].append(
+            "%d finding(s) hidden — no runnable snippet on disk: %s (BENCH_ALL=1 shows them)"
+            % (len(dropped), ", ".join(dropped[:6])))
     for i, it in enumerate(keep):
         it["n"] = i
     return keep
