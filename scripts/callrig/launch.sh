@@ -75,7 +75,12 @@ sector_cap() {
     *) echo 3 ;;   # free lanes carrying no sector
   esac
 }
-MAX_TOTAL="${QA_MAX_BROWSERS:-16}"
+# 20, not 16: the SECTORS.md map (A4 B4 C4 D4 E3) wants 19 across five concurrent
+# sessions, and a cap of 16 refused the 17th launch mid-run. This is a ceiling for
+# five sessions, not a statement that the RAM is there -- 19 browsers at ~1.3 GB is
+# past 16 GB of physical memory, so the headroom warning below is the thing to
+# read, and a lane that is done should ./stop.sh rather than idle on a slot.
+MAX_TOTAL="${QA_MAX_BROWSERS:-20}"
 
 count_live() {   # $1 = first port, $2 = last port
   local p n=0
