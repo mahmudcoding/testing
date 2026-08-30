@@ -230,6 +230,18 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
   nodes under `[data-radix-popper-content-wrapper]`. `window.__qa.popperPick()`
   handles the walk-up.
 
+- **Transport evidence cannot tell an audio leak from a deliberate mix — check
+  `volume`, not just `paused` and the track count.** Someone inside a Side Room
+  legitimately keeps live, unmuted inbound audio elements from the main call:
+  `<audio>` with `paused:false`, and the subscription count tracks main-call
+  publishers exactly (1 -> 2 ssrc when a second person unmutes). That looks like
+  an isolation leak from `getStats()` alone. It is not — those elements sit at
+  `volume 0.3` while the room's own track is at `volume 1`, the header carries
+  `[data-testid="main-audio-trigger"]` reading "Main call audio, 30%", and its
+  popover says "You can still hear the main call while in a Side Room. Other
+  Side Rooms remain muted." `main-audio-mute` drives the main-call elements to
+  `volume 0` and leaves the room's at 1. The screen states the design; the
+  peer-connection stats do not.
 - **Tab age changes a state-clearing measurement by 40x, and nothing on the page
   shows it.** Two clients in the same call, same account type, same
   `visibilityState`, differing only in how long the tab had been open: a host

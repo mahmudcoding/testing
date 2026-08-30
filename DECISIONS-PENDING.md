@@ -128,8 +128,19 @@ ticket outside it can still *specify* the measured state, and the grep to run. N
 silent without the flag, and no row added or lost. That delivers most of the benefit at the point of
 failure, which is why this line is a genuine choice rather than urgent.
 
+**A separate and arguably sharper question this turned up: `REVIEW` is not in the dedup rule's status
+list.** The rule is `status IN ("Backlog","Ready","In Progress")`. There are **13 Bugs in REVIEW**,
+and REVIEW is where a fix is actively in flight — arguably the *most* important status to dedup
+against, because someone is working the ticket right now. It cost something concrete today: lane C
+reported "ALK-3492 confirmed fixed", I repeated it to two lanes and to you, and it was wrong —
+ALK-3492 is `Bug/REVIEW`, the **backend** half (`POST /invite` answering 204 for a banned target),
+still open, while what was measured was the frontend half. Invisible to `--open-bugs` throughout.
+Whether to add `REVIEW` to the dedup statuses changes what every sector suppresses, so it is yours,
+not mine — and it is a change to the rule itself rather than to how it is executed.
+
 **Options** · (1) Add the line as worded. (2) Reword it. (3) Decline — the tool warning stands alone
-and `CLAUDE.md` is unchanged.
+and `CLAUDE.md` is unchanged. (4) Any of the above, plus a separate decision on whether `REVIEW`
+joins the dedup statuses.
 
 **Recommendation** · Option 1, but weakly. The tool warning is the better mechanism because it fires
 where the mistake happens; the `CLAUDE.md` line matters mainly for a session that deduped some other

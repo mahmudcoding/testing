@@ -3412,11 +3412,24 @@ deploy stamp, so a backend change remains possible and invisible.
 
 ## Cross-sector results routed this round (no file changes)
 
-- **ALK-3492 confirmed FIXED on rc.7** by lane C: a banned participant now renders `Cannot be
-  invited` with the checkbox disabled. The rc.5 finding "Ведущий может пригласить в звонок того,
-  кого сам заблокировал" does not reproduce. Told lanes A and D, because the rc.5 reports are the
-  closest dedup targets for all of them and are 105 commits behind — a finding suppressed against a
-  since-fixed report is a finding nobody sees.
+- ~~**ALK-3492 confirmed FIXED on rc.7**~~ — **RETRACTED, and I amplified it.** Lane C reported this
+  and then corrected themselves; I had already passed the stronger claim to lanes A and D and to
+  Mahmud. **ALK-3492 is `Bug/REVIEW`, `[BE][CALLS] POST /invite отвечает 204 для забаненного` — the
+  *backend* half, still open.** It asks `POST /meeting/{id}/invite` to reject a banned target with an
+  error key rather than answering 204, and its own text says it was split from ALK-3448 with
+  "фронтовая половина закрыта в PR 2796". Lane C measured the **frontend** half only — the
+  Add-to-call list marks a banned person `Cannot be invited` with the checkbox disabled — and never
+  called the endpoint directly, so there is **no evidence either way** about ALK-3492's own subject.
+  The correct claim is: *the UI no longer lets a host invite someone they banned.* Retracted to lanes
+  A and D.
+  **What the error cost, and what it proves:** nothing yet, because it was caught inside two hours.
+  What it demonstrates is that a ticket key attached to a measurement is a claim like any other —
+  I repeated "ALK-3492 is fixed" three times without once reading the ticket, when
+  `jira_cache.py show ALK-3492` would have shown `REVIEW` and a `[BE]` tag in one call. Note also
+  that **REVIEW is not in the dedup rule's status list**, so ALK-3492 was invisible to
+  `--open-bugs` — the same gap, hit a third time.
+  The consequence for dedup is unchanged: the rc.5 finding "Ведущий может пригласить в звонок того,
+  кого сам заблокировал" does not reproduce through the UI on rc.7.
 - **~13s permission propagation** broadcast to lanes A, B and D as a poll-don't-sample-once rule.
   Safe under both explanations above, and it prevents the false finding where "did not apply" and
   "has not arrived yet" are indistinguishable at t+1s.
