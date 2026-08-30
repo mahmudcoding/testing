@@ -3309,3 +3309,73 @@ when it was a successful hand-over — the remaining steps are the judging itsel
 **Verified** · Drove each control and read the state file back, including the clear-the-override path.
 **Reverted?** · Two attempts were: an 80% page zoom (CSS zoom does not rescale viewport units, so the
 app laid out at 80% inside a full-size window) and the window growing while the list is open.
+
+---
+
+# 2026-08-30
+
+_Supervision round during the five-session Calls run (sectors K–O on lanes A–E, build
+`v0.61.0-rc.7` `10a407a46be1`)._
+
+## `snip/a-v60-media.mjs` — RTC_STATS was never actually invoked
+
+**What** · `page.evaluate(RTC_STATS)` → `page.evaluate(\`(${RTC_STATS})()\`)` on lines 4 and 6.
+
+**Why** · Reported by **lane B / sector L**. `RTC_STATS` is a template *string* of an
+`async () => {…}` expression (`snip/lib.mjs:16`), so the bare form evaluates to a function object
+and never calls it — the snippet cannot produce media numbers. This is the shape that produces a
+false Critical: a media measurement that reads as "no media flowing" against a call that is fine.
+
+**Verified** · Mechanism read at source (`lib.mjs:16` is a string beginning `async () => {`). Swept
+every snippet importing `RTC_STATS`: exactly **one** was broken. The 40+ others use
+`'('+RTC_STATS+')()'`, which is equivalent and correct; `a-v60-speakenergy.mjs` imports it without
+calling it (dead import, harmless). Negative-controlled the sweep — wrote a file containing the
+known-bad form, confirmed the grep fires on it, and confirmed it stays silent on the fixed file.
+Blast radius is one snippet, exactly as reported.
+
+**Unverified detail, flagged not asserted** · The report characterised the failure as *silently*
+returning `undefined`. Reading the snippet, `JSON.stringify(undefined).slice(0,400)` should throw a
+TypeError instead — i.e. loud, not silent. That distinction decides whether any past finding could
+have been published from this snippet (a crash means no numbers ever came out). Not settled: it
+needs a live page, and every browser belongs to a running session's lane.
+
+**Reverted?** · No. Backup at `/tmp/a-v60-media.bak`; the file is tracked, so `git checkout` reverts.
+
+**Considered and deferred** · A node-side `readRtcStats(page)` wrapper in a *new* file would stop
+this recurring, since a string that looks callable is the underlying footgun. Not shipped mid-run:
+a new helper nobody adopts today is risk without benefit. Worth doing between runs.
+
+## `SELECTORS.md` — four notes, all verified before writing
+
+**What** · Four additions, 44 lines, **0 deletions** (`git diff --numstat`; all four hunks are
+`-N,0`, i.e. pure insertions — nothing existing moved).
+
+1. *Endpoints that answer misleadingly* — `PATCH /meeting/<id>/settings {entry_mode}` returns 200 and
+   drops the field. Sharpened past the report: `entry_mode` is not a meeting-entry field at all. In
+   the deployed contract it is `breakout_room_item.entry_mode` (`direct|request|none`), a per-caller
+   **side room** capability. Listed the 11 keys `update_room_settings` actually accepts, and recorded
+   that `PATCH /meeting/<id> {requires_approval:false}` is the call that takes.
+2. *Names that carry a person's name* (new section) — `nameOf` joins `aria-label` + `textContent`, so
+   the waiting-room admit button reads `"Admit QA Bob Admit"` and `clickDeepest(/^Admit$/i)` returns
+   `{ok:false, why:"no match", seen:0}` against a visible control — the same signature as absence.
+3. *Calls — state that gates a control* — hub "Start now" defaults to `requires_approval: true`; the
+   three "Who can join" options collapse onto two independent wire fields (`password`,
+   `requires_approval`), there is no `entry_mode` in `POST /meeting`; door order is lobby-first,
+   gate-second.
+4. *Other measurement traps* — the rig's fake-device set has exactly one videoinput, so "the camera
+   picker offers nothing to switch to" is the launch flags, not the product.
+
+**Why** · Reported by lanes B, C, D and E. Every one is a measurement trap whose failure signature is
+indistinguishable from a product defect, which is what `SELECTORS.md` is for. None went in
+`CLAUDE.md`: these are values that drift with the product, and CLAUDE.md is for things that break
+loudly.
+
+**Verified** · (1) read out of `openapi.json` at the deployed sha — enumerated the `update_room_settings`
+properties and located `entry_mode` on `breakout_room_item`. (2) read at `lib.mjs:117-122` — `nameOf`
+demonstrably joins the four sources with spaces, so the anchored regex cannot match. (3) convergent:
+three sessions on three different lanes, and I ruled out the fixture explanation by grepping the
+seeder — `seed_qa_fixtures.py` touches users/channels/roles/memberships only and writes **no** meeting
+or policy row, so the default is the product's, not seeded state. (4) taken as reported (a device
+enumeration on lane B); not independently re-measured, since it needs that lane's browser.
+
+**Reverted?** · No. Backup at `/tmp/SELECTORS.md.bak`.

@@ -108,6 +108,20 @@ The `parent_message_id` case is the same family as the pagination-cursor names i
 unknown field is accepted and dropped, so 140 "thread replies" became 140 ordinary channel messages
 with `reply_count` still 0 — indistinguishable from a broken threads feature.
 
+    PATCH /meeting/<id>/settings {entry_mode}      200, field SILENTLY IGNORED. `entry_mode` is not
+                                                   a meeting-entry field at all -- in the deployed
+                                                   contract it is `breakout_room_item.entry_mode`
+                                                   (enum direct|request|none), a per-caller SIDE
+                                                   ROOM capability. The settings body accepts only:
+                                                   camera_mode chat_enabled max_rooms
+                                                   max_video_height mic_mode mute_on_join
+                                                   reactions_enabled recording_enabled
+                                                   screen_share_mode who_can_open_rooms
+                                                   who_can_see_guest_link
+    entry policy is NOT on /settings               PATCH /meeting/<id> {requires_approval:false}
+                                                   is the one that takes; GET /meeting/<id> then
+                                                   reads it back false.
+
 ## There is no `Leave call` inside a Side Room
 
 A participant in a Side Room has no `Leave call` — two sectors enumerated 23 and 34 controls and
@@ -158,6 +172,19 @@ a text-based filter drops them silently.
 Tab labels render as `Files0`, `People 0`, `All 8`, so `^Files$` matches nothing. Match on prefix
 or strip trailing digits before comparing.
 
+## Names that carry a person's name
+
+`nameOf` (`snip/lib.mjs:117`) joins `aria-label`, `textContent`, `labelFor` and `labelledBy` with
+spaces, so a control labelled for one person carries the name **and** its own text:
+
+    waiting-room admit BUTTON   aria-label="Admit QA Bob" + text "Admit"
+                                nameOf -> "Admit QA Bob Admit"
+
+An anchored `clickDeepest(/^Admit$/i)` therefore matches nothing and returns
+`{ok:false, why:"no match", seen:0}` against a plainly visible button -- the same signature as the
+control being absent. Match unanchored (`/^Admit\b/i`) or on the testid. Assume the same shape for
+`Deny` and for any control whose label names a participant.
+
 ## Blocked-users picker
 
 `INPUT[role=combobox]`, placeholder `Search by name or username`. Not a button, so a button
@@ -192,6 +219,11 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
 - Radix popper items are not `[role=option]`/`[role=menuitem]`; they are plain
   nodes under `[data-radix-popper-content-wrapper]`. `window.__qa.popperPick()`
   handles the walk-up.
+
+- **The rig's fake-device set has exactly one videoinput** (`fake_device_0`), against three
+  audioinputs and three audiooutputs. So "the camera picker offers nothing to switch to" is the
+  launch flags, not the product -- camera *switching* is not exercisable on the rig as
+  `launch.sh` starts Chrome. Mic and speaker switching are (3 each).
 
 ## Calls — state that gates a control
 
@@ -228,6 +260,18 @@ locator finds them but the click never lands — `scrollIntoViewIfNeeded()` firs
   what is being measured. Enumerate the *visible* named buttons before
   believing an empty menu — two entries (`Close Side Rooms panel`, `Close
   room`) says the panel is what you are looking at, not the call.
+
+- **A call started from the hub "Start now" dialog defaults to `requires_approval: true`**, so every
+  joiner lands on "Waiting for host approval" and a snippet that joins a second participant by URL
+  reports them stuck outside. That is the default, not a defect. Clear it with
+  `PATCH /meeting/<id> {"requires_approval":false}`.
+- **Three "Who can join" options collapse onto two independent fields.** The dialog offers
+  `calls-start-entry-manual-admit` / `-password` / `-open`, but `POST /meeting` carries no
+  `entry_mode`: the wire body has `password` and `requires_approval` only. A password-protected call
+  is created with `requires_approval:false`.
+- Door order is **lobby first, gate second**: a joiner gets the full lobby (`lobby-page`, device
+  check, `Test audio`, `lobby-join`) and only meets `call-password-gate` after pressing Join. A repro
+  that assumes the gate is the landing screen will not reproduce.
 
 ## Settings
 
