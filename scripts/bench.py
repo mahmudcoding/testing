@@ -21,14 +21,15 @@ Nothing here parses HTML. findings.py is the one parser, and a finding's id come
 from its file rather than from a hash of its title -- so fixing a typo in a title
 no longer orphans the verdict somebody recorded against it.
 """
-import os, sys, re, json, glob, html, hashlib, shutil, subprocess, datetime, threading, time, webbrowser
+import os, sys, re, json, html, hashlib, shutil, subprocess, datetime, threading, time, webbrowser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from findings import SourceError, bench_items, lane_name, load_runs
+from findings import (SNIP_DIR, SOURCE_DIRS, SourceError, bench_items,
+                      lane_name, load_runs)
 
 def _repair_path():
     """Put node back on PATH.
@@ -63,22 +64,9 @@ _repair_path()
 
 PORT = int(os.environ.get("BENCH_PORT", "8777"))
 SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
-# One report per lane. PINNED is the set someone chose; discovery only overrides
-# a pin when it finds something STRICTLY newer, so a new report is picked up
-# without a code change and today's set can never be silently swapped for a
-# different one. That distinction is load-bearing: lane A once had two reports of
-# the same date with no revision suffix — nine findings and one — separated only
-# by mtime, which a git checkout rewrites. Ranking alone would coin-flip between
-# them, and a wrong auto-pick looks exactly like a right one from inside the app.
-#
-# EMPTY means discovery-by-newest, and that is the current state: nothing has been
-# pinned for the nine-sector map yet. Pin a lane here — one line, lane to path — as
-# soon as two reports could plausibly compete for it, which is what brings the
-# coin-flip protection above back into play.
 _CACHE = {"items": None, "stamp": None, "meta": None}
 _LOAD_LOCK = threading.RLock()
-SRC_DIRS = [os.path.join(REPO, "reports", "findings"),
-            os.path.join(REPO, "reports", "runs")]
+SRC_DIRS = SOURCE_DIRS
 
 
 def _stamp():
@@ -120,12 +108,40 @@ def load():
                     os.path.getmtime(os.path.join(REPO, r["path"]))
                 ).isoformat(timespec="seconds"),
             })
+        for r in runs:
+            if r.get("dropped"):
+                meta["warnings"].append(
+                    "%s: %d finding(s) not published, so not shown: %s"
+                    % (os.path.basename(r["path"]), len(r["dropped"]),
+                       ", ".join(r["dropped"])))
         if runs and not items:
             meta["warnings"].append("runs found but no findings resolved — check "
                                     "each run's `findings:` list")
+        # A verdict recorded against an id that no longer exists is invisible
+        # otherwise: it stays in the state file, gets written back on every save,
+        # and the person who recorded it just sees it gone.
+        orphans = _orphan_state({i["id"] for i in items})
+        if orphans:
+            meta["warnings"].append(
+                "%d recorded verdict(s)/priority(ies) match no finding on disk: %s"
+                % (len(orphans), ", ".join(sorted(orphans)[:6])))
         items = _runnable_only(items, meta)
         _CACHE.update(items=items, stamp=st, meta=meta)
         return items
+
+
+def _orphan_state(live_ids):
+    """State keys that no longer name a finding."""
+    try:
+        st = json.loads(read_state() or "{}")
+    except ValueError:
+        return set()
+    keys = set()
+    for section in ("verdicts", "expected", "priority"):
+        m = st.get(section)
+        if isinstance(m, dict):
+            keys |= set(m)
+    return keys - set(live_ids)
 
 
 def load_meta():
@@ -145,7 +161,7 @@ def _runnable_only(items, meta=None):
     for it in items:
         rep = it.get("repro") or {}
         snip = rep.get("snippet")
-        if snip and os.path.exists(os.path.join(REPO, "scripts", "callrig", "snip", snip)):
+        if snip and os.path.exists(os.path.join(SNIP_DIR, snip)):
             keep.append(it)
         else:
             dropped.append("%s (%s)" % (it["id"], snip or "no snippet"))
@@ -510,9 +526,15 @@ if __name__ == "__main__":
     threading.Thread(target=_boot, daemon=True).start()
     print(f"\n  Review")
     print(f"  http://127.0.0.1:{PORT}\n")
-    # Say which five it chose. An auto-pick that goes unannounced is
-    # indistinguishable from the right one until someone judges the wrong report.
-    _pick_reports()
+    # Say what it is carrying. A queue that came up empty, or short, is
+    # indistinguishable from a correct one until someone judges the wrong thing.
+    _m = load_meta()
+    for _r in _m.get("reports", []):
+        print("  %-34s %s, %d finding(s)" % (_r["file"], _r["laneName"], _r["count"]))
+    if not _m.get("reports"):
+        print("  no runs in reports/runs/ — nothing to judge")
+    for _w in _m.get("warnings", []):
+        print("  WARNING: %s" % _w)
     print()
     print("  Reproduce launches real browsers on your machine. Ctrl-C to stop.\n")
     if not os.environ.get("BENCH_NO_BROWSER"):      # the .app hosts its own window

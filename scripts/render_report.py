@@ -44,7 +44,18 @@ NUM = ["", "Одна", "Две", "Три", "Четыре", "Пять", "Шест
 
 
 def esc(t):
+    """Escape for element text. Quotes are left alone so prose reads naturally."""
     return html.escape(t, quote=False)
+
+
+def att(t):
+    """Escape for an attribute value — quotes included.
+
+    esc() deliberately keeps quotes, which is right inside element text and
+    wrong inside an attribute: a double quote in an account name or a snippet
+    filename would close data-accounts early and swallow the rest of the tag.
+    """
+    return html.escape(t, quote=True)
 
 
 def inline(t):
@@ -123,8 +134,8 @@ def article(f):
             '\n    <div class="block repro" data-lane="%s" data-accounts="%s" data-snippet="%s">\n'
             "      <h3>Воспроизведение</h3>\n"
             "      <p><code>./d %s:%s snip/%s</code></p>\n    </div>"
-            % (esc(f["lane"]), esc(",".join(f["accounts"])), esc(f["snippet"]),
-               f["lane"].lower(), esc(f["accounts"][0] if f["accounts"] else "alice"),
+            % (att(f["lane"]), att(",".join(f["accounts"])), att(f["snippet"]),
+               esc(f["lane"].lower()), esc(f["accounts"][0] if f["accounts"] else "alice"),
                esc(f["snippet"])))
     for name in SECTIONS:
         body = f["sections"].get(name)

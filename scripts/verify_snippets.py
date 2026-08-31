@@ -116,8 +116,10 @@ def main(lanes):
     if "QA_MAX_BROWSERS" not in os.environ:
         need = set()
         for lane in lanes:
-            if lane not in REPORT:
-                continue
+            # No guard on "does this lane have a report": _by_lane() already
+            # returns nothing for a lane with no findings, so both loops below
+            # are no-ops for one. The guard that used to be here referenced a
+            # map of report files that no longer exists.
             for accs in _all_accounts(lane).values():
                 need.update((lane, a) for a in accs)
             need.update((lane, a) for _, a in blocks(lane))

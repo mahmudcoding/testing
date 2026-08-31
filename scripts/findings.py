@@ -57,8 +57,6 @@ FIELDS_KNOWN = FIELDS_REQUIRED + ["tags", "lane", "accounts", "snippet",
                                   "build", "sha", "duplicate-of"]
 LIST_FIELDS = {"tags", "accounts", "findings"}
 SOURCE_DIRS = [FINDINGS_DIR, RUNS_DIR]
-SOURCE_ERROR_HINT = ("source files live in reports/findings/ and reports/runs/; "
-                     "render with scripts/render_report.py")
 
 
 class SourceError(Exception):
@@ -146,9 +144,17 @@ def split_prose_and_code(section):
 
 
 def list_items(section):
-    """Items of a leading ordered or unordered list, markers stripped."""
+    """Items of an ordered or unordered list, markers stripped.
+
+    Fences are stripped first. The renderer puts a fenced block in a <pre>, so a
+    line inside one that happens to start with "- " or "1." is not a list item --
+    counting it here made the published report and the bench disagree about how
+    many steps a finding has, and the bench's tick list could then never
+    complete. Every other text helper in this module is fence-aware; this one
+    was the exception.
+    """
     out = []
-    for line in section.splitlines():
+    for line in FENCE.sub("", section).splitlines():
         m = re.match(r"\s*(?:[-*]|\d+[.)])\s+(.*)$", line)
         if m:
             out.append(m.group(1).strip())
@@ -253,17 +259,29 @@ def load_run(path, index=None):
         front, body = split_front(fh.read(), path)
     index = load_findings() if index is None else index
     ids = front.get("findings") or []
-    missing = [i for i in ids if i not in index]
+    # A run lists ids; some of them stop being publishable. Withdrawing a single
+    # finding is the normal outcome of verification, and it must not empty the
+    # run -- raising here blanked every other finding in it. Unpublished ids are
+    # dropped with a note; an id that names no file at all is still an error,
+    # because that is a typo rather than a decision.
+    everything = load_findings(status=None)
+    missing = [i for i in ids if i not in everything]
     if missing:
-        raise SourceError("%s: findings not found (or not published): %s"
+        raise SourceError("%s: findings not found: %s"
                           % (os.path.relpath(path, REPO), ", ".join(missing)))
-    items = [index[i] for i in ids]
+    dropped = [i for i in ids if i not in index]
+    ids = [i for i in ids if i in index]
+    # Copy before ordering. These dicts belong to a shared index, so numbering
+    # them in place meant a finding listed by two runs took whichever number the
+    # last run assigned.
+    items = [dict(index[i]) for i in ids]
     items.sort(key=lambda f: SEV_RANK.get(f["sev"], len(SEVERITIES)))
-    for n, f in enumerate(items, start=1):
-        f["n"] = n
+    for i, f in enumerate(items, start=1):
+        f["n"] = i
     secs = split_sections(body, path, preamble=True)
     return {
         "path": os.path.relpath(path, REPO),
+        "dropped": dropped,
         "date": front.get("date", ""),
         "lane": front.get("lane", ""),
         "sector": front.get("sector", ""),

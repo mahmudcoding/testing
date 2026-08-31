@@ -23,6 +23,8 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+from findings import FINDINGS_DIR, RUNS_DIR, SOURCE_DIRS  # noqa: E402
 CHECKER = os.path.join(HERE, "verify_report.py")
 
 FAILURES = []
@@ -46,15 +48,25 @@ def case(label, mutate, src, run_path=None, expect=None):
     """
     global CASES
     CASES += 1
-    d = tempfile.mkdtemp(prefix="vrs-")
+    # Mutating in place inside reports/findings, so relative-path checks and the
+    # run's `findings:` resolution behave exactly as they do for real -- but a
+    # kill between the write and the restore would leave a real finding holding a
+    # deliberately corrupted body. The sidecar is the crash net: it is written
+    # before the mutation and removed after the restore, and restore_orphans()
+    # puts the file back on the next run if this process never got there.
+    keep = open(src, encoding="utf-8").read()
+    text = mutate(keep)
+    if text is None:
+        print("  skip %s" % label)
+        return
+    if text == keep:
+        print("  FAIL %s — the mutation changed nothing" % label)
+        FAILURES.append(label)
+        return
+    bak = src + BAK
+    with open(bak, "w", encoding="utf-8") as fh:
+        fh.write(keep)
     try:
-        # Mutating in place inside reports/findings so relative-path checks and
-        # the run's `findings:` resolution behave exactly as they do for real.
-        keep = open(src, encoding="utf-8").read()
-        text = mutate(keep)
-        if text is None:
-            print("  skip %s" % label)
-            return
         open(src, "w", encoding="utf-8").write(text)
         rc, out = run(run_path or src)
         why = [l.strip()[6:] for l in out.splitlines() if l.strip().startswith("FAIL")]
@@ -71,11 +83,29 @@ def case(label, mutate, src, run_path=None, expect=None):
             print("  ok   %s\n         → %s" % (label, (why[0] if why else "")[:92]))
     finally:
         open(src, "w", encoding="utf-8").write(keep)
-        shutil.rmtree(d, ignore_errors=True)
+        os.remove(bak)
+
+
+BAK = ".selftest-orig"
+
+
+def restore_orphans():
+    """Put back anything a killed run left mutated, before doing anything else."""
+    for d in SOURCE_DIRS:
+        for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+            if not name.endswith(BAK):
+                continue
+            bak = os.path.join(d, name)
+            live = bak[:-len(BAK)]
+            shutil.copyfile(bak, live)
+            os.remove(bak)
+            print("  restored %s — a previous run was interrupted mid-mutation"
+                  % os.path.relpath(live, REPO))
 
 
 def main():
-    fdir = os.path.join(REPO, "reports", "findings")
+    restore_orphans()
+    fdir = FINDINGS_DIR
     srcs = sorted(f for f in os.listdir(fdir) if f.endswith(".md")) if os.path.isdir(fdir) else []
     if not srcs:
         print("no findings to mutate — write one first")
@@ -163,7 +193,7 @@ def main():
          expect="is not a full path")
 
     print("\nRuns")
-    rdir = os.path.join(REPO, "reports", "runs")
+    rdir = RUNS_DIR
     runs = sorted(f for f in os.listdir(rdir) if f.endswith(".md")) if os.path.isdir(rdir) else []
     if runs:
         rsrc = os.path.join(rdir, runs[0])

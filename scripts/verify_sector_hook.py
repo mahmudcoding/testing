@@ -26,6 +26,8 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, ".."))
 HOOK = os.path.join(HERE, "hooks", "sector_context.py")
+sys.path.insert(0, HERE)
+from findings import RUNS_DIR  # noqa: E402
 
 # sector -> (lane, area token). Lane letter is the sector letter on this map.
 SECTORS = [
@@ -42,7 +44,7 @@ def published_areas():
     filename.
     """
     out = set()
-    rd = os.path.join(REPO, "reports", "runs")
+    rd = RUNS_DIR
     for name in sorted(os.listdir(rd)) if os.path.isdir(rd) else []:
         if not name.endswith(".md"):
             continue

@@ -114,8 +114,11 @@ def main():
             n += 1
             print(f"  ── {n}. [{f['sev']}] {f['title']}")
             for w in notes.get(f['id'], []):       print(f"     ⚠ {w}")
-            if f.get('table_drift'):                  print(f"     ⚠ summary row wording differs from this title")
-            print(f"\n     Claim: {f.get('Фактический результат','')[:400]}\n")
+            # f['actual'], not f['Фактический результат'] — the Russian heading is
+            # a key of f['sections'], never a top-level field. Reading the old
+            # shape printed an empty claim for every finding, so the person
+            # judging saw the steps with nothing to judge them against.
+            print(f"\n     Claim: {f['actual'][:400]}\n")
             print("     Steps:")
             for i, s in enumerate(f['steps'], 1):     print(f"       {i}. {s}")
             print()

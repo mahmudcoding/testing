@@ -23,10 +23,9 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REPO,  # noqa: E402
-                      REQUIRED_SECTIONS, SEVERITIES, SIDES, SNIP_DIR, SOURCE_DIRS,
-                      SOURCE_ERROR_HINT, SURFACES, STATUSES, SourceError,
-                      load_finding, load_findings, load_run, plain, split_front)
+from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REPO, REQUIRED_SECTIONS,  # noqa: E402
+                      RUNS_DIR, SEVERITIES, SIDES, SNIP_DIR, STATUSES, SURFACES,
+                      SourceError, load_finding, load_findings, load_run, plain)
 
 # Fixture names, ids, ports and hosts that must never reach a published report.
 # Carried over unchanged -- this is a content rule, not a markup one.
@@ -91,13 +90,8 @@ def check_finding(f, errs):
         bad("prose is %d words over budget (%d > %d) — check whether something is "
             "misplaced rather than merely long" % (words - BUDGET, words, BUDGET))
 
-    text = open(os.path.join(REPO, where), encoding="utf-8").read()
-    for pat in LEAKS:
-        for m in set(re.findall(pat, text)):
-            bad("leaked test-setup name: %r" % (m if isinstance(m, str) else m[0]))
-    for c in sorted(set(CITATION.findall(text))):
-        if not (c.startswith("apps/") or c.startswith("packages/") or c.startswith("platform/")):
-            bad("citation %r is not a full path a reader can paste into git show" % c)
+    with open(os.path.join(REPO, where), encoding="utf-8") as fh:
+        scan_text(fh.read(), where, errs)
 
     if f["snippet"]:
         if not os.path.exists(os.path.join(SNIP_DIR, f["snippet"])):
@@ -111,8 +105,30 @@ def check_finding(f, errs):
         bad("lane %r is not a single letter A-J" % f["lane"])
 
 
+def scan_text(text, where, errs):
+    """Leak and citation rules. Applies to anything that reaches a reader.
+
+    Run prose used to escape this: the checks lived inside check_finding, while
+    a run's heading, lede and extra sections are rendered into the published
+    header verbatim.
+    """
+    for pat in LEAKS:
+        for m in set(re.findall(pat, text)):
+            errs.append("%s: leaked test-setup name: %r"
+                        % (where, m if isinstance(m, str) else m[0]))
+    for c in sorted(set(CITATION.findall(text))):
+        if not c.startswith(("apps/", "packages/", "platform/")):
+            errs.append("%s: citation %r is not a full path a reader can paste "
+                        "into git show" % (where, c))
+
+
 def check_run(run, errs):
     where = run["path"]
+    with open(os.path.join(REPO, where), encoding="utf-8") as fh:
+        scan_text(fh.read(), where, errs)
+    for d in run.get("dropped") or []:
+        errs.append("%s: lists %s, which is not published — remove it from "
+                    "`findings:` or republish it" % (where, d))
     if not run["heading"]:
         errs.append("%s: no '# ' heading" % where)
     for k in ("date", "lane", "area", "build", "sha"):
@@ -120,6 +136,29 @@ def check_run(run, errs):
             errs.append("%s: missing %s" % (where, k))
     if not run["items"]:
         errs.append("%s: lists no findings" % where)
+
+
+def check_corpus(index, errs):
+    """Rules about the set of findings, which no per-file check can see.
+
+    Two findings sharing a title render two identical <h2>s and two identical
+    summary rows. Generating both views from one list stops them drifting apart;
+    it does not stop them being duplicates in the first place, and a
+    find-and-replace that overwrote one published finding with a copy of another
+    is exactly how that has gone wrong before.
+    """
+    by_title, by_prefix = {}, {}
+    for f in sorted(index.values(), key=lambda x: x["id"]):
+        t = " ".join(f["title"].split())
+        if t in by_title:
+            errs.append("%s: same title as %s" % (f["path"], by_title[t]))
+        by_title[t] = f["path"]
+        pre = t[:30].lower()
+        if len(pre) == 30 and pre in by_prefix:
+            errs.append("%s: first 30 characters of the title match %s — too "
+                        "close to tell apart in a summary row"
+                        % (f["path"], by_prefix[pre]))
+        by_prefix[pre] = f["path"]
 
 
 def main(argv):
@@ -143,13 +182,16 @@ def main(argv):
             return 1
         for f in index.values():
             check_finding(f, errs)
+        check_corpus(index, errs)
+        # One published index for every run. Without it each run rebuilt the
+        # whole index from disk: M + N*M parses instead of M + N.
+        pub = {k: v for k, v in index.items() if v["status"] == "published"}
         runs = []
-        rd = os.path.join(REPO, "reports", "runs")
-        for n in sorted(os.listdir(rd)) if os.path.isdir(rd) else []:
-            if not n.endswith(".md"):
+        for name in sorted(os.listdir(RUNS_DIR)) if os.path.isdir(RUNS_DIR) else []:
+            if not name.endswith(".md"):
                 continue
             try:
-                runs.append(load_run(os.path.join(rd, n)))
+                runs.append(load_run(os.path.join(RUNS_DIR, name), pub))
             except SourceError as e:
                 errs.append(str(e))
         for r in runs:

@@ -17,12 +17,11 @@ screen; only running it proves that, which is the author's job.
 import os, re, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
 sys.path.insert(0, os.path.join(REPO, "scripts"))
-from findings import load_findings  # noqa: E402
+from findings import SNIP_DIR as SNIP, load_findings  # noqa: E402
 
 
-def blocks(_unused=None):
+def blocks(only=None):
     """(id, title, repro) for every finding, from the source. No HTML anywhere.
 
     This used to re-implement bench.py's regex over report HTML, with an index
@@ -32,6 +31,8 @@ def blocks(_unused=None):
     """
     out = []
     for f in sorted(load_findings().values(), key=lambda x: x["id"]):
+        if only and f["id"] not in only and f["path"] not in only:
+            continue
         out.append((f["id"], f["title"][:70], f["repro"]))
     return out
 
@@ -62,7 +63,20 @@ def check_snippet(name):
 
 
 def main(argv):
-    rows = blocks()
+    # Honour the arguments the docstring advertises. Ignoring them printed
+    # full-corpus output to someone who thought they had scoped the run to one
+    # file, which reads as a clean result for findings they never asked about.
+    only = set()
+    for a in argv:
+        if a.startswith("-"):
+            continue
+        only.add(a)
+        only.add(os.path.splitext(os.path.basename(a))[0])
+        only.add(os.path.relpath(os.path.abspath(a), REPO))
+    rows = blocks(only or None)
+    if only and not rows:
+        print("\n  nothing matched: %s" % ", ".join(sorted(a for a in argv if not a.startswith("-"))))
+        return 1
     named = [(i, t, a) for i, t, a in rows if a]
     problems = 0
     print("\n  %d of %d findings carry a runnable block\n" % (len(named), len(rows)))
