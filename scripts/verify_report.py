@@ -23,7 +23,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REQUIRED_SECTIONS,  # noqa: E402
+from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REPO, REQUIRED_SECTIONS,  # noqa: E402
                       RUNS_DIR, SEVERITIES, SIDES, SNIP_DIR, STATUSES, SURFACES, is_run_path,
                       SourceError, UnreadableSource, load_finding, load_findings, load_run, plain,
                       publish_blockers)
@@ -40,6 +40,7 @@ LEAKS = [
     r'airion-cargo|aloqa\.test',
 ]
 CITATION = re.compile(r'[A-Za-z0-9_/\[\].-]*\.(?:tsx?|json|go|py)+:[0-9-]+')
+REPO_PREFIX = REPO + os.sep   # trimmed from messages: nobody typed it
 BUDGET = 180          # words over Проблема + Фактический результат + Ожидаемый результат
 
 
@@ -237,6 +238,11 @@ def main(argv):
                 continue
             try:
                 runs.append(load_run(os.path.join(RUNS_DIR, name), pub, index))
+            except UnreadableSource as e:
+                # Same classification as the scoped branch. Labelling this FAIL
+                # here and UNREADABLE there described one condition two ways, in
+                # one tool, depending only on how it was invoked.
+                unreadable.append(str(e).replace(REPO_PREFIX, ""))
             except SourceError as e:
                 errs.append(str(e))
         for r in runs:
@@ -256,7 +262,11 @@ def main(argv):
         return 1
     if unreadable:
         print("\n  %d path(s) could not be read" % len(unreadable))
-        return 2
+        # 2 only when NOTHING could be checked. An unreadable file among others
+        # that checked fine is a problem found during a run that happened, which
+        # is 1 -- the same answer render_report --all gives for one bad run
+        # among several.
+        return 2 if n_f + n_r == 0 else 1
     print("  ALL CHECKS PASS")
     return 0
 
