@@ -114,13 +114,10 @@ def load():
             # was introduced to stop.
             for why in publish_blockers(r):
                 meta["warnings"].append("%s: %s" % (os.path.basename(r["path"]), why))
-        if runs and not items and not any(publish_blockers(r) for r in runs):
-            # Only when publish_blockers has not already said why. It reports
-            # both "lists X, which is not published" and "has no findings to
-            # publish", so an all-withdrawn run was producing three warnings for
-            # one condition.
-            meta["warnings"].append("runs found but no findings resolved — check "
-                                    "each run's `findings:` list")
+        # No "no findings resolved" warning here: publish_blockers already
+        # appends "has no findings to publish" for exactly that case, so the
+        # guard that de-duplicated it made the branch unreachable rather than
+        # rare. Deleted instead of left as dead code with a comment.
         # A verdict recorded against an id that no longer exists is invisible
         # otherwise: it stays in the state file, gets written back on every save,
         # and the person who recorded it just sees it gone.

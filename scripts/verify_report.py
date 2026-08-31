@@ -24,7 +24,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REPO, REQUIRED_SECTIONS,  # noqa: E402
-                      RUNS_DIR, SEVERITIES, SIDES, SNIP_DIR, STATUSES, SURFACES,
+                      RUNS_DIR, SEVERITIES, SIDES, SNIP_DIR, STATUSES, SURFACES, is_run_path,
                       SourceError, load_finding, load_findings, load_run, plain)
 
 # Fixture names, ids, ports and hosts that must never reach a published report.
@@ -42,8 +42,11 @@ CITATION = re.compile(r'[A-Za-z0-9_/\[\].-]*\.(?:tsx?|json|go|py)+:[0-9-]+')
 BUDGET = 180          # words over Проблема + Фактический результат + Ожидаемый результат
 
 
-def check_finding(f, errs):
-    where = f["path"]
+def check_finding(f, errs, shown=None):
+    # `shown` is the path the caller typed. f["path"] is relative to REPO, which
+    # for an argument outside the tree renders as ../../../.. -- a path the user
+    # never typed and cannot paste back.
+    where = shown or f["path"]
 
     def bad(msg):
         errs.append("%s: %s" % (where, msg))
@@ -121,9 +124,13 @@ def scan_text(text, where, errs):
                         "into git show" % (where, c))
 
 
-def check_run(run, errs):
-    where = run["path"]
-    with open(os.path.join(REPO, where), encoding="utf-8") as fh:
+def check_run(run, errs, shown=None):
+    # Same rule as check_finding: read what was named. run["path"] is relative to
+    # REPO, and re-joining a "../.." relpath resolves against the real parent
+    # rather than the lexical one, so an out-of-tree run under a symlinked root
+    # raised FileNotFoundError against a path the user never typed.
+    where = shown or run["path"]
+    with open(run["abspath"], encoding="utf-8") as fh:
         scan_text(fh.read(), where, errs)
     for d in run.get("dropped") or []:
         errs.append("%s: lists %s, which is not published — remove it from "
@@ -178,20 +185,21 @@ def main(argv):
         check_corpus(pub, errs)
         for p in paths:
             try:
-                # Route on the containing directory, not a substring: a repo
-                # checked out under a path containing "/runs/" would send every
-                # finding down the run branch.
-                if os.path.basename(os.path.dirname(os.path.abspath(p))) == "runs":
-                    check_run(load_run(p, pub, known), errs)
+                if is_run_path(p):
+                    check_run(load_run(p, pub, known), errs, shown=p)
                 else:
                     # Always load the named file. Reusing the index entry by
                     # basename validated a DIFFERENT file whenever the argument
                     # lived outside reports/findings -- a corrupted copy passed
                     # because a repo finding of the same name was clean.
-                    check_finding(load_finding(p), errs)
+                    check_finding(load_finding(p), errs, shown=p)
             except (SourceError, OSError) as e:
                 errs.append(str(e))
-        n_f, n_r = len([p for p in paths if "/runs/" not in p]), len([p for p in paths if "/runs/" in p])
+        # Counted with the same predicate that routed them. These were two
+        # different tests, so the summary could report having checked a run it
+        # never looked at.
+        n_r = len([p for p in paths if is_run_path(p)])
+        n_f = len(paths) - n_r
     else:
         try:
             index = load_findings(status=None)

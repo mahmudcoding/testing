@@ -18,8 +18,8 @@ import os, re, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
-from findings import (SNIP_DIR as SNIP, SourceError, load_findings,  # noqa: E402
-                      load_run)
+from findings import (SNIP_DIR as SNIP, SourceError, is_run_path,  # noqa: E402
+                      load_findings, load_run, publish_blockers)
 
 
 def blocks(only=None):
@@ -77,15 +77,14 @@ def main(argv):
         # change the report-shaped file IS the run, so pointing the tool at one
         # is the natural scoped invocation and used to exit 1 as "nothing
         # matched".
-        if "/runs/" in a.replace(os.sep, "/") or os.path.basename(os.path.dirname(os.path.abspath(a))) == "runs":
+        if is_run_path(a):
             try:
                 run = load_run(os.path.abspath(a))
                 only.update(f["id"] for f in run["items"])
                 # Say what the run lists but cannot be checked, rather than
                 # quietly reporting a pass over the remainder.
-                for d in run.get("dropped") or []:
-                    print("  note  %s lists %s, which is not published — not checked"
-                          % (os.path.basename(a), d))
+                for why in publish_blockers(run):
+                    print("  note  %s %s — not checked" % (os.path.basename(a), why))
             except (SourceError, OSError) as e:
                 print("\n  %s" % e)
                 return 1

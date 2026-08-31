@@ -246,10 +246,11 @@ def load_findings(status="published"):
         if f["id"] in out:
             # Hard stop: every consumer resolves findings by id, so a collision
             # has no safe interpretation. It is only reachable when an `id:` does
-            # not match its filename, which verify_report reports per file --
-            # run that for the actionable message.
+            # not match its filename, so say that -- pointing at verify_report
+            # was circular advice, since it raises this same error before it can
+            # reach its own per-file check.
             raise SourceError("%s: id %r already used by %s — an id must match "
-                              "its filename; run scripts/verify_report.py"
+                              "its filename, so rename the id in one of them"
                               % (f["path"], f["id"], out[f["id"]]["path"]))
         out[f["id"]] = f
     return out
@@ -298,6 +299,7 @@ def load_run(path, index=None, known=None):
     secs = split_sections(body, path, preamble=True)
     return {
         "path": os.path.relpath(path, REPO),
+        "abspath": os.path.abspath(path),
         "dropped": dropped,
         "date": front.get("date", ""),
         "lane": front.get("lane", ""),
@@ -314,6 +316,18 @@ def load_run(path, index=None, known=None):
         "basename": "aloqa-%s-qa-%s-%s" % (front.get("area", "report"),
                                            front.get("date", ""), front.get("lane", "")),
     }
+
+
+def is_run_path(path):
+    """Does this path name a run rather than a finding?
+
+    One definition, because two spellings of it diverged: a substring test for
+    "/runs/" fires on any ancestor directory of that name, so a repo checked out
+    under ~/runs sent every finding down the run branch -- and in verify_report
+    the routing was fixed while the sibling count line kept the old test, so the
+    summary reported checking a run it had not looked at.
+    """
+    return os.path.basename(os.path.dirname(os.path.abspath(path))) == "runs"
 
 
 def publish_blockers(run):
