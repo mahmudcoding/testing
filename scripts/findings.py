@@ -244,7 +244,12 @@ def load_findings(status="published"):
         if not f["id"]:
             raise SourceError("%s: no id" % f["path"])
         if f["id"] in out:
-            raise SourceError("%s: id %r already used by %s"
+            # Hard stop: every consumer resolves findings by id, so a collision
+            # has no safe interpretation. It is only reachable when an `id:` does
+            # not match its filename, which verify_report reports per file --
+            # run that for the actionable message.
+            raise SourceError("%s: id %r already used by %s — an id must match "
+                              "its filename; run scripts/verify_report.py"
                               % (f["path"], f["id"], out[f["id"]]["path"]))
         out[f["id"]] = f
     return out

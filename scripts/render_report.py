@@ -266,8 +266,9 @@ def main(argv):
               % (os.path.relpath(out, REPO), len(run["items"]),
                  os.path.getsize(out)))
     if refused:
-        print("\n  %d run(s) refused. Fix the `findings:` list, or re-render that "
-              "run with --force to publish what remains." % refused)
+        print("\n  %d run(s) refused. Fix the `findings:` list — or re-run with "
+              "--force, which publishes what remains for EVERY run in this "
+              "invocation, not just the refused ones." % refused)
     return 1 if refused else 0
 
 

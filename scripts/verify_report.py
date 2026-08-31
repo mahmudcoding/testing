@@ -178,11 +178,17 @@ def main(argv):
         check_corpus(pub, errs)
         for p in paths:
             try:
-                if "/runs/" in p.replace(os.sep, "/"):
+                # Route on the containing directory, not a substring: a repo
+                # checked out under a path containing "/runs/" would send every
+                # finding down the run branch.
+                if os.path.basename(os.path.dirname(os.path.abspath(p))) == "runs":
                     check_run(load_run(p, pub, known), errs)
                 else:
-                    check_finding(known.get(
-                        os.path.splitext(os.path.basename(p))[0]) or load_finding(p), errs)
+                    # Always load the named file. Reusing the index entry by
+                    # basename validated a DIFFERENT file whenever the argument
+                    # lived outside reports/findings -- a corrupted copy passed
+                    # because a repo finding of the same name was clean.
+                    check_finding(load_finding(p), errs)
             except (SourceError, OSError) as e:
                 errs.append(str(e))
         n_f, n_r = len([p for p in paths if "/runs/" not in p]), len([p for p in paths if "/runs/" in p])

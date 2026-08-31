@@ -79,7 +79,13 @@ def main(argv):
         # matched".
         if "/runs/" in a.replace(os.sep, "/") or os.path.basename(os.path.dirname(os.path.abspath(a))) == "runs":
             try:
-                only.update(f["id"] for f in load_run(os.path.abspath(a))["items"])
+                run = load_run(os.path.abspath(a))
+                only.update(f["id"] for f in run["items"])
+                # Say what the run lists but cannot be checked, rather than
+                # quietly reporting a pass over the remainder.
+                for d in run.get("dropped") or []:
+                    print("  note  %s lists %s, which is not published — not checked"
+                          % (os.path.basename(a), d))
             except (SourceError, OSError) as e:
                 print("\n  %s" % e)
                 return 1
