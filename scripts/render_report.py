@@ -245,17 +245,19 @@ def main(argv):
     # instead of raising, so without this the renderer was the one consumer that
     # never asked -- it wrote a run missing a finding, printed a count that
     # agreed with the reduced set, and exited 0.
-    blocked = [(r, publish_blockers(r)) for r in runs]
-    bad = [(r, b) for r, b in blocked if b]
-    if bad and "--force" not in argv:
-        for r, b in bad:
-            for why in b:
-                print("  REFUSING %s: %s" % (r["path"], why))
-        print("\n  Fix the run's `findings:` list, or re-render with --force to "
-              "publish what remains.")
-        return 1
+    #
+    # Per run, not per invocation: refusing the whole batch meant one session
+    # withdrawing a finding stopped every other sector's report from rendering.
+    force = "--force" in argv
+    refused = 0
     os.makedirs(BUILD, exist_ok=True)
     for run in runs:
+        why = publish_blockers(run)
+        if why and not force:
+            for w in why:
+                print("  REFUSING %-38s %s" % (os.path.basename(run["path"]), w))
+            refused += 1
+            continue
         run["laneName"] = lane_name(run)
         out = os.path.join(BUILD, run["basename"] + ".html")
         with open(out, "w", encoding="utf-8") as fh:
@@ -263,7 +265,10 @@ def main(argv):
         print("  %-52s %d findings, %d bytes"
               % (os.path.relpath(out, REPO), len(run["items"]),
                  os.path.getsize(out)))
-    return 0
+    if refused:
+        print("\n  %d run(s) refused. Fix the `findings:` list, or re-render that "
+              "run with --force to publish what remains." % refused)
+    return 1 if refused else 0
 
 
 if __name__ == "__main__":

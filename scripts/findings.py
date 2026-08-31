@@ -253,7 +253,7 @@ def load_findings(status="published"):
 SEV_RANK = {s: i for i, s in enumerate(SEVERITIES)}
 
 
-def load_run(path, index=None):
+def load_run(path, index=None, known=None):
     """A run file plus its resolved findings, severity-ordered.
 
     The order is computed once here, so the summary table and the articles that
@@ -271,10 +271,11 @@ def load_run(path, index=None):
     # because that is a typo rather than a decision.
     dropped = [i for i in ids if i not in index]
     if dropped:
-        # Only when the index cannot answer. Scanning unconditionally re-parsed
-        # every finding on disk even when the caller had already built an index,
-        # which is the cost passing one exists to avoid.
-        everything = load_findings(status=None)
+        # Telling a withdrawn id from a typo'd one needs an all-status view. A
+        # caller that already has one passes it as `known`; only a caller that
+        # does not pays for the scan. Withdrawing a finding is the ordinary case,
+        # so making it re-read every file was the cost this exists to avoid.
+        everything = known if known is not None else load_findings(status=None)
         missing = [i for i in dropped if i not in everything]
         if missing:
             raise SourceError("%s: findings not found: %s"
@@ -330,8 +331,9 @@ def load_runs():
     """Every run on disk, newest first."""
     if not os.path.isdir(RUNS_DIR):
         return []
-    index = load_findings()
-    runs = [load_run(os.path.join(RUNS_DIR, n), index)
+    known = load_findings(status=None)
+    index = {k: v for k, v in known.items() if v["status"] == "published"}
+    runs = [load_run(os.path.join(RUNS_DIR, n), index, known)
             for n in sorted(os.listdir(RUNS_DIR)) if n.endswith(".md")]
     runs.sort(key=lambda r: (r["date"], r["lane"]), reverse=True)
     return runs

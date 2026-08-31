@@ -14,11 +14,17 @@ has no such precondition. And four of its cases are gone rather than ported: the
 tested that the summary table still agreed with the articles, which is not a thing
 that can drift once both are generated from one list.
 
-Nothing here touches a tracked file. reports/ is copied into a temp tree and the
+No case here touches a tracked file. reports/ is copied into a temp tree and the
 checker is pointed at it with QA_REPO, so a kill mid-mutation loses a copy rather
 than a finding. The earlier version mutated the real file and restored it in a
 finally, with a sidecar as a crash net -- a net over a hazard that did not need
 to exist.
+
+The one thing the tree does NOT copy is scripts/callrig/snip/, which is symlinked
+so the snippet-on-disk check resolves the same way it does for real. rmtree is
+symlink-safe, so the real snippets are not at risk from cleanup -- but a case that
+mutated a snippet would write through the link into tracked files. Copy the
+directory before adding one.
 """
 import os
 import re

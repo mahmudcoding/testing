@@ -87,8 +87,17 @@ def main(argv):
         only.add(a)
         only.add(os.path.splitext(os.path.basename(a))[0])
         only.add(os.path.relpath(os.path.abspath(a), REPO))
-    rows = blocks(only or None)
-    if only and not rows:
+    # `scoped` distinguishes "no arguments" from "arguments that matched nothing".
+    # Collapsing them with `only or None` made an argument resolving to zero ids --
+    # a run whose findings are all withdrawn -- fall back to the whole corpus and
+    # report ALL BLOCKS OK, which is a pass the tool never performed.
+    scoped = any(not a.startswith("-") for a in argv)
+    if scoped and not only:
+        print("\n  nothing to check: %s names no published finding"
+              % ", ".join(sorted(a for a in argv if not a.startswith("-"))))
+        return 1
+    rows = blocks(only if scoped else None)
+    if scoped and not rows:
         print("\n  nothing matched: %s" % ", ".join(sorted(a for a in argv if not a.startswith("-"))))
         return 1
     named = [(i, t, a) for i, t, a in rows if a]

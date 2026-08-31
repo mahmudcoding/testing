@@ -167,18 +167,23 @@ def main(argv):
         # The corpus rules are a property of the pair, so they need every
         # published finding even when the invocation names one file. Scoping them
         # to the argument let "check the finding I just wrote" pass a duplicate
-        # that only a full run would catch.
+        # that only a full run would catch. One index, built once and reused for
+        # both the corpus rules and every run resolution below.
         try:
-            check_corpus(load_findings(), errs)
+            known = load_findings(status=None)
         except SourceError as e:
             errs.append(str(e))
+            known = {}
+        pub = {k: v for k, v in known.items() if v["status"] == "published"}
+        check_corpus(pub, errs)
         for p in paths:
             try:
-                if "/runs/" in p:
-                    check_run(load_run(p), errs)
+                if "/runs/" in p.replace(os.sep, "/"):
+                    check_run(load_run(p, pub, known), errs)
                 else:
-                    check_finding(load_finding(p), errs)
-            except SourceError as e:
+                    check_finding(known.get(
+                        os.path.splitext(os.path.basename(p))[0]) or load_finding(p), errs)
+            except (SourceError, OSError) as e:
                 errs.append(str(e))
         n_f, n_r = len([p for p in paths if "/runs/" not in p]), len([p for p in paths if "/runs/" in p])
     else:
@@ -202,7 +207,7 @@ def main(argv):
             if not name.endswith(".md"):
                 continue
             try:
-                runs.append(load_run(os.path.join(RUNS_DIR, name), pub))
+                runs.append(load_run(os.path.join(RUNS_DIR, name), pub, index))
             except SourceError as e:
                 errs.append(str(e))
         for r in runs:

@@ -28,8 +28,8 @@ from urllib.parse import urlparse, parse_qs
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from findings import (SNIP_DIR, SOURCE_DIRS, SourceError, bench_items,
-                      lane_name, load_runs)
+from findings import (REPO as SRC_REPO, SNIP_DIR, SOURCE_DIRS, SourceError, bench_items,
+                      lane_name, load_runs, publish_blockers)
 
 def _repair_path():
     """Put node back on PATH.
@@ -109,11 +109,11 @@ def load():
                 ).isoformat(timespec="seconds"),
             })
         for r in runs:
-            if r.get("dropped"):
-                meta["warnings"].append(
-                    "%s: %d finding(s) not published, so not shown: %s"
-                    % (os.path.basename(r["path"]), len(r["dropped"]),
-                       ", ".join(r["dropped"])))
+            # Through the shared helper, not off r["dropped"] directly: three
+            # consumers wording the same condition differently is what the helper
+            # was introduced to stop.
+            for why in publish_blockers(r):
+                meta["warnings"].append("%s: %s" % (os.path.basename(r["path"]), why))
         if runs and not items:
             meta["warnings"].append("runs found but no findings resolved — check "
                                     "each run's `findings:` list")
@@ -520,6 +520,12 @@ if __name__ == "__main__":
     # background thread. Parsing five reports takes seconds; if we did it first
     # the port would not exist yet and anything waiting on us would conclude we
     # had died. /api/ping blocks until the parse finishes, which is the signal.
+    if os.environ.get("QA_REPO"):
+        # An inherited QA_REPO redirects the whole module at import time. Left in
+        # a shell by a selftest run it points Review at another tree, where the
+        # only symptom is an empty queue -- which reads as "nothing to judge".
+        print("  NOTE: QA_REPO is set, reading %s" % SRC_REPO)
+
     def _boot():
         load()
         m = _CACHE["meta"] or {}
