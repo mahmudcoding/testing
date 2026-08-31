@@ -180,6 +180,7 @@ def main(argv):
     # Resolution is unaffected: every consumer below absolutises what it needs.
     paths = [a for a in argv if not a.startswith("-")]
     errs, unreadable = [], []
+    checked_f = checked_r = 0
     if paths:
         # The corpus rules are a property of the pair, so they need every
         # published finding even when the invocation names one file. Scoping them
@@ -197,12 +198,14 @@ def main(argv):
             try:
                 if is_run_path(p):
                     check_run(load_run(p, pub, known), errs, shown=p)
+                    checked_r += 1
                 else:
                     # Always load the named file. Reusing the index entry by
                     # basename validated a DIFFERENT file whenever the argument
                     # lived outside reports/findings -- a corrupted copy passed
                     # because a repo finding of the same name was clean.
                     check_finding(load_finding(p), errs, shown=p)
+                    checked_f += 1
             except (OSError, UnreadableSource) as e:
                 # "I could not read this" is a different answer from "this file
                 # is wrong", and the exit code says which -- see the convention
@@ -211,11 +214,11 @@ def main(argv):
                 unreadable.append(str(e))
             except SourceError as e:
                 errs.append(str(e))
-        # Counted with the same predicate that routed them. These were two
-        # different tests, so the summary could report having checked a run it
-        # never looked at.
-        n_r = len([p for p in paths if is_run_path(p)])
-        n_f = len(paths) - n_r
+        # Counted where the check succeeded, not where the path was routed.
+        # Counting named paths meant a file that could not be read still counted
+        # as checked, so "nothing was checked" was never true and the exit code
+        # said 1 for a run that never loaded.
+        n_f, n_r = checked_f, checked_r
     else:
         try:
             index = load_findings(status=None)
