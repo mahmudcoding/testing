@@ -39,6 +39,95 @@ REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 CHECKER = os.path.join(HERE, "verify_report.py")
 
+# --------------------------------------------------------------------------
+# The fixture. Every string a case mutates lives here, so a case and the text it
+# depends on are readable side by side -- when they lived in reports/ a corpus
+# edit could silently make a mutation a no-op.
+
+FIXTURE_ID = "selftest-fixture-finding"
+FIXTURE_RUN = "2026-01-01-D-selftest.md"
+
+FINDING = """---
+id: selftest-fixture-finding
+title: Неудавшееся действие показано пользователю как успешно выполненное
+tags: FE-WEB, CHAT
+severity: High
+side: frontend
+surface: Chat
+status: published
+lane: D
+accounts: alice, bob
+snippet: d-selftest.mjs
+build: v0.0.0-selftest
+sha: 0000000000ff
+---
+
+## Проблема
+
+Если запрос не проходит, автор всё равно видит подтверждение выполненного
+действия, а другие участники видят прежнее состояние. Ни ошибки, ни повторной
+попытки при этом нет.
+
+## Как воспроизвести
+
+1. В своём канале выполнить действие над собственным сообщением.
+2. Сделать так, чтобы запрос к серверу завершился ошибкой.
+3. Посмотреть на результат, затем открыть тот же канал под другим аккаунтом.
+
+## Фактический результат
+
+Автор видит успех, остальные — прежнее состояние сообщения.
+
+```
+у автора: подтверждение показано, текст исчез
+сервер:   GET /api/v1/messaging/channels/<ch>/messages -> тело на месте
+```
+
+## Подтверждённая причина
+
+Узкая граница: запрос ушёл один раз и был оборван, а сервер всё это время
+отдаёт прежнее тело — значит на сервере не происходит ничего.
+
+## Ожидаемый результат
+
+Пока сервер не подтвердил действие, результат не показывается выполненным, и
+неудача объясняется пользователю так же, как у соседних операций.
+
+## Проверка
+
+- При упавшем запросе автор видит объяснение, состояние не меняется.
+- Успешное действие по-прежнему отражается сразу у всех участников.
+- Отложенное действие не уходит на сервер молча при следующей загрузке.
+"""
+
+RUN = """---
+date: 2026-01-01
+lane: D
+sector: D
+area: chat-messages
+build: v0.0.0-selftest
+sha: 0000000000ff
+findings: selftest-fixture-finding
+---
+
+# Чат: проверка самого проверяющего
+
+Единственный прогон, существующий только внутри временного дерева селфтеста.
+
+## Проверено и работает
+
+- Ничего: этот прогон синтетический и не описывает реальную сборку.
+"""
+
+SNIPPET = """// Fixture snippet. Exists so the fixture's `snippet:` resolves; never run.
+export default async ({ page, progress }) => {
+  const asserted = true;
+  progress(1);
+  return { ready: true, asserted, stepsDone: 1, leftToDo: "nothing" };
+};
+"""
+
+
 FAILURES = []
 CASES = 0
 TMP_REPO = None      # the copied tree every case runs against
@@ -120,24 +209,39 @@ def _run_case(label, keep, text, src, run_path, expect, rc_want=1):
 
 def main():
     tmp = tempfile.mkdtemp(prefix="verify-report-selftest-")
-    shutil.copytree(os.path.join(REPO, "reports"), os.path.join(tmp, "reports"))
-    # The snippet-on-disk check resolves against QA_REPO too, so the temp tree
-    # needs the snippets a finding names -- otherwise every case would be
-    # rejected for "snippet is not on disk" rather than the mutation under test,
-    # which is exactly the wrong-reason failure the expect= assertions catch.
-    # copytree preserves mode, so a read-only source would make the copy
-    # read-only and every case would die on a PermissionError instead of
-    # reporting a verdict.
-    for d, _, fs in os.walk(os.path.join(tmp, "reports")):
-        for f in fs:
-            os.chmod(os.path.join(d, f), 0o644)
-    os.makedirs(os.path.join(tmp, "scripts", "callrig"), exist_ok=True)
-    os.symlink(os.path.join(REPO, "scripts", "callrig", "snip"),
-               os.path.join(tmp, "scripts", "callrig", "snip"))
+    _build_tree(tmp)
     try:
         return _run_cases(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _build_tree(tmp):
+    """A complete, self-contained tree: the fixture is written, not borrowed.
+
+    It used to copy reports/ and mutate whichever finding sorted first, so what
+    the negative controls actually tested depended on the corpus -- and emptying
+    reports/ silenced all of them with one line of output nobody would read as a
+    loss of coverage. Everything the cases need is synthesised here.
+
+    snip/ is copied rather than symlinked: the link meant a case that mutated a
+    snippet would write through it into tracked files, which the docstring's
+    "no case here touches a tracked file" would not lead anyone to expect.
+    """
+    for d in ("reports/findings", "reports/runs", "reports/tools", "scripts/callrig"):
+        os.makedirs(os.path.join(tmp, d), exist_ok=True)
+    shutil.copytree(os.path.join(REPO, "scripts", "callrig", "snip"),
+                    os.path.join(tmp, "scripts", "callrig", "snip"))
+    shutil.copy(os.path.join(REPO, "reports", "tools", "report.css"),
+                os.path.join(tmp, "reports", "tools", "report.css"))
+    # The snippet the fixture names. Written here so the fixture depends on
+    # nothing in scripts/callrig/snip/ that a later cleanup might remove.
+    open(os.path.join(tmp, "scripts", "callrig", "snip", "d-selftest.mjs"),
+         "w", encoding="utf-8").write(SNIPPET)
+    open(os.path.join(tmp, "reports", "findings", FIXTURE_ID + ".md"),
+         "w", encoding="utf-8").write(FINDING)
+    open(os.path.join(tmp, "reports", "runs", FIXTURE_RUN),
+         "w", encoding="utf-8").write(RUN)
 
 
 @contextlib.contextmanager
@@ -169,11 +273,7 @@ def _run_cases(tmp):
     global TMP_REPO
     TMP_REPO = tmp
     fdir = os.path.join(tmp, "reports", "findings")
-    srcs = sorted(f for f in os.listdir(fdir) if f.endswith(".md")) if os.path.isdir(fdir) else []
-    if not srcs:
-        print("no findings to mutate — write one first")
-        return 2
-    src = os.path.join(fdir, srcs[0])
+    src = os.path.join(fdir, FIXTURE_ID + ".md")
 
     # Positive control. Every case below is worthless if the clean file does not pass.
     rc, out = run(src, tmp)
@@ -208,7 +308,7 @@ def _run_cases(tmp):
 
     print("\nRepro")
     case("snippet not on disk",
-         lambda s: s.replace("snippet: d-fail-delete.mjs", "snippet: d-not-a-file.mjs"), src,
+         lambda s: s.replace("snippet: d-selftest.mjs", "snippet: d-not-a-file.mjs"), src,
          expect="is not on disk")
     case("snippet does not match the lane",
          lambda s: s.replace("lane: D", "lane: E"), src,
@@ -257,9 +357,8 @@ def _run_cases(tmp):
 
     print("\nRuns")
     rdir = os.path.join(tmp, "reports", "runs")
-    runs = sorted(f for f in os.listdir(rdir) if f.endswith(".md")) if os.path.isdir(rdir) else []
-    if runs:
-        rsrc = os.path.join(rdir, runs[0])
+    if True:
+        rsrc = os.path.join(rdir, FIXTURE_RUN)
         case("run names a finding that does not exist",
              lambda s: re.sub(r"^findings: .*$", "findings: no-such-finding", s,
                               count=1, flags=re.M), rsrc, run_path=rsrc,

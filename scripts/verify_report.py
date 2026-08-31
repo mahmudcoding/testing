@@ -270,6 +270,11 @@ def main(argv):
         # is 1 -- the same answer render_report --all gives for one bad run
         # among several.
         return 2 if n_f + n_r == 0 else 1
+    if n_f + n_r == 0:
+        # A pass over nothing is not a pass. Saying so keeps the green line
+        # meaning "I checked things and they were fine".
+        print("  nothing to check — reports/findings/ and reports/runs/ are empty")
+        return 0
     print("  ALL CHECKS PASS")
     return 0
 

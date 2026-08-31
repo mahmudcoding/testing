@@ -251,6 +251,12 @@ def main(argv):
     for rel, e in load_errors:
         print("  UNREADABLE %-36s %s" % (os.path.basename(rel), e))
     if not runs:
+        # "--all found nothing" is not the same answer as "you gave me no
+        # arguments", and printing usage for the first reads as a mistake the
+        # caller made.
+        if "--all" in argv:
+            print("\n  no runs in reports/runs/ — nothing to render\n")
+            return 0
         print(__doc__)
         return 2
     # Refuse rather than publish short. load_run drops an unpublished finding

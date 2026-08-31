@@ -145,6 +145,8 @@ def main(argv):
     elif unchecked:
         print("\nBLOCKS OK, but %d run(s) could not be fully checked (see notes)"
               % unchecked)
+    elif not rows:
+        print("\nnothing to check — no findings on disk")
     else:
         print("\nALL BLOCKS OK")
     return 1 if problems or unchecked else 0
