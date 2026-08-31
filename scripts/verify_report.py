@@ -90,8 +90,7 @@ def check_finding(f, errs):
         bad("prose is %d words over budget (%d > %d) — check whether something is "
             "misplaced rather than merely long" % (words - BUDGET, words, BUDGET))
 
-    with open(os.path.join(REPO, where), encoding="utf-8") as fh:
-        scan_text(fh.read(), where, errs)
+    scan_text(f["raw"], where, errs)   # load_finding already read the file
 
     if f["snippet"]:
         if not os.path.exists(os.path.join(SNIP_DIR, f["snippet"])):
@@ -165,6 +164,14 @@ def main(argv):
     paths = [os.path.abspath(a) for a in argv if not a.startswith("-")]
     errs = []
     if paths:
+        # The corpus rules are a property of the pair, so they need every
+        # published finding even when the invocation names one file. Scoping them
+        # to the argument let "check the finding I just wrote" pass a duplicate
+        # that only a full run would catch.
+        try:
+            check_corpus(load_findings(), errs)
+        except SourceError as e:
+            errs.append(str(e))
         for p in paths:
             try:
                 if "/runs/" in p:
@@ -182,10 +189,14 @@ def main(argv):
             return 1
         for f in index.values():
             check_finding(f, errs)
-        check_corpus(index, errs)
         # One published index for every run. Without it each run rebuilt the
         # whole index from disk: M + N*M parses instead of M + N.
         pub = {k: v for k, v in index.items() if v["status"] == "published"}
+        # Published only: a withdrawn or duplicate finding never reaches a
+        # rendered report, so sharing a title with one is not a collision. Over
+        # the whole index this made `status: duplicate` -- which the schema
+        # documents -- fail validation with an error nobody could resolve.
+        check_corpus(pub, errs)
         runs = []
         for name in sorted(os.listdir(RUNS_DIR)) if os.path.isdir(RUNS_DIR) else []:
             if not name.endswith(".md"):

@@ -25,11 +25,15 @@ shape to parse and one shape to validate.
 
     from findings import load_findings, load_run, load_runs
 """
+import copy
 import os
 import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.normpath(os.path.join(HERE, ".."))
+# QA_REPO lets a caller point the whole module at a copy of the tree. The
+# selftest uses it to mutate findings in a temp directory instead of in
+# reports/, which is what removes the need for a crash net over tracked files.
+REPO = os.environ.get("QA_REPO") or os.path.normpath(os.path.join(HERE, ".."))
 FINDINGS_DIR = os.path.join(REPO, "reports", "findings")
 RUNS_DIR = os.path.join(REPO, "reports", "runs")
 SNIP_DIR = os.path.join(REPO, "scripts", "callrig", "snip")
@@ -208,6 +212,7 @@ def load_finding(path):
         "snippet": front.get("snippet", ""),
         "build": front.get("build", ""),
         "sha": front.get("sha", ""),
+        "raw": text,          # the source, so validators need not re-read it
         "sections": secs,
         "steps": list_items(secs.get("Как воспроизвести", "")),
         "checks": list_items(secs.get("Проверка", "")),
@@ -264,17 +269,23 @@ def load_run(path, index=None):
     # run -- raising here blanked every other finding in it. Unpublished ids are
     # dropped with a note; an id that names no file at all is still an error,
     # because that is a typo rather than a decision.
-    everything = load_findings(status=None)
-    missing = [i for i in ids if i not in everything]
-    if missing:
-        raise SourceError("%s: findings not found: %s"
-                          % (os.path.relpath(path, REPO), ", ".join(missing)))
     dropped = [i for i in ids if i not in index]
+    if dropped:
+        # Only when the index cannot answer. Scanning unconditionally re-parsed
+        # every finding on disk even when the caller had already built an index,
+        # which is the cost passing one exists to avoid.
+        everything = load_findings(status=None)
+        missing = [i for i in dropped if i not in everything]
+        if missing:
+            raise SourceError("%s: findings not found: %s"
+                              % (os.path.relpath(path, REPO), ", ".join(missing)))
     ids = [i for i in ids if i in index]
-    # Copy before ordering. These dicts belong to a shared index, so numbering
-    # them in place meant a finding listed by two runs took whichever number the
-    # last run assigned.
-    items = [dict(index[i]) for i in ids]
+    # Deep-copy before ordering. These dicts belong to a shared index, so
+    # numbering them in place meant a finding listed by two runs took whichever
+    # number the last run assigned. A shallow dict() left `steps`, `accounts`,
+    # `sections` and `repro` shared, so the guarantee only held for the keys
+    # nobody happened to mutate yet.
+    items = [copy.deepcopy(index[i]) for i in ids]
     items.sort(key=lambda f: SEV_RANK.get(f["sev"], len(SEVERITIES)))
     for i, f in enumerate(items, start=1):
         f["n"] = i
@@ -297,6 +308,22 @@ def load_run(path, index=None):
         "basename": "aloqa-%s-qa-%s-%s" % (front.get("area", "report"),
                                            front.get("date", ""), front.get("lane", "")),
     }
+
+
+def publish_blockers(run):
+    """Why this run must not be published, or [] if it may be.
+
+    One definition, three reactions: the renderer refuses, the validator errors,
+    the bench warns. Leaving each consumer to decide for itself is how the
+    renderer ended up silently publishing a run short -- it was the only one that
+    never asked.
+    """
+    out = []
+    for d in run.get("dropped") or []:
+        out.append("lists %s, which is not published" % d)
+    if not run.get("items"):
+        out.append("has no findings to publish")
+    return out
 
 
 def load_runs():

@@ -18,7 +18,8 @@ import os, re, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
-from findings import SNIP_DIR as SNIP, load_findings  # noqa: E402
+from findings import (SNIP_DIR as SNIP, SourceError, load_findings,  # noqa: E402
+                      load_run)
 
 
 def blocks(only=None):
@@ -30,7 +31,9 @@ def blocks(only=None):
     come apart.
     """
     out = []
-    for f in sorted(load_findings().values(), key=lambda x: x["id"]):
+    # Every status, not just published: a withdrawn finding is still a real file
+    # on disk, and scoping the tool to one used to hard-fail as "nothing matched".
+    for f in sorted(load_findings(status=None).values(), key=lambda x: x["id"]):
         if only and f["id"] not in only and f["path"] not in only:
             continue
         out.append((f["id"], f["title"][:70], f["repro"]))
@@ -69,6 +72,17 @@ def main(argv):
     only = set()
     for a in argv:
         if a.startswith("-"):
+            continue
+        # A run expands to the findings it publishes. Since the source-format
+        # change the report-shaped file IS the run, so pointing the tool at one
+        # is the natural scoped invocation and used to exit 1 as "nothing
+        # matched".
+        if "/runs/" in a.replace(os.sep, "/") or os.path.basename(os.path.dirname(os.path.abspath(a))) == "runs":
+            try:
+                only.update(f["id"] for f in load_run(os.path.abspath(a))["items"])
+            except (SourceError, OSError) as e:
+                print("\n  %s" % e)
+                return 1
             continue
         only.add(a)
         only.add(os.path.splitext(os.path.basename(a))[0])

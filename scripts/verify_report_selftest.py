@@ -13,6 +13,12 @@ corpus was never negative-controlled at all; this one mutates a single file and
 has no such precondition. And four of its cases are gone rather than ported: they
 tested that the summary table still agreed with the articles, which is not a thing
 that can drift once both are generated from one list.
+
+Nothing here touches a tracked file. reports/ is copied into a temp tree and the
+checker is pointed at it with QA_REPO, so a kill mid-mutation loses a copy rather
+than a finding. The earlier version mutated the real file and restored it in a
+finally, with a sidecar as a crash net -- a net over a hazard that did not need
+to exist.
 """
 import os
 import re
@@ -24,21 +30,22 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from findings import FINDINGS_DIR, RUNS_DIR, SOURCE_DIRS  # noqa: E402
 CHECKER = os.path.join(HERE, "verify_report.py")
 
 FAILURES = []
 CASES = 0
+TMP_REPO = None      # the copied tree every case runs against
 
 
-def run(path):
+def run(path, repo):
     r = subprocess.run([sys.executable, CHECKER, path],
-                       capture_output=True, text=True, timeout=60, cwd=REPO)
+                       capture_output=True, text=True, timeout=60, cwd=REPO,
+                       env=dict(os.environ, QA_REPO=repo))
     return r.returncode, r.stdout
 
 
 def case(label, mutate, src, run_path=None, expect=None):
-    """Apply `mutate` to `src` and require the checker to reject it *for the right reason*.
+    """Mutate `src` in the temp tree and require rejection for the right reason.
 
     `expect` is a substring of the message that should fire. Without it a case
     passes whenever anything at all is rejected, and three of these did exactly
@@ -48,12 +55,6 @@ def case(label, mutate, src, run_path=None, expect=None):
     """
     global CASES
     CASES += 1
-    # Mutating in place inside reports/findings, so relative-path checks and the
-    # run's `findings:` resolution behave exactly as they do for real -- but a
-    # kill between the write and the restore would leave a real finding holding a
-    # deliberately corrupted body. The sidecar is the crash net: it is written
-    # before the mutation and removed after the restore, and restore_orphans()
-    # puts the file back on the next run if this process never got there.
     keep = open(src, encoding="utf-8").read()
     text = mutate(keep)
     if text is None:
@@ -63,12 +64,9 @@ def case(label, mutate, src, run_path=None, expect=None):
         print("  FAIL %s — the mutation changed nothing" % label)
         FAILURES.append(label)
         return
-    bak = src + BAK
-    with open(bak, "w", encoding="utf-8") as fh:
-        fh.write(keep)
     try:
         open(src, "w", encoding="utf-8").write(text)
-        rc, out = run(run_path or src)
+        rc, out = run(run_path or src, TMP_REPO)
         why = [l.strip()[6:] for l in out.splitlines() if l.strip().startswith("FAIL")]
         if rc == 0:
             print("  FAIL %s — checker accepted it" % label)
@@ -83,29 +81,34 @@ def case(label, mutate, src, run_path=None, expect=None):
             print("  ok   %s\n         → %s" % (label, (why[0] if why else "")[:92]))
     finally:
         open(src, "w", encoding="utf-8").write(keep)
-        os.remove(bak)
-
-
-BAK = ".selftest-orig"
-
-
-def restore_orphans():
-    """Put back anything a killed run left mutated, before doing anything else."""
-    for d in SOURCE_DIRS:
-        for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
-            if not name.endswith(BAK):
-                continue
-            bak = os.path.join(d, name)
-            live = bak[:-len(BAK)]
-            shutil.copyfile(bak, live)
-            os.remove(bak)
-            print("  restored %s — a previous run was interrupted mid-mutation"
-                  % os.path.relpath(live, REPO))
 
 
 def main():
-    restore_orphans()
-    fdir = FINDINGS_DIR
+    tmp = tempfile.mkdtemp(prefix="verify-report-selftest-")
+    shutil.copytree(os.path.join(REPO, "reports"), os.path.join(tmp, "reports"))
+    # The snippet-on-disk check resolves against QA_REPO too, so the temp tree
+    # needs the snippets a finding names -- otherwise every case would be
+    # rejected for "snippet is not on disk" rather than the mutation under test,
+    # which is exactly the wrong-reason failure the expect= assertions catch.
+    # copytree preserves mode, so a read-only source would make the copy
+    # read-only and every case would die on a PermissionError instead of
+    # reporting a verdict.
+    for d, _, fs in os.walk(os.path.join(tmp, "reports")):
+        for f in fs:
+            os.chmod(os.path.join(d, f), 0o644)
+    os.makedirs(os.path.join(tmp, "scripts", "callrig"), exist_ok=True)
+    os.symlink(os.path.join(REPO, "scripts", "callrig", "snip"),
+               os.path.join(tmp, "scripts", "callrig", "snip"))
+    try:
+        return _run_cases(tmp)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _run_cases(tmp):
+    global TMP_REPO
+    TMP_REPO = tmp
+    fdir = os.path.join(tmp, "reports", "findings")
     srcs = sorted(f for f in os.listdir(fdir) if f.endswith(".md")) if os.path.isdir(fdir) else []
     if not srcs:
         print("no findings to mutate — write one first")
@@ -113,7 +116,7 @@ def main():
     src = os.path.join(fdir, srcs[0])
 
     # Positive control. Every case below is worthless if the clean file does not pass.
-    rc, out = run(src)
+    rc, out = run(src, tmp)
     print("\n  positive control — the unmutated file passes: %s" % ("yes" if rc == 0 else "NO"))
     if rc != 0:
         print(out)
@@ -193,7 +196,7 @@ def main():
          expect="is not a full path")
 
     print("\nRuns")
-    rdir = RUNS_DIR
+    rdir = os.path.join(tmp, "reports", "runs")
     runs = sorted(f for f in os.listdir(rdir) if f.endswith(".md")) if os.path.isdir(rdir) else []
     if runs:
         rsrc = os.path.join(rdir, runs[0])

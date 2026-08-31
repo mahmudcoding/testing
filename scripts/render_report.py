@@ -27,7 +27,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from findings import (FENCE, REPO, SECTIONS, SourceError,  # noqa: E402
-                      load_run, load_runs)
+                      load_run, load_runs, publish_blockers)
 
 CSS = os.path.join(REPO, "reports", "tools", "report.css")
 BUILD = os.path.join(REPO, "build")
@@ -241,6 +241,19 @@ def main(argv):
     if not runs:
         print(__doc__)
         return 2
+    # Refuse rather than publish short. load_run drops an unpublished finding
+    # instead of raising, so without this the renderer was the one consumer that
+    # never asked -- it wrote a run missing a finding, printed a count that
+    # agreed with the reduced set, and exited 0.
+    blocked = [(r, publish_blockers(r)) for r in runs]
+    bad = [(r, b) for r, b in blocked if b]
+    if bad and "--force" not in argv:
+        for r, b in bad:
+            for why in b:
+                print("  REFUSING %s: %s" % (r["path"], why))
+        print("\n  Fix the run's `findings:` list, or re-render with --force to "
+              "publish what remains.")
+        return 1
     os.makedirs(BUILD, exist_ok=True)
     for run in runs:
         run["laneName"] = lane_name(run)

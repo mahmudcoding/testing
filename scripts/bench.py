@@ -66,13 +66,13 @@ PORT = int(os.environ.get("BENCH_PORT", "8777"))
 SNIP = os.path.join(REPO, "scripts", "callrig", "snip")
 _CACHE = {"items": None, "stamp": None, "meta": None}
 _LOAD_LOCK = threading.RLock()
-SRC_DIRS = SOURCE_DIRS
+
 
 
 def _stamp():
     """Every source file and its mtime, so an edit reloads without a restart."""
     out = []
-    for d in SRC_DIRS:
+    for d in SOURCE_DIRS:
         if not os.path.isdir(d):
             continue
         for n in sorted(os.listdir(d)):
@@ -135,6 +135,12 @@ def _orphan_state(live_ids):
     try:
         st = json.loads(read_state() or "{}")
     except ValueError:
+        return set()
+    # Valid JSON that is not an object -- [] or null or 3 -- reaches here because
+    # POST /api/state persists whatever it is handed. Reading .get() off it raised
+    # AttributeError, which killed the process before the port bound and left
+    # deleting the verdict file as the only way back in.
+    if not isinstance(st, dict):
         return set()
     keys = set()
     for section in ("verdicts", "expected", "priority"):
@@ -520,22 +526,17 @@ if __name__ == "__main__":
         # Per-lane counts, because a truncated report parses to zero findings
         # and the lane silently vanishes from the queue otherwise.
         for r in m.get("reports", []):
-            print(f"  lane {r['lane']}: {r['count']} findings parsed")
+            print("  %-34s %s, %d finding(s)" % (r["file"], r["laneName"], r["count"]))
+        if not m.get("reports"):
+            print("  no runs in reports/runs/ — nothing to judge")
         for w in m.get("warnings", []):
             print(f"  WARNING: {w}")
     threading.Thread(target=_boot, daemon=True).start()
     print(f"\n  Review")
     print(f"  http://127.0.0.1:{PORT}\n")
-    # Say what it is carrying. A queue that came up empty, or short, is
-    # indistinguishable from a correct one until someone judges the wrong thing.
-    _m = load_meta()
-    for _r in _m.get("reports", []):
-        print("  %-34s %s, %d finding(s)" % (_r["file"], _r["laneName"], _r["count"]))
-    if not _m.get("reports"):
-        print("  no runs in reports/runs/ — nothing to judge")
-    for _w in _m.get("warnings", []):
-        print("  WARNING: %s" % _w)
-    print()
+    # The readout stays on the _boot thread. Doing it here blocked the bind on a
+    # full parse, which the comment above exists to prevent, and printed every
+    # warning a second time.
     print("  Reproduce launches real browsers on your machine. Ctrl-C to stop.\n")
     if not os.environ.get("BENCH_NO_BROWSER"):      # the .app hosts its own window
         threading.Timer(0.8, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
