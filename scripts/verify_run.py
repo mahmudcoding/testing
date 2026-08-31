@@ -9,7 +9,7 @@
 You perform the trigger and you judge. This only removes setup and ordering.
 Verdicts are written to verifications/verification-<lane>-<date>.md as a signed record.
 """
-import sys, os, json, subprocess, datetime, re
+import sys, os, subprocess, datetime, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from findings import SourceError, load_run, notes_for, publish_blockers
 from collections import defaultdict

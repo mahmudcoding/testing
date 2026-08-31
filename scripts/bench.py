@@ -28,7 +28,7 @@ from urllib.parse import urlparse, parse_qs
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from findings import (REPO as SRC_REPO, SNIP_DIR, SOURCE_DIRS, SourceError, bench_items,
+from findings import (REPO as SRC_REPO, SNIP_DIR, SOURCE_DIRS, bench_items,
                       lane_name, load_runs, publish_blockers)
 
 def _repair_path():

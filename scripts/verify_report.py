@@ -23,9 +23,9 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REPO, REQUIRED_SECTIONS,  # noqa: E402
+from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REQUIRED_SECTIONS,  # noqa: E402
                       RUNS_DIR, SEVERITIES, SIDES, SNIP_DIR, STATUSES, SURFACES, is_run_path,
-                      SourceError, load_finding, load_findings, load_run, plain,
+                      SourceError, UnreadableSource, load_finding, load_findings, load_run, plain,
                       publish_blockers)
 
 # Fixture names, ids, ports and hosts that must never reach a published report.
@@ -202,10 +202,11 @@ def main(argv):
                     # lived outside reports/findings -- a corrupted copy passed
                     # because a repo finding of the same name was clean.
                     check_finding(load_finding(p), errs, shown=p)
-            except OSError as e:
+            except (OSError, UnreadableSource) as e:
                 # "I could not read this" is a different answer from "this file
                 # is wrong", and the exit code says which -- see the convention
-                # at the end of main().
+                # at the end of main(). A missing file and one that will not
+                # parse are the same answer: nothing was checked.
                 unreadable.append(str(e))
             except SourceError as e:
                 errs.append(str(e))

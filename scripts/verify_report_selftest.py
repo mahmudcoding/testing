@@ -51,7 +51,7 @@ def run(path, repo):
     return r.returncode, r.stdout
 
 
-def case(label, mutate, src, run_path=None, expect=None, also=None):
+def case(label, mutate, src, run_path=None, expect=None, also=None, rc_want=1):
     """Mutate `src` in the temp tree and require rejection for the right reason.
 
     `expect` is a substring of the message that should fire. Without it a case
@@ -75,7 +75,7 @@ def case(label, mutate, src, run_path=None, expect=None, also=None):
             print("  FAIL %s — the mutation changed nothing" % label)
             FAILURES.append(label)
             return
-        _run_case(label, keep, text, src, run_path, expect)
+        _run_case(label, keep, text, src, run_path, expect, rc_want)
 
 
 @contextlib.contextmanager
@@ -83,7 +83,7 @@ def _nothing():
     yield False
 
 
-def _run_case(label, keep, text, src, run_path, expect):
+def _run_case(label, keep, text, src, run_path, expect, rc_want=1):
     try:
         open(src, "w", encoding="utf-8").write(text)
         rc, out = run(run_path or src, TMP_REPO)
@@ -91,10 +91,20 @@ def _run_case(label, keep, text, src, run_path, expect):
         # at [:92] every diagnostic truncated to the directory name -- which
         # blinds exactly the output that catches a case rejected by the wrong
         # check, the thing the expect= assertions exist for.
-        why = [l.strip()[6:].replace(TMP_REPO + os.sep, "")
-               for l in out.splitlines() if l.strip().startswith("FAIL")]
+        # Both prefixes: the checker says FAIL for "read it, found it wrong" and
+        # UNREADABLE for "could not read it". Reading only FAIL made every
+        # expect= assertion on an unreadable case impossible to satisfy.
+        why = [l.strip().split(None, 1)[1].replace(TMP_REPO + os.sep, "")
+               for l in out.splitlines()
+               if l.strip().startswith(("FAIL", "UNREADABLE"))]
         if rc == 0:
             print("  FAIL %s — checker accepted it" % label)
+            FAILURES.append(label)
+        elif rc != rc_want:
+            # 1 means "read it, found it wrong"; 2 means "could not read it".
+            # A caller that acts on the difference gets a wrong answer if these
+            # drift, and nothing else asserts them.
+            print("  FAIL %s — rejected with exit %d, expected %d" % (label, rc, rc_want))
             FAILURES.append(label)
         elif expect and not any(expect in w for w in why):
             print("  FAIL %s — rejected, but by the wrong check" % label)
@@ -257,6 +267,9 @@ def _run_cases(tmp):
         case("run missing its build stamp",
              lambda s: re.sub(r"^build: .*\n", "", s, count=1, flags=re.M), rsrc, run_path=rsrc,
              expect="missing build")
+        case("unparseable run is exit 2, not exit 1",
+             lambda s: "junk, not frontmatter\n", rsrc, run_path=rsrc,
+             expect="no frontmatter", rc_want=2)
         case("run with no heading",
              lambda s: re.sub(r"^# .*\n", "", s, count=1, flags=re.M), rsrc, run_path=rsrc,
              expect="no '# ' heading")

@@ -64,7 +64,18 @@ SOURCE_DIRS = [FINDINGS_DIR, RUNS_DIR]
 
 
 class SourceError(Exception):
-    """A source file that cannot be read as a finding or a run."""
+    """Something is wrong with the source."""
+
+
+class UnreadableSource(SourceError):
+    """This file cannot be read as source at all.
+
+    Distinct from a SourceError about the *content*, because the two get
+    different exit codes: nothing can be checked in a file that will not parse,
+    while a file that parses and names a missing finding has been read fine and
+    found wanting. Subclasses SourceError so every existing `except SourceError`
+    still catches it.
+    """
 
 
 # --------------------------------------------------------------------------
@@ -79,10 +90,10 @@ def split_front(text, path="<source>"):
     shape is that there is exactly one thing the parser can encounter.
     """
     if not text.startswith("---\n"):
-        raise SourceError("%s: no frontmatter (file must open with '---')" % path)
+        raise UnreadableSource("%s: no frontmatter (file must open with '---')" % path)
     end = text.find("\n---\n", 3)
     if end == -1:
-        raise SourceError("%s: frontmatter is never closed with '---'" % path)
+        raise UnreadableSource("%s: frontmatter is never closed with '---'" % path)
     head, body = text[4:end + 1], text[end + 5:]
 
     front = {}
@@ -90,15 +101,15 @@ def split_front(text, path="<source>"):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         if line[:1] in " \t":
-            raise SourceError("%s:%d: indented frontmatter line — the schema is "
+            raise UnreadableSource("%s:%d: indented frontmatter line — the schema is "
                               "flat, use a comma list instead of nesting" % (path, n))
         if ":" not in line:
-            raise SourceError("%s:%d: frontmatter line without a colon: %r"
+            raise UnreadableSource("%s:%d: frontmatter line without a colon: %r"
                               % (path, n, line[:60]))
         k, _, v = line.partition(":")
         k, v = k.strip(), v.strip()
         if k in front:
-            raise SourceError("%s:%d: duplicate frontmatter key %r" % (path, n, k))
+            raise UnreadableSource("%s:%d: duplicate frontmatter key %r" % (path, n, k))
         front[k] = [x.strip() for x in v.split(",") if x.strip()] if k in LIST_FIELDS else v
     return front, body
 
@@ -125,7 +136,7 @@ def split_sections(body, path="<source>", preamble=False):
         elif cur is not None:
             buf.append(line)
         elif line.strip() and not line.startswith("#") and not preamble:
-            raise SourceError("%s: prose before the first '## ' heading — a finding "
+            raise UnreadableSource("%s: prose before the first '## ' heading — a finding "
                               "is only sections, so this text would be dropped" % path)
     if cur is not None:
         out[cur] = "\n".join(buf).strip()
@@ -188,7 +199,7 @@ def load_finding(path):
 
     unknown = [h for h in secs if h not in SECTIONS]
     if unknown:
-        raise SourceError("%s: unknown section heading(s): %s — the schema is %s"
+        raise UnreadableSource("%s: unknown section heading(s): %s — the schema is %s"
                           % (path, ", ".join(unknown), ", ".join(SECTIONS)))
 
     actual_prose, measure = split_prose_and_code(secs.get("Фактический результат", ""))
@@ -385,7 +396,9 @@ def bench_items(runs=None):
     and the Mac app need no changes.
     """
     out = []
-    for r in runs if runs is not None else load_runs():
+    # Degrade like every other consumer: the CLI used to traceback on one bad
+    # run while the five tools all skipped it and said so.
+    for r in runs if runs is not None else load_runs([]):
         for f in r["items"]:
             out.append({
                 # The FINDING's lane, not the run's. The snippet is bound to a
