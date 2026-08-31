@@ -92,11 +92,14 @@ def load():
         if _CACHE["items"] is not None and _CACHE["stamp"] == st:
             return _CACHE["items"]
         meta = {"warnings": [], "reports": [], "tileLeft": int(TILE_LEFT)}
-        try:
-            runs = load_runs()
-        except SourceError as e:
-            meta["warnings"].append(str(e))
-            runs = []
+        # Per file: one unreadable run used to blank the whole judging queue,
+        # which from inside the app is indistinguishable from having nothing to
+        # judge. Each bad file is now one warning and the rest still load.
+        load_errors = []
+        runs = load_runs(load_errors)
+        for rel, e in load_errors:
+            meta["warnings"].append("%s could not be read: %s"
+                                    % (os.path.basename(rel), e))
         items = bench_items(runs) if runs else []
         for r in runs:
             meta["reports"].append({

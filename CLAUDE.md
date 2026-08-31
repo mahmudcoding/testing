@@ -137,7 +137,7 @@ Staging also holds unrelated `qa.*` leftovers (`qa.probe.*`, `qa.livecall.*`) fr
   ```
 
   Frontmatter is flat on purpose — scalars and comma lists, no nesting — so there is one shape to write and
-  one to validate. `python3 scripts/verify_report.py` checks all of it.
+  one to validate. `python3 scripts/verify_report.py` checks all of it. **All five tools share one exit convention** — `0` nothing wrong, `1` problems found in what was checked, `2` could not run at all (a path that does not exist, a file that will not parse). A caller that treats every non-zero the same is fine; one that distinguishes a failing report from a mistyped path needs the difference.
 
 - **A finding that turns out not to be a bug stays, as `status: withdrawn`, with a `## Почему снято` section
   carrying the measurement that killed it.** It never reaches a report, and it is the only thing that stops a

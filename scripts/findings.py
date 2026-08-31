@@ -347,14 +347,33 @@ def publish_blockers(run):
     return out
 
 
-def load_runs():
-    """Every run on disk, newest first."""
+def load_runs(errors=None):
+    """Every run on disk, newest first.
+
+    Pass a list as `errors` and an unparseable run is appended to it as
+    (path, exception) instead of raising, so one bad file costs one run rather
+    than all of them. Omit it and the raise stands, for a caller that wants the
+    whole set or nothing.
+
+    The default used to be the only behaviour, and it made the two consumers
+    disagree: the renderer aborted every run over one malformed file while the
+    validator reported it and carried on, and the bench blanked its entire queue.
+    """
     if not os.path.isdir(RUNS_DIR):
         return []
     known = load_findings(status=None)
     index = {k: v for k, v in known.items() if v["status"] == "published"}
-    runs = [load_run(os.path.join(RUNS_DIR, n), index, known)
-            for n in sorted(os.listdir(RUNS_DIR)) if n.endswith(".md")]
+    runs = []
+    for name in sorted(os.listdir(RUNS_DIR)):
+        if not name.endswith(".md"):
+            continue
+        path = os.path.join(RUNS_DIR, name)
+        try:
+            runs.append(load_run(path, index, known))
+        except (SourceError, OSError) as e:
+            if errors is None:
+                raise
+            errors.append((os.path.relpath(path, REPO), e))
     runs.sort(key=lambda r: (r["date"], r["lane"]), reverse=True)
     return runs
 

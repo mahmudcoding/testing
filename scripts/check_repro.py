@@ -70,7 +70,13 @@ def main(argv):
     # full-corpus output to someone who thought they had scoped the run to one
     # file, which reads as a clean result for findings they never asked about.
     only, unchecked = set(), 0
+    # Dedup: the same run named twice was counted twice and printed twice, so the
+    # verdict line reported a number of unchecked runs nobody asked about.
+    seen = set()
     for a in argv:
+        if a in seen:
+            continue
+        seen.add(a)
         if a.startswith("-"):
             continue
         # A run expands to the findings it publishes. Since the source-format
@@ -92,8 +98,10 @@ def main(argv):
                     # reported "1 listed finding(s)" for a run listing none.
                     unchecked += 1
             except (SourceError, OSError) as e:
+                # 2, not 1: could-not-run, not problems-found. See the shared
+                # convention documented in CLAUDE.md.
                 print("\n  %s" % e)
-                return 1
+                return 2
             continue
         only.add(a)
         only.add(os.path.splitext(os.path.basename(a))[0])
@@ -105,12 +113,12 @@ def main(argv):
     scoped = any(not a.startswith("-") for a in argv)
     if scoped and not only:
         print("\n  nothing to check: %s names no published finding"
-              % ", ".join(sorted(a for a in argv if not a.startswith("-"))))
-        return 1
+              % ", ".join(sorted(seen)))
+        return 2
     rows = blocks(only if scoped else None)
     if scoped and not rows:
-        print("\n  nothing matched: %s" % ", ".join(sorted(a for a in argv if not a.startswith("-"))))
-        return 1
+        print("\n  nothing matched: %s" % ", ".join(sorted(seen)))
+        return 2
     named = [(i, t, a) for i, t, a in rows if a]
     problems = 0
     print("\n  %d of %d findings carry a runnable block\n" % (len(named), len(rows)))

@@ -28,6 +28,7 @@ directory before adding one.
 """
 import os
 import re
+import contextlib
 import shutil
 import subprocess
 import sys
@@ -66,11 +67,23 @@ def case(label, mutate, src, run_path=None, expect=None, also=None):
     if text is None:
         print("  skip %s" % label)
         return
-    if text == keep and also is None:
-        print("  FAIL %s — the mutation changed nothing" % label)
-        FAILURES.append(label)
-        return
-    undo = also() if also else None
+    # A case must change something, whether that is `src` or the wider tree. The
+    # exemption used to be "unless also= is given", which let an also= case whose
+    # setup silently stopped working keep passing with nothing changed anywhere.
+    with (also() if also else _nothing()) as changed_elsewhere:
+        if text == keep and not changed_elsewhere:
+            print("  FAIL %s — the mutation changed nothing" % label)
+            FAILURES.append(label)
+            return
+        _run_case(label, keep, text, src, run_path, expect)
+
+
+@contextlib.contextmanager
+def _nothing():
+    yield False
+
+
+def _run_case(label, keep, text, src, run_path, expect):
     try:
         open(src, "w", encoding="utf-8").write(text)
         rc, out = run(run_path or src, TMP_REPO)
@@ -93,8 +106,6 @@ def case(label, mutate, src, run_path=None, expect=None, also=None):
             print("  ok   %s\n         → %s" % (label, (why[0] if why else "")[:92]))
     finally:
         open(src, "w", encoding="utf-8").write(keep)
-        if undo:
-            undo()
 
 
 def main():
@@ -119,8 +130,15 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+@contextlib.contextmanager
 def _withdraw(fdir):
-    """Set every finding in the temp tree to withdrawn; return the undo."""
+    """Every finding in the temp tree withdrawn for the duration.
+
+    A context manager rather than a returned undo: the restore is then structural
+    rather than an ordering the caller has to get right in a finally alongside
+    its own. Yields whether it actually changed anything, so a case relying on it
+    is still held to the must-change rule.
+    """
     saved = {}
     for name in sorted(os.listdir(fdir)):
         if not name.endswith(".md"):
@@ -129,11 +147,12 @@ def _withdraw(fdir):
         saved[path] = open(path, encoding="utf-8").read()
         open(path, "w", encoding="utf-8").write(
             saved[path].replace("status: published", "status: withdrawn"))
-
-    def undo():
+    changed = any(open(p, encoding="utf-8").read() != t for p, t in saved.items())
+    try:
+        yield changed
+    finally:
         for path, text in saved.items():
             open(path, "w", encoding="utf-8").write(text)
-    return undo
 
 
 def _run_cases(tmp):

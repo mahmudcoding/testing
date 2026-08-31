@@ -178,7 +178,7 @@ def main(argv):
     # and blinded the output that catches a case rejected by the wrong check.
     # Resolution is unaffected: every consumer below absolutises what it needs.
     paths = [a for a in argv if not a.startswith("-")]
-    errs = []
+    errs, unreadable = [], []
     if paths:
         # The corpus rules are a property of the pair, so they need every
         # published finding even when the invocation names one file. Scoping them
@@ -202,7 +202,12 @@ def main(argv):
                     # lived outside reports/findings -- a corrupted copy passed
                     # because a repo finding of the same name was clean.
                     check_finding(load_finding(p), errs, shown=p)
-            except (SourceError, OSError) as e:
+            except OSError as e:
+                # "I could not read this" is a different answer from "this file
+                # is wrong", and the exit code says which -- see the convention
+                # at the end of main().
+                unreadable.append(str(e))
+            except SourceError as e:
                 errs.append(str(e))
         # Counted with the same predicate that routed them. These were two
         # different tests, so the summary could report having checked a run it
@@ -214,7 +219,7 @@ def main(argv):
             index = load_findings(status=None)
         except SourceError as e:
             print("  %s" % e)
-            return 1
+            return 2
         for f in index.values():
             check_finding(f, errs)
         # One published index for every run. Without it each run rebuilt the
@@ -237,12 +242,20 @@ def main(argv):
             check_run(r, errs)
         n_f, n_r = len(index), len(runs)
 
+    # Exit codes, shared by all five tools: 0 nothing wrong, 1 problems found in
+    # what was checked, 2 could not run at all. Returning 1 for both left a
+    # caller unable to tell a failing report from a mistyped path.
     print("\n  %d finding(s), %d run(s) checked" % (n_f, n_r))
+    for e in unreadable:
+        print("  UNREADABLE  %s" % e)
+    for e in errs:
+        print("  FAIL  %s" % e)
     if errs:
-        for e in errs:
-            print("  FAIL  %s" % e)
         print("\n  %d problem(s)" % len(errs))
         return 1
+    if unreadable:
+        print("\n  %d path(s) could not be read" % len(unreadable))
+        return 2
     print("  ALL CHECKS PASS")
     return 0
 

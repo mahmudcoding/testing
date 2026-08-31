@@ -236,14 +236,20 @@ def _plural(n):
 
 def main(argv):
     from findings import lane_name
+    load_errors = []
     try:
-        runs = load_runs() if "--all" in argv else [load_run(os.path.abspath(a))
-                                                    for a in argv if not a.startswith("-")]
+        if "--all" in argv:
+            # Per file, not all-or-nothing: one malformed run used to abort the
+            # whole render, so a single bad file blocked every other sector's
+            # report. A named run still raises -- there the file is the request.
+            runs = load_runs(load_errors)
+        else:
+            runs = [load_run(os.path.abspath(a)) for a in argv if not a.startswith("-")]
     except (SourceError, OSError) as e:
-        # Same guard the other four tools carry. Without it a typo in a run name
-        # came out as a FileNotFoundError traceback.
         print("\n  %s\n" % e)
         return 2
+    for rel, e in load_errors:
+        print("  UNREADABLE %-36s %s" % (os.path.basename(rel), e))
     if not runs:
         print(__doc__)
         return 2
@@ -271,11 +277,13 @@ def main(argv):
         print("  %-52s %d findings, %d bytes"
               % (os.path.relpath(out, REPO), len(run["items"]),
                  os.path.getsize(out)))
+    if load_errors:
+        print("\n  %d run(s) could not be read and were skipped." % len(load_errors))
     if refused:
         print("\n  %d run(s) refused. Fix the `findings:` list — or re-run with "
               "--force, which publishes what remains for EVERY run in this "
               "invocation, not just the refused ones." % refused)
-    return 1 if refused else 0
+    return 1 if refused or load_errors else 0
 
 
 if __name__ == "__main__":
