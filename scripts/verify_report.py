@@ -172,11 +172,11 @@ def check_corpus(index, errs):
 
 
 def main(argv):
-    # As typed, not absolutised. `shown` is meant to echo the caller's own words
-    # back in every message; abspath'ing here made it a 126-character temp prefix
-    # in the selftest, which truncates the wrong-check diagnostic to the
-    # directory name -- blinding the one output that catches a case rejected for
-    # the wrong reason.
+    # As typed. `shown` echoes the caller's own words back in every message, and
+    # absolutising here made that a 126-character temp prefix in the selftest --
+    # which, at the width the diagnostic prints, truncated to the directory name
+    # and blinded the output that catches a case rejected by the wrong check.
+    # Resolution is unaffected: every consumer below absolutises what it needs.
     paths = [a for a in argv if not a.startswith("-")]
     errs = []
     if paths:

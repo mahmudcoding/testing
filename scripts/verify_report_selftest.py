@@ -50,7 +50,7 @@ def run(path, repo):
     return r.returncode, r.stdout
 
 
-def case(label, mutate, src, run_path=None, expect=None):
+def case(label, mutate, src, run_path=None, expect=None, also=None):
     """Mutate `src` in the temp tree and require rejection for the right reason.
 
     `expect` is a substring of the message that should fire. Without it a case
@@ -66,10 +66,11 @@ def case(label, mutate, src, run_path=None, expect=None):
     if text is None:
         print("  skip %s" % label)
         return
-    if text == keep:
+    if text == keep and also is None:
         print("  FAIL %s — the mutation changed nothing" % label)
         FAILURES.append(label)
         return
+    undo = also() if also else None
     try:
         open(src, "w", encoding="utf-8").write(text)
         rc, out = run(run_path or src, TMP_REPO)
@@ -92,6 +93,8 @@ def case(label, mutate, src, run_path=None, expect=None):
             print("  ok   %s\n         → %s" % (label, (why[0] if why else "")[:92]))
     finally:
         open(src, "w", encoding="utf-8").write(keep)
+        if undo:
+            undo()
 
 
 def main():
@@ -114,6 +117,23 @@ def main():
         return _run_cases(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _withdraw(fdir):
+    """Set every finding in the temp tree to withdrawn; return the undo."""
+    saved = {}
+    for name in sorted(os.listdir(fdir)):
+        if not name.endswith(".md"):
+            continue
+        path = os.path.join(fdir, name)
+        saved[path] = open(path, encoding="utf-8").read()
+        open(path, "w", encoding="utf-8").write(
+            saved[path].replace("status: published", "status: withdrawn"))
+
+    def undo():
+        for path, text in saved.items():
+            open(path, "w", encoding="utf-8").write(text)
+    return undo
 
 
 def _run_cases(tmp):
@@ -221,6 +241,16 @@ def _run_cases(tmp):
         case("run with no heading",
              lambda s: re.sub(r"^# .*\n", "", s, count=1, flags=re.M), rsrc, run_path=rsrc,
              expect="no '# ' heading")
+        # check_run's publishability path was rewired three times across this fix
+        # series and never negative-controlled. A run listing an id that exists
+        # but is not published must be an error, not a quiet short publish.
+        case("run lists a finding that is not published",
+             lambda s: s, rsrc, run_path=rsrc, expect="which is not published",
+             also=lambda: _withdraw(fdir))
+        # And the leak scan reaches run prose, which it did not until recently.
+        case("leaked fixture name in the run's lede",
+             lambda s: s.replace("# Чат", "# Чат qa.bob@aloqa.test"), rsrc,
+             run_path=rsrc, expect="leaked test-setup name")
 
     print("\n  %d cases, %d failed" % (CASES, len(FAILURES)))
     if FAILURES:

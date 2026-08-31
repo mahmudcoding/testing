@@ -83,8 +83,13 @@ def main(argv):
                 only.update(f["id"] for f in run["items"])
                 # Say what the run lists but cannot be checked, rather than
                 # quietly reporting a pass over the remainder.
-                for why in publish_blockers(run):
-                    print("  note  %s %s — not checked" % (os.path.basename(a), why))
+                why = publish_blockers(run)
+                for w in why:
+                    print("  note  %s %s — not checked" % (os.path.basename(a), w))
+                if why:
+                    # Count runs, not blocker strings: "has no findings to
+                    # publish" is a reason, not a finding, so counting strings
+                    # reported "1 listed finding(s)" for a run listing none.
                     unchecked += 1
             except (SourceError, OSError) as e:
                 print("\n  %s" % e)
@@ -130,7 +135,7 @@ def main(argv):
     if problems:
         print("\nPROBLEMS: %d" % problems)
     elif unchecked:
-        print("\nBLOCKS OK, but %d listed finding(s) could not be checked (see notes)"
+        print("\nBLOCKS OK, but %d run(s) could not be fully checked (see notes)"
               % unchecked)
     else:
         print("\nALL BLOCKS OK")

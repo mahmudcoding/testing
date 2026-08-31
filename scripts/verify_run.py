@@ -64,12 +64,15 @@ def main():
     # living in the record instead of the HTML.
     blockers = publish_blockers(run)
     anyway = "--anyway" in sys.argv
-    if blockers and not anyway:
+    if blockers:
+        verb = "WALKING SHORT" if anyway else "REFUSING"
         for why in blockers:
-            print("  REFUSING %s: %s" % (os.path.basename(path), why))
-        print("\n  A verification record must cover the run it names. Fix the "
-              "`findings:` list, or pass --anyway to walk what remains.")
-        return 1
+            print("  %s %s: %s" % (verb, os.path.basename(path), why))
+        if not anyway:
+            print("\n  A verification record must cover the run it names. Fix the "
+                  "`findings:` list, or pass --anyway to walk what remains.")
+            return 1
+        print("  The record will say the walk was short.\n")
     findings = run["items"]
     notes = {f["id"]: notes_for(f) for f in findings}
     # Group by the setup a finding actually needs. Both halves of the key used to
@@ -100,11 +103,9 @@ def main():
             # An incomplete walk must say so IN the record. The console line
             # warning about it is not kept, and the header is otherwise
             # byte-identical to a complete walk's.
-            for why in blockers:
-                logf.write(f"> **Incomplete:** this run {why}. "
-                           f"Walked with `--anyway`.\n")
             if blockers:
-                logf.write("\n")
+                logf.write("> **Incomplete:** walked with `--anyway`. This run "
+                           + "; ".join(blockers) + ".\n\n")
         logf.write(text)
         logf.flush()
 

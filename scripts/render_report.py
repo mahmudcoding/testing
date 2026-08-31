@@ -236,8 +236,14 @@ def _plural(n):
 
 def main(argv):
     from findings import lane_name
-    runs = load_runs() if "--all" in argv else [load_run(os.path.abspath(a))
-                                                for a in argv if not a.startswith("-")]
+    try:
+        runs = load_runs() if "--all" in argv else [load_run(os.path.abspath(a))
+                                                    for a in argv if not a.startswith("-")]
+    except (SourceError, OSError) as e:
+        # Same guard the other four tools carry. Without it a typo in a run name
+        # came out as a FileNotFoundError traceback.
+        print("\n  %s\n" % e)
+        return 2
     if not runs:
         print(__doc__)
         return 2

@@ -301,7 +301,6 @@ def load_run(path, index=None, known=None):
     return {
         "path": os.path.relpath(path, REPO),
         "raw": text,          # the source, so validators need not re-read it
-        "abspath": os.path.abspath(path),
         "dropped": dropped,
         "date": front.get("date", ""),
         "lane": front.get("lane", ""),
