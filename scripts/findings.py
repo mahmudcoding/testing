@@ -267,7 +267,8 @@ def load_run(path, index=None, known=None):
     that produced the substitution and ordering bugs.
     """
     with open(path, encoding="utf-8") as fh:
-        front, body = split_front(fh.read(), path)
+        text = fh.read()
+    front, body = split_front(text, path)
     index = load_findings() if index is None else index
     ids = front.get("findings") or []
     # A run lists ids; some of them stop being publishable. Withdrawing a single
@@ -299,6 +300,7 @@ def load_run(path, index=None, known=None):
     secs = split_sections(body, path, preamble=True)
     return {
         "path": os.path.relpath(path, REPO),
+        "raw": text,          # the source, so validators need not re-read it
         "abspath": os.path.abspath(path),
         "dropped": dropped,
         "date": front.get("date", ""),

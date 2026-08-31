@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Walk a report's findings in setup order, with browsers already positioned.
 
-  scripts/verify_run.py reports/<file>.html <lane>          # e.g. D
-  scripts/verify_run.py reports/<file>.html D --group 3     # one setup only
-  scripts/verify_run.py reports/<file>.html D --dry         # show plan, launch nothing
+  scripts/verify_run.py reports/runs/<run>.md <lane>        # e.g. D
+  scripts/verify_run.py reports/runs/<run>.md D --group 3   # one setup only
+  scripts/verify_run.py reports/runs/<run>.md D --dry       # show plan, launch nothing
+  scripts/verify_run.py reports/runs/<run>.md D --anyway    # walk a run that is short
 
 You perform the trigger and you judge. This only removes setup and ordering.
 Verdicts are written to verifications/verification-<lane>-<date>.md as a signed record.
 """
 import sys, os, json, subprocess, datetime, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from findings import load_run, notes_for, publish_blockers
+from findings import SourceError, load_run, notes_for, publish_blockers
 from collections import defaultdict
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,19 +50,26 @@ def main():
     only  = int(sys.argv[sys.argv.index('--group')+1]) if '--group' in sys.argv else None
     dry   = '--dry' in sys.argv
 
-    run = load_run(os.path.abspath(path))
+    try:
+        run = load_run(os.path.abspath(path))
+    except (SourceError, OSError) as e:
+        # The other four tools all catch this and print a line. Without it a typo
+        # in the run name came out as a traceback, through an exit code this
+        # commit had just made meaningful.
+        print("\n  %s\n" % e)
+        return 2
     # The fourth consumer of publish_blockers, and the last to ask. Walking a run
     # that lists an unpublished finding wrote a signed human verification record
     # for a walk that silently skipped it -- the renderer's "publish short" bug,
     # living in the record instead of the HTML.
     blockers = publish_blockers(run)
-    if blockers:
+    anyway = "--anyway" in sys.argv
+    if blockers and not anyway:
         for why in blockers:
             print("  REFUSING %s: %s" % (os.path.basename(path), why))
         print("\n  A verification record must cover the run it names. Fix the "
               "`findings:` list, or pass --anyway to walk what remains.")
-        if "--anyway" not in sys.argv:
-            return 1
+        return 1
     findings = run["items"]
     notes = {f["id"]: notes_for(f) for f in findings}
     # Group by the setup a finding actually needs. Both halves of the key used to
@@ -89,6 +97,14 @@ def main():
             logf = open(outp, 'a', encoding='utf-8')
             logf.write(f"\n# Human verification — {os.path.basename(path)}, lane {lane}\n"
                        f"_started {datetime.datetime.now():%Y-%m-%d %H:%M}_\n\n")
+            # An incomplete walk must say so IN the record. The console line
+            # warning about it is not kept, and the header is otherwise
+            # byte-identical to a complete walk's.
+            for why in blockers:
+                logf.write(f"> **Incomplete:** this run {why}. "
+                           f"Walked with `--anyway`.\n")
+            if blockers:
+                logf.write("\n")
         logf.write(text)
         logf.flush()
 

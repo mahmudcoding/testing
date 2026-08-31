@@ -73,7 +73,12 @@ def case(label, mutate, src, run_path=None, expect=None):
     try:
         open(src, "w", encoding="utf-8").write(text)
         rc, out = run(run_path or src, TMP_REPO)
-        why = [l.strip()[6:] for l in out.splitlines() if l.strip().startswith("FAIL")]
+        # Strip the temp-tree prefix before printing. It is ~126 characters, so
+        # at [:92] every diagnostic truncated to the directory name -- which
+        # blinds exactly the output that catches a case rejected by the wrong
+        # check, the thing the expect= assertions exist for.
+        why = [l.strip()[6:].replace(TMP_REPO + os.sep, "")
+               for l in out.splitlines() if l.strip().startswith("FAIL")]
         if rc == 0:
             print("  FAIL %s — checker accepted it" % label)
             FAILURES.append(label)

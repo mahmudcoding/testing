@@ -25,7 +25,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from findings import (FIELDS_KNOWN, FIELDS_REQUIRED, REPO, REQUIRED_SECTIONS,  # noqa: E402
                       RUNS_DIR, SEVERITIES, SIDES, SNIP_DIR, STATUSES, SURFACES, is_run_path,
-                      SourceError, load_finding, load_findings, load_run, plain)
+                      SourceError, load_finding, load_findings, load_run, plain,
+                      publish_blockers)
 
 # Fixture names, ids, ports and hosts that must never reach a published report.
 # Carried over unchanged -- this is a content rule, not a markup one.
@@ -125,23 +126,26 @@ def scan_text(text, where, errs):
 
 
 def check_run(run, errs, shown=None):
+    """Validate a run. Publishability comes from findings.publish_blockers.
+
+    This was the last consumer still spelling those conditions itself -- and the
+    one publish_blockers' own docstring names ("the validator errors"). A new
+    blocker would have been honoured by the renderer, the bench, check_repro and
+    verify_run, and silently ignored here.
+    """
     # Same rule as check_finding: read what was named. run["path"] is relative to
     # REPO, and re-joining a "../.." relpath resolves against the real parent
     # rather than the lexical one, so an out-of-tree run under a symlinked root
     # raised FileNotFoundError against a path the user never typed.
     where = shown or run["path"]
-    with open(run["abspath"], encoding="utf-8") as fh:
-        scan_text(fh.read(), where, errs)
-    for d in run.get("dropped") or []:
-        errs.append("%s: lists %s, which is not published — remove it from "
-                    "`findings:` or republish it" % (where, d))
+    scan_text(run["raw"], where, errs)   # load_run already read the file
+    for why in publish_blockers(run):
+        errs.append("%s: %s" % (where, why))
     if not run["heading"]:
         errs.append("%s: no '# ' heading" % where)
     for k in ("date", "lane", "area", "build", "sha"):
         if not run.get(k):
             errs.append("%s: missing %s" % (where, k))
-    if not run["items"]:
-        errs.append("%s: lists no findings" % where)
 
 
 def check_corpus(index, errs):
@@ -168,7 +172,12 @@ def check_corpus(index, errs):
 
 
 def main(argv):
-    paths = [os.path.abspath(a) for a in argv if not a.startswith("-")]
+    # As typed, not absolutised. `shown` is meant to echo the caller's own words
+    # back in every message; abspath'ing here made it a 126-character temp prefix
+    # in the selftest, which truncates the wrong-check diagnostic to the
+    # directory name -- blinding the one output that catches a case rejected for
+    # the wrong reason.
+    paths = [a for a in argv if not a.startswith("-")]
     errs = []
     if paths:
         # The corpus rules are a property of the pair, so they need every

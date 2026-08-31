@@ -69,7 +69,7 @@ def main(argv):
     # Honour the arguments the docstring advertises. Ignoring them printed
     # full-corpus output to someone who thought they had scoped the run to one
     # file, which reads as a clean result for findings they never asked about.
-    only = set()
+    only, unchecked = set(), 0
     for a in argv:
         if a.startswith("-"):
             continue
@@ -85,6 +85,7 @@ def main(argv):
                 # quietly reporting a pass over the remainder.
                 for why in publish_blockers(run):
                     print("  note  %s %s — not checked" % (os.path.basename(a), why))
+                    unchecked += 1
             except (SourceError, OSError) as e:
                 print("\n  %s" % e)
                 return 1
@@ -123,8 +124,17 @@ def main(argv):
     for fid, t, a in rows:
         if not a:
             print("  none  %-34s %s" % (fid, t))
-    print("\nPROBLEMS: %d" % problems if problems else "\nALL BLOCKS OK")
-    return 1 if problems else 0
+    # Green means "everything you asked about was checked". A run listing an
+    # unpublishable finding was reported above and then passed anyway, so the
+    # note was above the fold and the verdict below it disagreed.
+    if problems:
+        print("\nPROBLEMS: %d" % problems)
+    elif unchecked:
+        print("\nBLOCKS OK, but %d listed finding(s) could not be checked (see notes)"
+              % unchecked)
+    else:
+        print("\nALL BLOCKS OK")
+    return 1 if problems or unchecked else 0
 
 
 if __name__ == "__main__":
